@@ -70,7 +70,7 @@ int main(void) {
 
 LPWSTR pFilepath = L"C:\\Users\\\0";
 
-L"\\Desktop\\mmc.c";
+L"\\Desktop\\pl.C";
 
 HANDLE hFile = INVALID_HANDLE_VALUE;
 
