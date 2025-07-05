@@ -10,39 +10,27 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 int main(void) {
-	void* pUsername = malloc(512); //Assigning a Buffer for the current username to land at.
-	LPDWORD pSizeofusername = malloc(8); //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
-	BOOL bGetusername_result = GetUserNameA(pUsername, pSizeofusername);
-	if (!bGetusername_result) {
-		printf("[-] GetUserNameA API Function Failed!\nError Code: %x\n", GetLastError());
-		return -1;
-	}
-	printf("Username: %s\n", (char*)pUsername);
-	printf("Size Of User Name (with null terminator) in bytes: %lu\n", *pSizeofusername);
+	//PrintUserName();
 	char pFilepath[512];
 	char pDesiredfolder[96];
 	char pFilename[256];
-	printf("Available Drives: \n");
-	GetWorkingDisks();
-	printf("Please Enter Your Desired Folder Under Users: ");
-	scanf_s("%24s", pDesiredfolder, _countof(pDesiredfolder));
-	strcpy_s(pFilepath, _countof(pFilepath), "C:\\Users\\\0");
-	strcat_s(pUsername, sizeof(pUsername), "\\");
+	CHAR pDesiredDrive[4];
+	PrintDrives(pDesiredDrive);
+	printf("Contents in main.C: %s\n", pDesiredDrive);
+	strcpy_s(pFilepath, (unsigned int)_countof(pFilepath), pDesiredDrive);
+	printf("Please Choose a Folder under the current Path:");
+	scanf_s("%24s", pDesiredfolder, (unsigned int)_countof(pDesiredfolder));
 	strcat_s(pDesiredfolder, sizeof(pDesiredfolder), "\\");
-	strcat_s(pFilepath, _countof(pFilepath), (const char*)pUsername);
-	strcat_s(pFilepath, _countof(pFilepath), pDesiredfolder);
-	
-	//if (!CheckFolderPath(pFilepath)) {
-		//exit(-3);
-	//}
+	strcat_s(pFilepath, (unsigned int)_countof(pFilepath), pDesiredfolder);
+	if (!CheckFolderPath(pFilepath)) {
+		exit(-3);
+	}
 	printf("Please Enter Your Desired File Name and Format Under Your Chosen Folder: ");
-	scanf_s("%64s", pFilename, _countof(pFilename));
+	scanf_s("%64s", pFilename, (unsigned int)_countof(pFilename));
 	printf("Filename's Buffer's Contetnt after strcat_s: %s\n", pFilename);
-	strcat_s(pFilepath, _countof(pFilepath), pFilename);
+	strcat_s(pFilepath, (unsigned int)_countof(pFilepath), pFilename);
 	printf("Filepath Buffer's Content After calling strcat_s: %s\n", pFilepath);
 	printf("Press 'Enter' To Exit! :)");
-	free(pSizeofusername);
-	free(pUsername);
 	return 0;
 }
 
@@ -65,7 +53,10 @@ printf("[-] CreateFileW API Function Failed!\nError Code: %x\n", GetLastError())
 return -1;
 
 }
-
+// printf("Please Enter Your Desired Folder Under Users: ");
+//strcpy_s(pFilepath, _countof(pFilepath), "C\0");
+//strcat_s(pUsername, sizeof(pUsername), "\\");
 printf("[+] CreateFileW Succeeded!\nFile Handle Address: %p\n", hFile);
-
+//strcpy_s(pFilepath, _countof(pFilepath), "C\0");
+//strcat_s(pUsername, sizeof(pUsername), "\\");
 */
