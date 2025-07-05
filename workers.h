@@ -4,3 +4,6 @@ inline BOOL CheckFolderPath(LPCSTR pFilepath); //inline is there to pervent mult
 inline LPCSTR PrintDrives(LPSTR pDesiredDrive);
 inline LPCSTR ChooseDrive(LPSTR pDesiredDrive);
 inline void PrintCWD(LPCSTR pFilepath);
+inline LPSTR ChooseSubDirectory(LPSTR pPath);
+inline BOOL PrintUserName();
+#define longPathAware

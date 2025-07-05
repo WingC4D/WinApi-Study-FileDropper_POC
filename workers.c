@@ -1,28 +1,68 @@
-#pragma once ("workers.h")
+#pragma once
+#pragma comment(lib, "Shlwapi.lib")
+#include "workers.h"
 #include <string.h>
-#include "workers.h";
 #include <Windows.h> 
 #include <stdio.h>
 #include <Shlwapi.h>
-#pragma comment(lib, "Shlwapi.lib")
+#include <wchar.h>
 
-static void PrintUserName() {
+#define _NO_CRT_STDIO_INLINE
+#define longPathAware
+
+
+LPSTR ChooseSubDirectory(LPSTR pPath) {
+	LPWIN32_FIND_DATAA pFolder_data =  malloc(sizeof(WIN32_FIND_DATAA));
+	LPSTR pSearch_buffer = malloc(MAX_PATH);
+	strcpy_s(pSearch_buffer, MAX_PATH, pPath);
+	strcat_s(pSearch_buffer, MAX_PATH, "*");
+	printf("pSearch_buffer: %s\npPath: %s\n", pSearch_buffer, pPath);
+	HANDLE hFile = FindFirstFileA(pSearch_buffer, pFolder_data);
+	if (hFile == INVALID_HANDLE_VALUE) 
+	{
+		wprintf(L"Failed To Fetch A File Handle\nExiting With Error Code: %ul\n", GetLastError());
+		return;
+	}
+	else 
+	{
+		int i = 0;
+		wprintf(L"FileName For File#%d: %s\n", i, pFolder_data->cAlternateFileName);
+		while (FindNextFile(hFile, pFolder_data) == TRUE) {
+			if (pFolder_data->dwFileAttributes == 16) 
+			{
+				i++;
+				wprintf(L"Folder Num: #%lu\n", i);
+				wprintf(L"Folder Name: %s\n", pFolder_data->cFileName);
+			}
+		}
+		LPSTR pAnswer = malloc(MAX_PATH);
+		scanf_s("%24s", pAnswer, MAX_PATH);
+		pPath[strlen(pPath)] = '\0';
+		strcat_s(pPath, MAX_PATH, pAnswer);
+	}
+	FindClose(hFile);
+	system("PAUSE");
+	return pPath;
+}
+
+BOOL PrintUserName() {
 	void* pUsername = malloc(512); //Assigning a Buffer for the current username to land at.
 	LPDWORD pSizeofusername = malloc(8); //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
 	BOOL bGetusername_result = GetUserNameA(pUsername, pSizeofusername);
 	if (!bGetusername_result) {
 		printf("[-] GetUserNameA API Function Failed!\nError Code: %x\n", GetLastError());
-		return -1;
+		return FALSE;
 	}
 	//printf("Sizeof Username: %lu\n", *pSizeofusername);
-	printf("Username: %s\n", (char*)pUsername);
+	printf("Username: %s\n", (char *)pUsername);
 	printf("Size Of User Name (with null terminator) in bytes: %lu\n", *pSizeofusername);
-	RtlSecureZeroMemory(pSizeofusername, strlen((char*)pSizeofusername) + 1);
-	RtlSecureZeroMemory(pUsername, strlen((char*)pUsername) + 1);
-	printf("What's left of pSizeofusername: %s\n", *pSizeofusername);
-	printf("What's left of pUsername:%s\n", pUsername);
+	RtlSecureZeroMemory((void *)pSizeofusername, sizeof( *pSizeofusername) + 1);
+	RtlSecureZeroMemory(pUsername, strlen(pUsername) + 1);
+	printf("What's left of pSizeofusername: %ul\n", *pSizeofusername);
+	printf("What's left of pUsername: %s\n", (LPSTR) pUsername);
 	free(pSizeofusername);
 	free(pUsername);
+	return TRUE;
 }
 
 void static PrintCWD(LPSTR pFilepath) {
@@ -30,24 +70,23 @@ void static PrintCWD(LPSTR pFilepath) {
 	return;
 }
 
-
-
 LPCSTR ChooseDrive(LPSTR pDesiredDrive) {
-	CHAR pPrediseredDrive[2]; //prepared for wchars
+	CHAR pPrediseredDrive[2]; 
 	pDesiredDrive[0] = '\0';
-	printf("Please Choose a Drive!\n");
+	printf("Please Choose a Drive\n");
 	scanf_s("%1s", pPrediseredDrive, sizeof(pPrediseredDrive));
+	pPrediseredDrive[0] = toupper(pPrediseredDrive[0]);
 	strcat_s(pDesiredDrive, _countof(pDesiredDrive), (LPCSTR)pPrediseredDrive);
 	//printf("input: %s\nInput Length: %lu\n", pPrediseredDrive, strlen(pPrediseredDrive));
 	strcat_s(pDesiredDrive, _countof(pDesiredDrive), ":\\");
 	//printf("Targeted Character: %c", pDesiredDrive[0]);
-	pDesiredDrive[0] = toupper(pDesiredDrive[0]);
-	printf("Output in ChooseDrive: %s\n", pDesiredDrive);
+	PrintCWD(pDesiredDrive);
 	return (LPCSTR)pDesiredDrive;
 }
 
 LPCSTR PrintDrives(LPSTR pDesiredDrive)
 {
+	printf("Available Drives:\n");
 	DWORD bitmask = GetLogicalDrives();
 	if (bitmask == 0) 
 	{
@@ -62,11 +101,8 @@ LPCSTR PrintDrives(LPSTR pDesiredDrive)
 		}
 	}
 	pDesiredDrive = ChooseDrive(pDesiredDrive);
-	printf("contents in printdrives: %s\n", pDesiredDrive);
-	PrintCWD(pDesiredDrive);
 	return (LPCSTR)pDesiredDrive;
 }
-
 
 BOOL CheckFolderPath(LPCSTR pFilepath) 
 {
@@ -116,8 +152,4 @@ BOOL CheckFolderPath(LPCSTR pFilepath)
 		}
 	}
 }
-/*
-void ListDir(LPCSTR pDirectorypath) {
 
-}
-*/

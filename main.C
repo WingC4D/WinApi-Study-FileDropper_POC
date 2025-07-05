@@ -4,28 +4,29 @@
 #include <stdlib.h>
 #include <Shlwapi.h>
 #include "workers.c"
+#define longPathAware
+
 
 #pragma comment(lib, "Shlwapi.lib")
 
 #define _CRT_SECURE_NO_WARNINGS
 
 int main(void) {
-	//PrintUserName();
-	char pFilepath[512];
-	char pDesiredfolder[96];
-	char pFilename[256];
-	CHAR pDesiredDrive[4];
+	LPSTR pDesiredDrive = malloc(16);
 	PrintDrives(pDesiredDrive);
-	printf("Contents in main.C: %s\n", pDesiredDrive);
+	LPSTR pFilepath = malloc(MAX_PATH);
 	strcpy_s(pFilepath, (unsigned int)_countof(pFilepath), pDesiredDrive);
-	printf("Please Choose a Folder under the current Path:");
-	scanf_s("%24s", pDesiredfolder, (unsigned int)_countof(pDesiredfolder));
-	strcat_s(pDesiredfolder, sizeof(pDesiredfolder), "\\");
-	strcat_s(pFilepath, (unsigned int)_countof(pFilepath), pDesiredfolder);
+	printf("Please Choose a Folder under the current Path:\n");
+	printf("%s\n", ChooseSubDirectory(pFilepath));
+	strcat_s(pFilepath, MAX_PATH, "\\");
+	PrintCWD(pFilepath);
+	//strcat_s(pFilepath, MAX_PATH, pDesiredfolder);
 	if (!CheckFolderPath(pFilepath)) {
 		exit(-3);
 	}
+	//PrintCWD(pFilepath);
 	printf("Please Enter Your Desired File Name and Format Under Your Chosen Folder: ");
+	CHAR pFilename[256];
 	scanf_s("%64s", pFilename, (unsigned int)_countof(pFilename));
 	printf("Filename's Buffer's Contetnt after strcat_s: %s\n", pFilename);
 	strcat_s(pFilepath, (unsigned int)_countof(pFilepath), pFilename);
@@ -33,8 +34,6 @@ int main(void) {
 	printf("Press 'Enter' To Exit! :)");
 	return 0;
 }
-
-
 
 /*
 
