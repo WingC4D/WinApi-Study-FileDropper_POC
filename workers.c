@@ -7,42 +7,71 @@
 #include <Shlwapi.h>
 #include <wchar.h>
 
+//#define MAX_PATH
 #define _NO_CRT_STDIO_INLINE
 #define longPathAware
 
 
-LPSTR ChooseSubDirectory(LPSTR pPath) {
-	LPWIN32_FIND_DATAA pFolder_data =  malloc(sizeof(WIN32_FIND_DATAA));
-	LPSTR pSearch_buffer = malloc(MAX_PATH);
-	strcpy_s(pSearch_buffer, MAX_PATH, pPath);
-	strcat_s(pSearch_buffer, MAX_PATH, "*");
-	printf("pSearch_buffer: %s\npPath: %s\n", pSearch_buffer, pPath);
-	HANDLE hFile = FindFirstFileA(pSearch_buffer, pFolder_data);
-	if (hFile == INVALID_HANDLE_VALUE) 
+LPWSTR ChooseSubDirectory(LPWSTR pPath) {
+	LPWIN32_FIND_DATAW pFolder_data = malloc(sizeof(WIN32_FIND_DATAW));//Allocating memory for a Find_Data Structure to hold the file's info
+	LPWSTR pSearch_buffer = malloc(MAX_PATH * sizeof(WCHAR));//Creating a temporary buffer to hold the path with the wildcard.
+	wcscpy_s(pSearch_buffer, MAX_PATH, (LPCWSTR)pPath);//Copying the buffer to not conflict with the original one.
+	wcscat_s(pSearch_buffer, MAX_PATH, L"*");//Adding the needed wildcard for the search
+	HANDLE hFile = FindFirstFileW(pSearch_buffer, pFolder_data);//using the SearchBuffer to look under the Current Path.
+	free(pSearch_buffer);//freeing the temporay buffer
+	if (hFile == INVALID_HANDLE_VALUE) //checking if the search for the first File succeeded or not.
 	{
-		wprintf(L"Failed To Fetch A File Handle\nExiting With Error Code: %ul\n", GetLastError());
-		return;
+		wprintf(L"Failed To Fetch A File Handle\nExiting With Error Code: %ul\n", GetLastError()); //If it didnt Print Out the Error Code
+		return;//&End the Function's process.
 	}
-	else 
+	else
 	{
-		int i = 0;
-		wprintf(L"FileName For File#%d: %s\n", i, pFolder_data->cAlternateFileName);
-		while (FindNextFile(hFile, pFolder_data) == TRUE) {
-			if (pFolder_data->dwFileAttributes == 16) 
+		int i = 0;//Genral counter my delete later if not needed.
+		WIN32_FIND_DATAW ids[100];
+		if (pFolder_data->dwFileAttributes == 16 || i == 99)//Checking if the First Found File is a Folder or not
+		{
+			wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cAlternateFileName, i); //If it Is print it out 
+			ids[i] = *pFolder_data;
+			i++;//increase the value of the counter by 1
+		}
+
+		while (FindNextFileW(hFile, pFolder_data)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
+		{
+			if (pFolder_data->dwFileAttributes == 16)
 			{
-				i++;
-				wprintf(L"Folder Num: #%lu\n", i);
-				wprintf(L"Folder Name: %s\n", pFolder_data->cFileName);
+				wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cFileName, i);//wchar are a must and i'm printing the Folder's Name and it's ID
+				ids[i] = *pFolder_data;
+				i++;//Increase the Counter by 1
 			}
 		}
-		LPSTR pAnswer = malloc(MAX_PATH);
-		scanf_s("%24s", pAnswer, MAX_PATH);
-		pPath[strlen(pPath)] = '\0';
-		strcat_s(pPath, MAX_PATH, pAnswer);
+		for (int j = 0; j < i; j++) {
+			wprintf(L"Folder: %s\nj: %d\n", ids[j].cFileName, j);
+		}
+
+		LPWSTR pAnswer = malloc(MAX_PATH);
+		wscanf_s(L"%1s", pAnswer, MAX_PATH);
+		(int)pAnswer[0];
+		//wprintf(L"%d\n", pAnswer[0]);
+		int ASCII_Value = pAnswer[0] - 48;
+		wprintf(L"ASCII: %lu\n", ASCII_Value);
+		if (0 <= ASCII_Value && ASCII_Value <= 9) {
+			//wprintf(L"ids array item name: %s\n", ids[ASCII_Value].cFileName);
+			pAnswer = ids[ASCII_Value].cFileName;
+			
+		}
+		//pPath[strlen(pPath)]  = '\0';
+		wcscat_s(pPath, MAX_PATH, (LPCWSTR)pAnswer);
+		wprintf(L"Path: %s\n", pPath);
+		
+		free(pAnswer);
+		printf("Freed pAnswer");
+		if (FindClose(hFile) == FALSE)
+		{
+			printf("Failed to Close Handle! ErrorCode: %x\n", GetLastError());
+		}
+		system("PAUSE");
+		return pPath;
 	}
-	FindClose(hFile);
-	system("PAUSE");
-	return pPath;
 }
 
 BOOL PrintUserName() {
@@ -65,48 +94,49 @@ BOOL PrintUserName() {
 	return TRUE;
 }
 
-void static PrintCWD(LPSTR pFilepath) {
-	printf("Current Working Path: %s\n", pFilepath);
+void static PrintCWD(LPWSTR pFilepath) {
+	wprintf(L"Current Working Path: %s\n", pFilepath);
 	return;
 }
 
-LPCSTR ChooseDrive(LPSTR pDesiredDrive) {
-	CHAR pPrediseredDrive[2]; 
-	pDesiredDrive[0] = '\0';
-	printf("Please Choose a Drive\n");
-	scanf_s("%1s", pPrediseredDrive, sizeof(pPrediseredDrive));
-	pPrediseredDrive[0] = toupper(pPrediseredDrive[0]);
-	strcat_s(pDesiredDrive, _countof(pDesiredDrive), (LPCSTR)pPrediseredDrive);
+LPCWSTR ChooseDrive(LPWSTR pDesiredDrive) {
+	LPWSTR pPrediseredDrive = malloc(24);
+	pDesiredDrive[0] = L'\0';
+	wprintf(L"Please Choose a Drive\n");
+	wscanf_s(L"%1s", pPrediseredDrive, _countof(pPrediseredDrive) * sizeof(WCHAR));
+	wprintf(L"%s\n", pPrediseredDrive);
+	pPrediseredDrive[0] = towupper(pPrediseredDrive[0]);
+	wcscat_s(pDesiredDrive, _countof(pDesiredDrive) * sizeof(WCHAR), (LPCSTR)pPrediseredDrive);
 	//printf("input: %s\nInput Length: %lu\n", pPrediseredDrive, strlen(pPrediseredDrive));
-	strcat_s(pDesiredDrive, _countof(pDesiredDrive), ":\\");
+	wcscat_s(pDesiredDrive, _countof(pDesiredDrive) * sizeof(WCHAR), L":\\");
 	//printf("Targeted Character: %c", pDesiredDrive[0]);
 	PrintCWD(pDesiredDrive);
-	return (LPCSTR)pDesiredDrive;
+	return (LPCWSTR)pDesiredDrive;
 }
 
-LPCSTR PrintDrives(LPSTR pDesiredDrive)
+LPWSTR PrintDrives(LPWSTR pDesiredDrive)
 {
-	printf("Available Drives:\n");
+	wprintf(L"Available Drives:\n");
 	DWORD bitmask = GetLogicalDrives();
 	if (bitmask == 0) 
 	{
 		printf("GetLogicalDrives Failed!\nExitig With Error Code: %x", GetLastError());
 	}
-	char cBase = 'A';
-	for (char iCount = 0; iCount < 26; iCount++) 
+	CHAR cBase = 'A';
+	for (CHAR iCount = 0; iCount < 26; iCount++) 
 	{
 		if (bitmask & (1 << iCount)) 
 		{
 			printf("- %c\n", cBase + iCount);
 		}
 	}
-	pDesiredDrive = ChooseDrive(pDesiredDrive);
-	return (LPCSTR)pDesiredDrive;
+	
+	return ChooseDrive(pDesiredDrive);
 }
 
-BOOL CheckFolderPath(LPCSTR pFilepath) 
+BOOL CheckFolderPath(LPWSTR pFilepath) 
 {
-	if (PathFileExistsA(pFilepath)) 
+	if (PathFileExistsW(pFilepath)) 
 	{
 		return TRUE;
 	}
@@ -123,10 +153,10 @@ BOOL CheckFolderPath(LPCSTR pFilepath)
 			case 'y':
 			case 'Y':
 			{
-				BOOL create_dir_result = CreateDirectoryA(pFilepath, NULL);
+				BOOL create_dir_result = CreateDirectoryW(pFilepath, NULL);
 				if (!create_dir_result)
 				{
-					printf("Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu", pFilepath, GetLastError());
+					wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu", pFilepath, GetLastError());
 					return create_dir_result;
 					break;
 				}
@@ -152,4 +182,6 @@ BOOL CheckFolderPath(LPCSTR pFilepath)
 		}
 	}
 }
+
+
 
