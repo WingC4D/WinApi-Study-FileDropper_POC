@@ -5,9 +5,6 @@
 #include "choosers.c"
 #include "Printers.h"
 
-
-//const DWORD WMAX_PATH = ;
-
 LPWSTR PrintDrives(LPWSTR pDesiredDrive)
 {
 	wprintf(L"Available Drives:\n");

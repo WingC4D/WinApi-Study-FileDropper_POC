@@ -10,10 +10,7 @@
 #include "Printers.h"
 #include "Printers.c"
 
-
-#define _NO_CRT_STUDIO_INLINE
-
-LPCWSTR CreatePayload(LPWSTR pPath) 
+HANDLE CreatePayload(LPWSTR pPath) 
 {
 	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
 	LPWSTR pFilename = VirtualAlloc(0, MAX_PATH, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -21,7 +18,9 @@ LPCWSTR CreatePayload(LPWSTR pPath)
 	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
 	wcscat_s(pPath, MAX_PATH, pFilename);
 	PrintCWD(pPath);
-	return (LPCWSTR)pPath;
+	HANDLE hFile = CreateFileW((LPCWSTR)pPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 128, NULL);
+	free(pPath);
+	return hFile;
 }
 
 LPWSTR ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
