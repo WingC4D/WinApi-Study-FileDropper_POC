@@ -28,48 +28,35 @@ LPWSTR ChooseSubDirectory(LPWSTR pPath) {
 	{
 		int i = 0;//Genral counter my delete later if not needed.
 		WIN32_FIND_DATAW ids[100];
-		if (pFolder_data->dwFileAttributes == 16 || i == 99)//Checking if the First Found File is a Folder or not
+		if (pFolder_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || i == 99)//Checking if the First Found File is a Folder or not
 		{
 			wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cAlternateFileName, i); //If it Is print it out 
 			ids[i] = *pFolder_data;
 			i++;//increase the value of the counter by 1
 		}
-
 		while (FindNextFileW(hFile, pFolder_data)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
 		{
-			if (pFolder_data->dwFileAttributes == 16)
+			if (pFolder_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cFileName, i);//wchar are a must and i'm printing the Folder's Name and it's ID
 				ids[i] = *pFolder_data;
 				i++;//Increase the Counter by 1
 			}
 		}
-		for (int j = 0; j < i; j++) {
-			wprintf(L"Folder: %s\nj: %d\n", ids[j].cFileName, j);
-		}
-
-		LPWSTR pAnswer = malloc(MAX_PATH);
+		free(pFolder_data);
+		LPWSTR pAnswer = (LPWSTR)malloc(MAX_PATH * sizeof(WCHAR));
 		wscanf_s(L"%1s", pAnswer, MAX_PATH);
-		(int)pAnswer[0];
-		//wprintf(L"%d\n", pAnswer[0]);
-		int ASCII_Value = pAnswer[0] - 48;
-		wprintf(L"ASCII: %lu\n", ASCII_Value);
-		if (0 <= ASCII_Value && ASCII_Value <= 9) {
-			//wprintf(L"ids array item name: %s\n", ids[ASCII_Value].cFileName);
-			pAnswer = ids[ASCII_Value].cFileName;
-			
+		int ASCII_Value = (int)pAnswer[0] - 48;
+		if (0 <= ASCII_Value && ASCII_Value <= 9) 
+		{
+			wcscpy_s(pAnswer, MAX_PATH, ids[ASCII_Value].cFileName);
 		}
-		//pPath[strlen(pPath)]  = '\0';
 		wcscat_s(pPath, MAX_PATH, (LPCWSTR)pAnswer);
-		wprintf(L"Path: %s\n", pPath);
-		
 		free(pAnswer);
-		printf("Freed pAnswer");
 		if (FindClose(hFile) == FALSE)
 		{
 			printf("Failed to Close Handle! ErrorCode: %x\n", GetLastError());
 		}
-		system("PAUSE");
 		return pPath;
 	}
 }
@@ -104,12 +91,9 @@ LPCWSTR ChooseDrive(LPWSTR pDesiredDrive) {
 	pDesiredDrive[0] = L'\0';
 	wprintf(L"Please Choose a Drive\n");
 	wscanf_s(L"%1s", pPrediseredDrive, _countof(pPrediseredDrive) * sizeof(WCHAR));
-	wprintf(L"%s\n", pPrediseredDrive);
 	pPrediseredDrive[0] = towupper(pPrediseredDrive[0]);
 	wcscat_s(pDesiredDrive, _countof(pDesiredDrive) * sizeof(WCHAR), (LPCSTR)pPrediseredDrive);
-	//printf("input: %s\nInput Length: %lu\n", pPrediseredDrive, strlen(pPrediseredDrive));
 	wcscat_s(pDesiredDrive, _countof(pDesiredDrive) * sizeof(WCHAR), L":\\");
-	//printf("Targeted Character: %c", pDesiredDrive[0]);
 	PrintCWD(pDesiredDrive);
 	return (LPCWSTR)pDesiredDrive;
 }
@@ -130,7 +114,6 @@ LPWSTR PrintDrives(LPWSTR pDesiredDrive)
 			printf("- %c\n", cBase + iCount);
 		}
 	}
-	
 	return ChooseDrive(pDesiredDrive);
 }
 

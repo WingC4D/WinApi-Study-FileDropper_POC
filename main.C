@@ -18,23 +18,17 @@ int main(void) {
 	wcscpy_s(pFilepath, MAX_PATH, pDesiredDrive);
 	free(pDesiredDrive);
 	pFilepath = ChooseSubDirectory(pFilepath);
-	printf("reached main\n");
 	wcscat_s(pFilepath, MAX_PATH, L"\\");
-	PrintCWD(pFilepath);
-	//strcat_s(pFilepath, MAX_PATH, pDesiredfolder);
 	if (CheckFolderPath(pFilepath) == FALSE) {
 		exit(-3);
 	}
 	PrintCWD(pFilepath);
 	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
-	LPWSTR pFilename = malloc(MAX_PATH * sizeof(WCHAR));
+	LPWSTR pFilename = VirtualAlloc(0, MAX_PATH, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	wscanf_s(L"%64s", pFilename, MAX_PATH);
 	wprintf(L"Filename's Buffer's Contetnt after wscanf_s: %s\n", pFilename);
-	LPWSTR pTemp = pFilename;
-	//pFilename[wcslen(pFilename)] = L'\0';
-	wcscat_s(pFilepath, MAX_PATH, pTemp);
-	wprintf(L"Filename's Buffer's Contetnt after strcat_s: %s\n", pTemp);
-	free(pFilename);
+	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
+	wcscat_s(pFilepath, MAX_PATH, pFilename);
 	wprintf(L"Filepath Buffer's Content After calling strcat_s: %s\n", pFilepath);
 	free(pFilepath);
 	printf("Press 'Enter' To Exit! :)");
