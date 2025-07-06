@@ -39,14 +39,29 @@ LPWSTR ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	return pPath;
 }
 
-LPWSTR ChooseDrive(LPWSTR pDesiredDrive) 
-{
+LPWSTR ChooseDrive(LPWSTR pDesiredDrive, PCHAR pValidCharacters) 
+{	
 	LPWSTR pPrediseredDrive = (LPWSTR)malloc(6* sizeof(WCHAR));
 	unsigned int uiBufferlength = _countof(pDesiredDrive);
 	pDesiredDrive[0] = L'\0';
 	wprintf(L"Please Choose a Drive\n");
 	wscanf_s(L"%1s", pPrediseredDrive, uiBufferlength);
 	pPrediseredDrive[0] = towupper(pPrediseredDrive[0]);
+	unsigned int uiAmount = strlen(pValidCharacters);
+	//start cut
+	for (unsigned int i = 0; i < uiAmount; i++) 
+	{
+		if (pPrediseredDrive[0] == pValidCharacters[i]) 
+		{
+			break;
+		}
+		if (i == uiAmount - 1) 
+		{
+			printf("Please Chose A Valid Drive\n");
+			return ChooseDrive(pDesiredDrive, pValidCharacters);
+		}
+	}
+	//end cut
 	wcscat_s(pDesiredDrive, uiBufferlength, (LPCSTR)pPrediseredDrive);
 	free(pPrediseredDrive);
 	wcscat_s(pDesiredDrive, uiBufferlength, L":\\");
@@ -54,51 +69,47 @@ LPWSTR ChooseDrive(LPWSTR pDesiredDrive)
 	return pDesiredDrive;
 }
 
-BOOL CheckFolderPath(LPWSTR pFilepath) 
+BOOL UserDebugger(LPWSTR pFilepath) 
 {
 	if (PathFileExistsW(pFilepath)) 
 	{
 		return TRUE;
 	}
-	else
+	printf("The Desired Folder Does Not Exist Under The Current Path.\n");
+	printf("- To Create The Specified Folder Under The Current Path Press: [C | c]\n- To Exit Press: [Q | q]\n");
+	printf("- To Retry Entring A New Folder Name Press: [R | r]\n");
+	printf("- To Discard The Inputed And Create The Payload File In The Current Path Press: [P | p]\n");
+	PCHAR pAnswer = (PCHAR)malloc(2);
+	scanf_s("%1s", pAnswer, sizeof(pAnswer));
+	switch (pAnswer[0])
 	{
-		printf("The Desired Directory Does Not Exist Under The Current Path.\n Would You Like To Make One?\nEnter [Y | y] Yes. / [N/n] No.\n");
-		char pAnswer[2];
-		if (scanf_s("%1s", pAnswer, sizeof(pAnswer)) != 1)
+		case 'c':
+		case 'C':
 		{
-			printf("Error reading input. Please try again.\n");
+			BOOL create_dir_result = CreateDirectoryW(pFilepath, NULL);
+			if (!create_dir_result)
+			{
+				wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu", pFilepath, GetLastError());
+				return create_dir_result;
+				break;
+			}
+			printf("Created The Desired Folder Successfully!\n");
+			return create_dir_result;
+			break;	
 		}
-		switch (pAnswer[0])
+		case 'q':
+		case 'Q':
 		{
-			case 'y':
-			case 'Y':
-			{
-				BOOL create_dir_result = CreateDirectoryW(pFilepath, NULL);
-				if (!create_dir_result)
-				{
-					wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu", pFilepath, GetLastError());
-					return create_dir_result;
-					break;
-				}
-				else
-				{
-					printf("Created The Desired Folder Successfully!\n");
-					return create_dir_result;
-					break;
-				}
-			}
-			case 'n':
-			case 'N':
-			{
-				printf("OK :(\nExiting Program With Exit Code: -3");
-				return FALSE;
-				break;
-			}
-			default:
-			{
-				return CheckFolderPath(pFilepath);
-				break;
-			}
+			printf("OK :(\nExiting Program With Exit Code: -3");
+			return FALSE;
+			break;
+		}
+		default:
+		{
+			printf("Your Input Is Incoherant With Provided Options.\nPlease Choose A Valid Answer.\n");
+			return UserDebugger(pFilepath);
+			break;
 		}
 	}
 }
+

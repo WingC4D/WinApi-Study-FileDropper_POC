@@ -13,15 +13,23 @@ LPWSTR PrintDrives(LPWSTR pDesiredDrive)
 	{
 		printf("GetLogicalDrives Failed!\nExitig With Error Code: %x", GetLastError());
 	}
+	unsigned int i = 0;
+	char *pPossibleCharacters =  (char *)malloc(26);
 	CHAR cBase = 'A';
 	for (CHAR iCount = 0; iCount < 26; iCount++)
 	{
 		if (bitmask & (1 << iCount))
 		{
+			pPossibleCharacters[i] = cBase + iCount;
 			printf("- %c\n", cBase + iCount);
+			i++;	
 		}
 	}
-	return ChooseDrive(pDesiredDrive);
+	LPSTR pAvailableCharacters = malloc(i + 1);
+	pPossibleCharacters[i] = '\0';
+	strcpy_s(pAvailableCharacters, i + 1, pPossibleCharacters);
+	free(pPossibleCharacters);
+	return ChooseDrive(pDesiredDrive, pAvailableCharacters);
 }
 
 void PrintCWD(LPWSTR pFilepath)
@@ -29,6 +37,7 @@ void PrintCWD(LPWSTR pFilepath)
 	wprintf(L"Current Working Path: %s\n", pFilepath);
 	return;
 }
+
 BOOL PrintUserName() {
 	DWORD uiLength = MAX_PATH * sizeof(WCHAR);
 	LPWSTR pUsername = (LPWSTR)malloc(uiLength); //Assigning a Buffer for the current username to land at.

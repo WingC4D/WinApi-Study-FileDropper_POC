@@ -9,7 +9,7 @@ int main(void) {
 	LPWSTR pFilepath = malloc(MAX_PATH * sizeof(WCHAR));
 	PrintDrives(pFilepath);
 	PrintSubFolders(pFilepath);
-	if (!CheckFolderPath(pFilepath)) {
+	if (!UserDebugger(pFilepath)) {
 		exit(-3);
 	}
 	HANDLE hFile = CreatePayload(pFilepath);
