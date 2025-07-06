@@ -13,6 +13,17 @@
 
 #define _NO_CRT_STUDIO_INLINE
 
+LPCWSTR CreatePayload(LPWSTR pPath) 
+{
+	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
+	LPWSTR pFilename = VirtualAlloc(0, MAX_PATH, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	wscanf_s(L"%64s", pFilename, MAX_PATH);
+	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
+	wcscat_s(pPath, MAX_PATH, pFilename);
+	PrintCWD(pPath);
+	return (LPCWSTR)pPath;
+}
+
 LPWSTR ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
 {
 	LPWSTR pAnswer = (LPWSTR)malloc(MAX_PATH * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
@@ -23,11 +34,13 @@ LPWSTR ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 		wcscpy_s(pAnswer, MAX_PATH, aFolders[ASCII_Value].cFileName);
 	}
 	wcscat_s(pPath, MAX_PATH, (LPCWSTR)pAnswer);
+	wcscat_s(pPath, MAX_PATH, L"\\");
+	PrintCWD(pPath);
 	free(pAnswer);
 	return pPath;
 }
 
-LPCWSTR ChooseDrive(LPWSTR pDesiredDrive) 
+LPWSTR ChooseDrive(LPWSTR pDesiredDrive) 
 {
 	LPWSTR pPrediseredDrive = (LPWSTR)malloc(6* sizeof(WCHAR));
 	unsigned int uiBufferlength = _countof(pDesiredDrive);
@@ -39,7 +52,7 @@ LPCWSTR ChooseDrive(LPWSTR pDesiredDrive)
 	free(pPrediseredDrive);
 	wcscat_s(pDesiredDrive, uiBufferlength, L":\\");
 	PrintCWD(pDesiredDrive);
-	return (LPCWSTR)pDesiredDrive;
+	return pDesiredDrive;
 }
 
 BOOL CheckFolderPath(LPWSTR pFilepath) 
