@@ -1,5 +1,3 @@
-
-
 #include "Printers.h"
 
 LPWSTR PrintDrives(LPWSTR pDesiredDrive)

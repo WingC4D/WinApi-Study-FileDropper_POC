@@ -1,6 +1,3 @@
-#include <Windows.h>
-#include <stdio.h>
-
 #include "Printers.h"
 
 int main(void) {
