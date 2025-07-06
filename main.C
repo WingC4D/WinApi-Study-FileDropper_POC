@@ -1,7 +1,7 @@
 #include <Windows.h>
 #include <stdio.h>
 
-#include "Printers.c"
+#include "Printers.h"
 
 int main(void) {
 	LPWSTR pFilepath = malloc(MAX_PATH * sizeof(WCHAR));

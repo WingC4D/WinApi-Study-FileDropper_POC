@@ -1,22 +1,15 @@
-#pragma once
-#pragma comment(lib, "Shlwapi.lib")
-
-#include <Windows.h> 
-#include <stdio.h>
-#include <string.h>
-#include <shlwapi.h>
-
-#include "choosers.h"
 #include "Printers.h"
-#include "Printers.c"
+#include "choosers.h"
+
+
 
 HANDLE CreatePayload(LPWSTR pPath) 
 {
 	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
 	LPWSTR pFilename = VirtualAlloc(0, MAX_PATH, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	wscanf_s(L"%64s", pFilename, MAX_PATH);
-	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
 	wcscat_s(pPath, MAX_PATH, pFilename);
+	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
 	PrintCWD(pPath);
 	HANDLE hFile = CreateFileW((LPCWSTR)pPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 128, NULL);
 	free(pPath);

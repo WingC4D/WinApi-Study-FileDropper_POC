@@ -1,8 +1,5 @@
-#pragma once
-#include <Windows.h>
-#include<stdio.h>
 
-#include "choosers.c"
+
 #include "Printers.h"
 
 LPWSTR PrintDrives(LPWSTR pDesiredDrive)
