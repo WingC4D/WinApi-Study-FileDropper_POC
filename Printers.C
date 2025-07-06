@@ -90,6 +90,10 @@ LPWSTR PrintSubFolders(LPWSTR pPath) {
 	}
 	free(pFolder_data);//Freeing the buffer holding the pointed to the "Find_DATA" struct
 	ChooseSubFolder(pPath, aFolders, i);
+	if (!UserDebugger(pPath)) 
+	{
+		exit(-3);
+	}
 	return pPath;
 }
 

@@ -20,6 +20,11 @@ HANDLE CreatePayload(LPWSTR pPath)
 	PrintCWD(pPath);
 	HANDLE hFile = CreateFileW((LPCWSTR)pPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 128, NULL);
 	free(pPath);
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+		printf("Failed To Create The Payload! :(\nExiting With Error Code: %x\n", GetLastError());
+		exit (-5);
+	}
 	return hFile;
 }
 
@@ -62,6 +67,7 @@ LPWSTR ChooseDrive(LPWSTR pDesiredDrive, PCHAR pValidCharacters)
 		}
 	}
 	//end cut
+	free(pValidCharacters);
 	wcscat_s(pDesiredDrive, uiBufferlength, (LPCSTR)pPrediseredDrive);
 	free(pPrediseredDrive);
 	wcscat_s(pDesiredDrive, uiBufferlength, L":\\");
