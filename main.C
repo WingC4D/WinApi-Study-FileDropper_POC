@@ -3,7 +3,8 @@
 
 
 int main(void) {
-	LPWSTR pFilepath = PrintDrives();
+	LPWSTR pFilepath = malloc(sizeof(WCHAR) * MAX_PATH);
+	PrintDrives(pFilepath);
 	PrintSubFolders(pFilepath);
 	HANDLE hFile = CreatePayload(pFilepath);
 	printf("Payload Created Successfully! :)\n");

@@ -1,8 +1,14 @@
 #include "Printers.h"
 #include "choosers.h"
+#include "ErrorHandlers.h"
 
+void PrintMemoryError(LPWSTR pCFPoint)
+{
+	wprintf(L"[X] Failed To Allocate Memory For %s!\nExiting With Error Code : % x\n", pCFPoint, GetLastError());
+	return;
+}
 
-LPWSTR PrintDrives()
+void PrintDrives(LPWSTR pPath)
 {
 	wprintf(L"Available Drives:\n");
 	DWORD bitmask = GetLogicalDrives();
@@ -11,12 +17,10 @@ LPWSTR PrintDrives()
 		printf("GetLogicalDrives Failed!\nExitig With Error Code: %x", GetLastError());
 		exit(-10);
 	}
-	
-	LPSTR pAvailableCharacters =  malloc(26);
+	LPSTR pAvailableCharacters =  malloc(1);
 	if (!pAvailableCharacters)
 	{
-		free(pAvailableCharacters);
-		printf("Failed To Allocate Memory For Drive Selection!\nExiting With Error Code: %x\n", GetLastError());
+		PrintMemoryError(L"The Available Drives Buffer");
 		exit(-8);
 	}
 	unsigned int i = 0;
@@ -28,43 +32,47 @@ LPWSTR PrintDrives()
 			pAvailableCharacters[i] = cBase + iCount;
 			printf("- %c\n", cBase + iCount);
 			i++;	
+			pAvailableCharacters = realloc(pAvailableCharacters, i + 1);
 		}
 	}
-	pAvailableCharacters[i] = '\0';//Setting the limit Of the "String" Area in the array the pointer points at
-	LPWSTR pPath = ChooseDrive(pAvailableCharacters);
+	ChooseDrive(pPath ,pAvailableCharacters);
 	free(pAvailableCharacters);
 	return pPath;
 }
 
-void PrintCWD(LPWSTR pFilepath)
+void PrintCWD(LPWSTR pPath)
 {
-	wprintf(L"Current Working Path: %s\n", pFilepath);
+	wprintf(L"Current Working Path: %s\n", pPath);
 	return;
 }
 
-BOOL PrintUserName() 
+BOOL PrintUserName(void) 
 {
-	DWORD uiLength = MAX_PATH * sizeof(WCHAR);
-	LPWSTR pUsername = (LPWSTR)malloc(uiLength); //Assigning a Buffer for the current username to land at.
+	LPWSTR pUsername = malloc(MAX_PATH * sizeof(WCHAR)); //Assigning a Buffer for the current username to land at.
+	if (!pUsername) 
+	{
+		PrintMemoryError("The User Name Buffer");
+		exit(-14);
+	}
 	LPDWORD pSizeofusername = (LPDWORD)malloc(8* sizeof(WCHAR)); //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
 	if (!GetUserNameW(pUsername, pSizeofusername))
 	{
-		printf("[-] GetUserNameA API Function Failed!\nError Code: %x\n", GetLastError());
+		printf("[X] GetUserNameA API Function Failed!\nError Code: %x\n", GetLastError());
 		return FALSE;
 	}
-	wprintf(L"Username: %s\n", _Notnull_ pUsername);
-	RtlSecureZeroMemory(_Notnull_ pSizeofusername, sizeof(*pSizeofusername) + 1);
-	RtlSecureZeroMemory(_Notnull_ pUsername, wcslen(_Notnull_ pUsername) + 1);
+	wprintf(L"Username: %s\n", pUsername);
+	RtlSecureZeroMemory(pUsername, (wcslen((const) pUsername) + 1));
 	free(pSizeofusername);
 	free(pUsername);
 	return TRUE;
 }
 
-void PrintSubFolders(LPWSTR pPath) {
+void PrintSubFolders(LPWSTR pPath) 
+{
 	LPWIN32_FIND_DATAW pFolder_data = malloc(sizeof(WIN32_FIND_DATAW));//Allocating memory for a Find_Data Structure to hold the file's info
 	if (!pFolder_data) {
 		free(pPath);
-		free(pFolder_data);
+		PrintMemoryError("Folder Data Structer");
 		exit(-6);
 	}
 	wcscat_s(pPath, MAX_PATH, L"*");//Adding the needed wildcard for the search
@@ -73,35 +81,44 @@ void PrintSubFolders(LPWSTR pPath) {
 	{
 		free(pFolder_data);
 		free(pPath);
-		wprintf(L"Failed To Scan Path (Couldn't Feth A File Hanlde.\nExiting With Error Code: %lu\n", GetLastError()); //If it didnt Print Out the Error Code
+		wprintf(L"Failed To Scan Path (Couldn't Feth A File Hanlde).\nExiting With Error Code: %lu\n", GetLastError()); //If it didnt Print Out the Error Code
 		exit(-11);
-		//&End the Function's process.
 	}
-	pPath[wcslen(pPath) - 1] = L'\0';
-	int i = 0;//Genral counter my delete later if not needed.
-	WIN32_FIND_DATAW aFolders[100];//Creating a buffer fit to hold a 100 folders !temporary!
-	if (pFolder_data->dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY || i == 99)//Checking if the First Found File is a Folder or not using the bit "and" operator
+	pPath[wcslen(pPath) - 1] = L'\0';//Deleting The Asteriks Wildcard that was used for the Search.
+	
+	int i = 0;
+	int j = 4;
+	LPWIN32_FIND_DATAW aFolders = malloc(j * sizeof(WIN32_FIND_DATAW));//Creating a buffer fit to hold a 100 folders !temporary!
+	if (pFolder_data->dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY)//Checking if the First Found File is a Folder or not using the bit "and" operator
 	{
 		wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cAlternateFileName, i); //print out the folder name and the id tag associated with it.
+		
 		aFolders[i] = *pFolder_data;//De-refencing the pointer tot the "FIND_DATA" struct to hold the struct itself
 		i++;//increase the value of the counter by 1
 	}
-	
+
 	while (FindNextFileW(hFile, pFolder_data)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
 	{
+		if (i == j / 2) 
+		{
+			j *= 2;
+			aFolders = (LPWIN32_FIND_DATAW)realloc(aFolders, j * sizeof(WIN32_FIND_DATAW));
+		}
 		if (pFolder_data->dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY)//Checking if the file at hand is a folder
 		{
-			wprintf(L"Folder Name - %s | Folder id - #%d\n", pFolder_data->cFileName, i);//wchar are a must and i'm printing the Folder's Name and it's ID
 			aFolders[i] = *pFolder_data;//Creating and entry for each fodler
-			i++;//Increase the Counter by 1
+			wprintf(L"Folder Name - %s | Folder id - #%d\n", aFolders[i].cFileName, i);//wchar are a must and i'm printing the Folder's Name and it's ID
+			i++;//Increase the Folders Held Index by 1
 		}
 	}
-	free(pFolder_data);//Freeing the buffer holding the pointed to the "Find_DATA" struct
-	if (FindClose(hFile) == FALSE)
+	//Freeing the buffer holding the pointed to the "Find_DATA" struct
+	if (!FindClose(hFile))
 	{
 		printf("Failed to Close Handle! ErrorCode: %x\n", GetLastError());
+		exit(-17);
 	}
 	ChooseSubFolder(pPath, aFolders, i);
+	free(pFolder_data);
 	return pPath;
 }
 
