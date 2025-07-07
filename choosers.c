@@ -1,5 +1,7 @@
 #include "choosers.h"
 #include "Printers.h"
+#include "main.h"
+
 
 HANDLE CreatePayload(LPWSTR pPath) 
 {
@@ -61,8 +63,8 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	return;
 }
 
-LPWSTR ChooseDrive(LPSTR pValidCharacters) 
-{	
+LPWSTR ChooseDrive(LPSTR pValidCharacters)
+{
 	LPWSTR pAnswer = calloc(5, sizeof(WCHAR));
 	wprintf(L"Please Choose a Drive\n");
 	wscanf_s(L"%1s", pAnswer, 5);
@@ -70,13 +72,13 @@ LPWSTR ChooseDrive(LPSTR pValidCharacters)
 	wprintf(L"Buffer's Contents %s\n", pAnswer);
 	unsigned int uiAmount = (unsigned int)strlen(pValidCharacters);
 	//start cut
-	for (unsigned int i = 0; i < uiAmount; i++) 
+	for (unsigned int i = 0; i < uiAmount; i++)
 	{
-		if (pAnswer[0] == pValidCharacters[i]) 
+		if (pAnswer[0] == pValidCharacters[i])
 		{
 			break;
 		}
-		if (i == uiAmount - 1) 
+		if (i == uiAmount - 1)
 		{
 			free(pAnswer);
 			printf("Please Chose A Valid Drive\n");
@@ -94,6 +96,7 @@ LPWSTR ChooseDrive(LPSTR pValidCharacters)
 
 BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pWorkingPath) 
 {
+	
 	if (PathFileExistsW(pCandidatePath)) 
 	{
 		return TRUE;
@@ -114,38 +117,37 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pWorkingPath)
 			{
 				wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu\n", pWorkingPath, GetLastError());
 				free(pAnswer);
-				return create_dir_result;
-				break;
+				return FALSE;
+				
 			}
 			wcscpy_s(pWorkingPath, MAX_PATH, pCandidatePath);
 			printf("Created The Desired Folder Successfully!\n");
-			free(pAnswer);
-			return create_dir_result;
 			break;	
 		}
 		case 'q':
 		case 'Q':
 		{
-			free(pAnswer);
 			printf("OK :(\nExiting Program With Exit Code: -3\n");
+			free(pAnswer);
 			return FALSE;
-			break;
+			
 		}
 		case 'f':
 		case 'F': 
 		{
 			free(pCandidatePath);//Freeing the Candidate Buffer because a new one is created in "PrintSubFolders()"" and i don't Want orphan pointers
-			free(pAnswer);
 			wprintf(L"Going Back To Folder Selction In Path: %s\n", pWorkingPath);
 			PrintSubFolders(pWorkingPath);
-			break;
+			free(pAnswer);
+			return FALSE;
 		}
 		case 'd':
 		case 'D': 
 		{
-			main();
+			free(pCandidatePath);
+			free(pWorkingPath);
 			free(pAnswer);
-			break;
+			return main();
 		}
 		case 'p':
 		case 'P': 
@@ -153,17 +155,13 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pWorkingPath)
 			free(pCandidatePath);
 			free(pAnswer);
 			wprintf(L"You Are Creating A Payload Vessel Under: %s\n", pWorkingPath);
-			CreatePayload(pWorkingPath);
-			return TRUE;
-			break;
-			
+			return CreatePayload(pWorkingPath);			
 		}
 		default:
 		{
 			printf("Your Input Is Incoherant With Provided Options.\nPlease Choose A Valid Answer.\n");
 			free(pAnswer);
-			FolderDebugger(pCandidatePath ,pWorkingPath);
-			break;
+			return FolderDebugger(pCandidatePath ,pWorkingPath);
 		}
 	}
 }
