@@ -1,111 +1,168 @@
 #include "choosers.h"
-
-
+#include "Printers.h"
 
 HANDLE CreatePayload(LPWSTR pPath) 
 {
 	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
-	LPWSTR pFilename = VirtualAlloc(0, MAX_PATH, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	LPWSTR pFilename = malloc(MAX_PATH * sizeof(WCHAR));
 	wscanf_s(L"%64s", pFilename, MAX_PATH);
 	wcscat_s(pPath, MAX_PATH, pFilename);
-	VirtualFree(pFilename, MAX_PATH, MEM_FREE);
+	free(pFilename);
 	PrintCWD(pPath);
 	HANDLE hFile = CreateFileW((LPCWSTR)pPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 128, NULL);
-	free(pPath);
+
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		printf("Failed To Create The Payload! :(\nExiting With Error Code: %x\n", GetLastError());
+		printf("Failed To Create The Payload! :(\nExiting With Error Code: %lu\n", GetLastError());
+		CloseHandle(hFile);
+		free(pPath);
 		exit (-5);
 	}
 	return hFile;
 }
 
-LPWSTR ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
+void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
 {
-	LPWSTR pAnswer = (LPWSTR)malloc(MAX_PATH * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
-	wscanf_s(L"%64s", pAnswer, MAX_PATH);//Scan for the desired folder name; options include the ID or a full string
+	LPWSTR pOriginalPath = malloc((wcslen(pPath) + 1) * sizeof(WCHAR));
+	if (!pOriginalPath) {
+		free(pPath);
+		free(pOriginalPath);
+		printf("Failed To Allocate Memory For The Original Path!\nExiting With Error Code: %x\n", GetLastError());
+		exit(-11);
+	}
+	size_t sCharacters = (MAX_PATH - wcslen(pPath) - 1) ;
+	LPWSTR pAnswer = malloc(sCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
+	if (!pAnswer) 
+	{
+		free(pPath);
+		free(pOriginalPath);
+		free(pAnswer);
+		printf("Failed To Allocate Memory For The User's Answer!\nExiting With ErrorCode: %x\n", GetLastError());
+		exit(-12);
+	}
+	wscanf_s(L"%64s", pAnswer, sCharacters);//Scan for the desired folder name; options include the ID or a full string
 	int ASCII_Value = (int)pAnswer[0] - 48;
 	if (0 <= ASCII_Value && (ASCII_Value <= 9 && ASCII_Value <= i))
 	{
-		wcscpy_s(pAnswer, MAX_PATH, aFolders[ASCII_Value].cFileName);
+		wcscpy_s(pAnswer, sCharacters, aFolders[ASCII_Value].cFileName);
 	}
-	wcscat_s(pPath, MAX_PATH, (LPCWSTR)pAnswer);
-	wcscat_s(pPath, MAX_PATH, L"\\");
+	wcscat_s(pPath, sCharacters, (LPCWSTR)pAnswer);
+	wcscat_s(pPath, sCharacters, L"\\");
 	PrintCWD(pPath);
-	free(pAnswer);
-	return pPath;
+	if (!FolderDebugger(pPath, pOriginalPath))
+	{
+		free(pPath);
+		free(pOriginalPath);
+		free(pAnswer);
+		exit(-13);
+	}
+	free(pOriginalPath);
+	free(pAnswer);	
+	return;
 }
 
-LPWSTR ChooseDrive(LPWSTR pDesiredDrive, PCHAR pValidCharacters) 
+LPWSTR ChooseDrive(LPSTR pValidCharacters) 
 {	
-	LPWSTR pPrediseredDrive = (LPWSTR)malloc(6* sizeof(WCHAR));
-	unsigned int uiBufferlength = _countof(pDesiredDrive);
-	pDesiredDrive[0] = L'\0';
+	LPWSTR pAnswer = calloc(5, sizeof(WCHAR));
 	wprintf(L"Please Choose a Drive\n");
-	wscanf_s(L"%1s", pPrediseredDrive, uiBufferlength);
-	pPrediseredDrive[0] = towupper(pPrediseredDrive[0]);
-	unsigned int uiAmount = strlen(pValidCharacters);
+	wscanf_s(L"%1s", pAnswer, 5);
+	pAnswer[0] = towupper(pAnswer[0]);
+	wprintf(L"Buffer's Contents %s\n", pAnswer);
+	unsigned int uiAmount = (unsigned int)strlen(pValidCharacters);
 	//start cut
 	for (unsigned int i = 0; i < uiAmount; i++) 
 	{
-		if (pPrediseredDrive[0] == pValidCharacters[i]) 
+		if (pAnswer[0] == pValidCharacters[i]) 
 		{
 			break;
 		}
 		if (i == uiAmount - 1) 
 		{
+			free(pAnswer);
 			printf("Please Chose A Valid Drive\n");
-			return ChooseDrive(pDesiredDrive, pValidCharacters);
+			return ChooseDrive(pValidCharacters);
 		}
 	}
-	//end cut
-	free(pValidCharacters);
-	wcscat_s(pDesiredDrive, uiBufferlength, (LPCSTR)pPrediseredDrive);
-	free(pPrediseredDrive);
-	wcscat_s(pDesiredDrive, uiBufferlength, L":\\");
-	PrintCWD(pDesiredDrive);
-	return pDesiredDrive;
+	//end 
+	LPWSTR pPath = (LPWSTR)calloc(MAX_PATH, sizeof(WCHAR));
+	wcscpy_s(pPath, MAX_PATH, pAnswer);
+	free(pAnswer);
+	wcscat_s(pPath, MAX_PATH, L":\\");
+	PrintCWD(pPath);
+	return pPath;
 }
 
-BOOL UserDebugger(LPWSTR pFilepath) 
+BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pWorkingPath) 
 {
-	if (PathFileExistsW(pFilepath)) 
+	if (PathFileExistsW(pCandidatePath)) 
 	{
 		return TRUE;
 	}
 	printf("The Desired Folder Does Not Exist Under The Current Path.\n");
-	printf("- To Create The Specified Folder Under The Current Path Press: [C | c]\n- To Exit Press: [Q | q]\n");
-	printf("- To Retry Entring A New Folder Name Press: [R | r]\n");
-	printf("- To Discard The Inputed And Create The Payload File In The Current Path Press: [P | p]\n");
-	PCHAR pAnswer = (PCHAR)malloc(2);
-	scanf_s("%1s", pAnswer, sizeof(pAnswer));
+	printf("- To Create The Specified Folder Under The Current Path Press: [ C | c ]\n- To Exit Press: [ Q | q ]\n");
+	printf("- To Retry Entring A New Folder Name Press: [ F | f ]\n- To Choose A New Drive Press: [ D | d ]\n");
+	printf("- To Discard The Inputed And Create The Payload File In The Current Path Press: [ P | p ]\n");
+	PCHAR pAnswer = malloc(2);
+	scanf_s("%1s", pAnswer, 2);
 	switch (pAnswer[0])
 	{
 		case 'c':
 		case 'C':
 		{
-			BOOL create_dir_result = CreateDirectoryW(pFilepath, NULL);
+			BOOL create_dir_result = CreateDirectoryW(pCandidatePath, NULL);
 			if (!create_dir_result)
 			{
-				wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu", pFilepath, GetLastError());
+				wprintf(L"Failed To Create A New Folder In The Desired Path!:\nPath: %s\nExiting With Error Code: %lu\n", pWorkingPath, GetLastError());
+				free(pAnswer);
 				return create_dir_result;
 				break;
 			}
+			wcscpy_s(pWorkingPath, MAX_PATH, pCandidatePath);
 			printf("Created The Desired Folder Successfully!\n");
+			free(pAnswer);
 			return create_dir_result;
 			break;	
 		}
 		case 'q':
 		case 'Q':
 		{
-			printf("OK :(\nExiting Program With Exit Code: -3");
+			free(pAnswer);
+			printf("OK :(\nExiting Program With Exit Code: -3\n");
 			return FALSE;
 			break;
+		}
+		case 'f':
+		case 'F': 
+		{
+			free(pCandidatePath);//Freeing the Candidate Buffer because a new one is created in "PrintSubFolders()"" and i don't Want orphan pointers
+			free(pAnswer);
+			wprintf(L"Going Back To Folder Selction In Path: %s\n", pWorkingPath);
+			PrintSubFolders(pWorkingPath);
+			break;
+		}
+		case 'd':
+		case 'D': 
+		{
+			main();
+			free(pAnswer);
+			break;
+		}
+		case 'p':
+		case 'P': 
+		{
+			free(pCandidatePath);
+			free(pAnswer);
+			wprintf(L"You Are Creating A Payload Vessel Under: %s\n", pWorkingPath);
+			CreatePayload(pWorkingPath);
+			return TRUE;
+			break;
+			
 		}
 		default:
 		{
 			printf("Your Input Is Incoherant With Provided Options.\nPlease Choose A Valid Answer.\n");
-			return UserDebugger(pFilepath);
+			free(pAnswer);
+			FolderDebugger(pCandidatePath ,pWorkingPath);
 			break;
 		}
 	}
