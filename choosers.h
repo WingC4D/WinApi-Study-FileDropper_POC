@@ -8,6 +8,6 @@
 
 
 
-void ChooseDrive(LPWSTR pPath,LPSTR pAvailableCharacters);
+void ChooseDrive(LPWSTR pPath,LPWSTR pAvailableCharacters);
 void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i);
 HANDLE CreatePayload(LPWSTR pPath);

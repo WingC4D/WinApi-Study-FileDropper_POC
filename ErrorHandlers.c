@@ -15,8 +15,16 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 	printf("- To Create The Specified Folder Under The Current Path Press: [ C | c ]\n- To Exit Press: [ Q | q ]\n");
 	printf("- To Retry Entring A New Folder Name Press: [ F | f ]\n- To Choose A New Drive Press: [ D | d ]\n");
 	printf("- To Discard The Inputed And Create The Payload File In The Current Path Press: [ P | p ]\n");
-	PCHAR pAnswer = malloc(2);
-	scanf_s("%1s", pAnswer, 2);
+	LPWSTR pAnswer = (LPWSTR)malloc(2 * sizeof(WCHAR));
+	if (!pAnswer) 
+	{
+		PrintMemoryError(L"The User's Answer in Folder Debugger");
+	}
+	wscanf_s(L"%1s", pAnswer, 2);
+	if (wcslen(pAnswer) < 1) {
+		wprintf(L"Failed To Catch The User's Answer!\nExiting With Error Code: %x\n", GetLastError());
+		exit(-18);
+	}
 	switch (pAnswer[0])
 	{
 		case 'c':
@@ -36,8 +44,11 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 		case 'q':
 		case 'Q':
 		{
-			printf("OK :(\nExiting Program With Exit Code: -13\n");
+			wprintf(L"OK :(\nExiting Program With Exit Code: -13\n");
+			free(pOriginalPath);
+			free(pCandidatePath);
 			free(pAnswer);
+			exit(-13);
 			return FALSE;
 
 		}
@@ -62,15 +73,16 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 		case 'p':
 		case 'P':
 		{
+			
 			free(pCandidatePath);
 			free(pAnswer);
 			wprintf(L"You Are Creating A Payload Vessel Under: %s\n", pOriginalPath);
 			CreatePayload(pOriginalPath);
-			exit(0);
+			return FALSE;
 		}
 		default:
 		{
-			printf("Your Input Is Incoherant With Provided Options.\nPlease Choose A Valid Answer.\n");
+			wprintf(L"Your Input Is Incoherant With Provided Options.\nPlease Choose A Valid Answer.\n");
 			free(pAnswer);
 			return FolderDebugger(pCandidatePath, pOriginalPath);
 		}

@@ -30,7 +30,7 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	wcscpy_s(pOriginalPath, sPathWordCount, pPath);
 	if (pOriginalPath == NULL) {
 		free(pPath);
-		PrintMemoryError("Original Path Copy Buffer In ChooseSubFolder");
+		PrintMemoryError(L"Original Path Copy Buffer In ChooseSubFolder");
 		exit(-11);
 	}
 	size_t sCharacters = (MAX_PATH - wcslen(pPath) - 1) ;
@@ -39,7 +39,7 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	{
 		free(pPath);
 		free(pOriginalPath);
-		PrintMemoryError("The User's Answer In ChooseSubFolder");
+		PrintMemoryError(L"The User's Answer In ChooseSubFolder");
 		exit(-12);
 	}
 	wscanf_s(L"%64s", pAnswer, sCharacters);//Scan for the desired folder name; options include the ID or a full string
@@ -62,13 +62,21 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	return;
 }
 
-void ChooseDrive(LPWSTR pPath, LPSTR pValidCharacters)
+void ChooseDrive(LPWSTR pPath, LPWSTR pValidCharacters)
 {
 	LPWSTR pAnswer = calloc(2, sizeof(WCHAR));
+	if (pAnswer == NULL)
+	{
+		PrintMemoryError(L"The User's Answer In ChooseDrive");
+		free(pPath);
+		free(pValidCharacters);
+		exit(-19);
+	}
 	wprintf(L"Please Choose a Drive\n");
 	wscanf_s(L"%1s", pAnswer, 2);
 	pAnswer[0] = towupper(pAnswer[0]);
-	unsigned int uiAmount = (unsigned int)strlen(pValidCharacters);
+	wprintf(L"pAnwer: %s\n", pAnswer);
+	unsigned int uiAmount = (unsigned int)wcslen(pValidCharacters);
 	//start cut
 	for (unsigned int i = 0; i < uiAmount; i++)
 	{
@@ -80,8 +88,7 @@ void ChooseDrive(LPWSTR pPath, LPSTR pValidCharacters)
 		{
 			free(pAnswer);
 			printf("Please Chose A Valid Drive\n");
-			PrintDrives(pPath);
-			return L' ';
+			return PrintDrives(pPath);
 		}
 	}
 	//end 
@@ -89,6 +96,6 @@ void ChooseDrive(LPWSTR pPath, LPSTR pValidCharacters)
 	free(pAnswer);
 	wcscat_s(pPath, MAX_PATH, L":\\");
 	PrintCWD(pPath);
-	return pPath;
+	return;
 }
 

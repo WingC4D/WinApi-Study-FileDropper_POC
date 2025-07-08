@@ -9,4 +9,4 @@ void PrintDrives(LPWSTR pPath);
 void PrintCWD(LPWSTR pPath);
 BOOL PrintUserName(void);
 void PrintSubFolders(LPWSTR pPath);
-void PrintMemoryError(LPWSTR pCFPoint);
+void PrintMemoryError(LPCWSTR pCFPoint);
