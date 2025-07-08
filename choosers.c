@@ -2,25 +2,48 @@
 #include "Printers.h"
 #include "ErrorHandlers.h"
 
-HANDLE CreatePayload(LPWSTR pPath) 
+HANDLE CreateVessel(LPWSTR pPath) 
 {
-	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");
-	LPWSTR pFilename = malloc(MAX_PATH * sizeof(WCHAR));
-	wscanf_s(L"%64s", pFilename, MAX_PATH);
-	wcscat_s(pPath, MAX_PATH, pFilename);
-	free(pFilename);
-	PrintCWD(pPath);
-	HANDLE hFile = CreateFileW((LPCWSTR)pPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 128, NULL);
-
-	if (hFile == INVALID_HANDLE_VALUE)
+	
+	SIZE_T sCharactersLeft = MAX_PATH - wcslen(pPath);//Calculating Dynamycally The Amount Of Character Left Out The System's Max Path Global Constant.
+	LPWSTR pAnswer = malloc(sCharactersLeft * sizeof(WCHAR));//Allocating The Amount of Memory Left Without a Syscall for teh File Name.
+	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");//Letting The User Know What Input Is Needed.
+	/* { Currently Takes In 64 Wide Characters Untill I learn How To Dynammically Choose The Amount Of Chars Scanned In C. }*/
+	wscanf_s(L"%64s", pAnswer, sCharactersLeft);//Taking In User's Input. 
+	wcscat_s(pPath, MAX_PATH, pAnswer);//Concatinating The Scanned Input Into the FilePath.
+	free(pAnswer);//Freeing Input's Buffer.
+	wprintf(L"Trying To Place Payload Vessel At: %s\n",pPath);// Printing The Path To Show The User Where The Payload/File Was Trying to Be Created. 
+	SECURITY_ATTRIBUTES SecurityAttributes_t =  {NULL}; //Initialising A Security Attributes Structre With All Data Members Set To Null
+	SecurityAttributes_t.bInheritHandle = TRUE;// Setting The Structure's InheritHandle Data Member To TRUE So Another Process Can Read The Vessel's Content's If Needed.
+	
+	/* 
+	* Storing The Result Of The Payload Creation Attempt To A Variable Of Type HANDLE.
+	* A HANDLE Is A DWORD Value Representing The I / O Device For The Kernel.
+	* DWORD = 4 bytes. This Means There Are 2 ^ 32 | 4,294,967,296 Values To Store The Result, I.E. a number ranging from 0 -> ({2^32} - 1).
+	*/
+	HANDLE hFile = CreateFileW //Trying To Create Said Vessel.
+	(		
+/*[In] */         (LPCWSTR)pPath, //{lpFileName} Casting The Program Made Path To A Long Pointer to a Constant Wide STRing &  Using It The Create The Vessel In The Dessired loaction.
+			   /*
+			    * GENERIC_READ = 0x80000000, GENERIC_WRITE = 0x40000000. (0d1073741824).
+			    * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
+				*/				
+/*[In] */         GENERIC_READ | GENERIC_WRITE, // {dwDesiredAccess} Generic Read Write So it Can Be Wrote Into and Make Sure The Content Is As Expected.
+/*[In]*/          FILE_SHARE_READ, // {dwShareMode} Using Share_Read Security Attributes So Future Processes Can Read From It. (1)
+/*[In, Optional]*/NULL, // {lpSecurity Attributes} Currently No Other Process Is Going On Or Needs This File So NULL Is Assigned. 
+/*[In]*/          CREATE_ALWAYS, // {dwCreateDisposition}The Current Set-up Makes Sure To Create A *CLEAN* (i.e. Turncated!) File.(2)
+/*[In]*/          FILE_ATTRIBUTE_NORMAL, //Currently The Procces Doesn't Want Nor Need Any Special Attributes, Therefor FILE_ATTRIBUTES_NORMAL Is Passed. (0x80 || 0d128)
+/*[In, Optional]*/NULL //
+	);
+	if (hFile == INVALID_HANDLE_VALUE)//Checking If The Vessel Creation Succeeded Or Failed.
 	{
-		printf("Failed To Create The Payload! :(\nExiting With Error Code: %lu\n", GetLastError());
-		CloseHandle(hFile);
-		free(pPath);
-
-		exit (-5);
+		printf("Failed To Create The Vessel! :(\nExiting With Error Code: %lu\n", GetLastError());//Letting The User Know The Vessel Creation Failed And Retriving The Last OS-Provided Error Code.
+		free(pPath);//Freeing The Main Buffer.
+	  /*DeleteFileW();*/ //Wanted To Implament And Saw The Inherant Race Condition.
+		CloseHandle(hFile);//Colsing The Allocated Association Made By The OS So This Process Can Manipulate It.
+		exit (-30);//Exiting The Process With Devloper-Provided Error Code -30.
 	}
-	return hFile;
+	return hFile;//Returning The Payload Vessel's File HANDLE Value To The main() Function Control Flow.
 }
 
 void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
@@ -31,9 +54,9 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	if (pOriginalPath == NULL) {
 		free(pPath);
 		PrintMemoryError(L"Original Path Copy Buffer In ChooseSubFolder");
-		exit(-11);
+		exit(-11);//
 	}
-	size_t sCharacters = (MAX_PATH - wcslen(pPath) - 1) ;
+	size_t sCharacters = (MAX_PATH - wcslen(pPath) - 1) ;//
 	LPWSTR pAnswer = malloc(sCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
 	if (!pAnswer) 
 	{
