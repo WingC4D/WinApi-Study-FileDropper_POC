@@ -49,35 +49,31 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 			free(pCandidatePath);
 			free(pAnswer);
 			exit(-13);
-			return FALSE;
 
 		}
 		case 'f':
 		case 'F':
 		{
-			//Freeing the Candidate Buffer because a new one is created in "PrintSubFolders()"" and i don't Want orphan pointers
 			wprintf(L"Going Back To Folder Selction In Path: %s\n", pOriginalPath);
 			PrintSubFolders(pOriginalPath);
-			//free(pOriginalPath);
 			free(pAnswer);
 			return TRUE;
 		}
 		case 'd':
 		case 'D':
 		{
-			free(pCandidatePath);
-			free(pOriginalPath);
+			//free(pOriginalPath);
 			free(pAnswer);
 			return main();
 		}
 		case 'p':
 		case 'P':
 		{
-			
-			free(pCandidatePath);
+			wcscpy_s(pCandidatePath, wcslen(pCandidatePath) + 1, pOriginalPath);
+			free(pOriginalPath);
 			free(pAnswer);
-			wprintf(L"You Are Creating A Payload Vessel Under: %s\n", pOriginalPath);
-			CreatePayload(pOriginalPath);
+			wprintf(L"You Are Creating A Payload Vessel Under: %s\n", pCandidatePath);
+			CreateVessel(pCandidatePath);
 			return FALSE;
 		}
 		default:

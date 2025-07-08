@@ -17,7 +17,7 @@ void PrintDrives(LPWSTR pPath)
 		printf("GetLogicalDrives Failed!\nExitig With Error Code: %x", GetLastError());
 		exit(-10);
 	}
-	LPWSTR pAvailableCharacters = (LPWSTR)malloc(sizeof(WCHAR));
+	LPWSTR pAvailableCharacters = (LPWSTR)calloc(1, sizeof(WCHAR));
 	if (pAvailableCharacters == NULL)
 	{
 		free(pPath);

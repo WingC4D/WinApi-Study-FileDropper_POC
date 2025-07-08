@@ -25,15 +25,16 @@ HANDLE CreateVessel(LPWSTR pPath)
 	(		
 /*[In] */         (LPCWSTR)pPath, //{lpFileName} Casting The Program Made Path To A Long Pointer to a Constant Wide STRing &  Using It The Create The Vessel In The Dessired loaction.
 			   /*
-			    * GENERIC_READ = 0x80000000, GENERIC_WRITE = 0x40000000. (0d1073741824).
+			    * GENERIC_READ = 0x80000000 
+				* GENERIC_WRITE = 0x40000000. (0d1073741824).
 			    * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
 				*/				
 /*[In] */         GENERIC_READ | GENERIC_WRITE, // {dwDesiredAccess} Generic Read Write So it Can Be Wrote Into and Make Sure The Content Is As Expected.
-/*[In]*/          FILE_SHARE_READ, // {dwShareMode} Using Share_Read Security Attributes So Future Processes Can Read From It. (1)
-/*[In, Optional]*/NULL, // {lpSecurity Attributes} Currently No Other Process Is Going On Or Needs This File So NULL Is Assigned. 
-/*[In]*/          CREATE_ALWAYS, // {dwCreateDisposition}The Current Set-up Makes Sure To Create A *CLEAN* (i.e. Turncated!) File.(2)
-/*[In]*/          FILE_ATTRIBUTE_NORMAL, //Currently The Procces Doesn't Want Nor Need Any Special Attributes, Therefor FILE_ATTRIBUTES_NORMAL Is Passed. (0x80 || 0d128)
-/*[In, Optional]*/NULL //
+/*[In]*/          FILE_SHARE_READ, // {dwShareMode} Using Share_Read Security Attributes So Future Processes Can Read From It. (0d1).
+/*[In, Optional]*/NULL, // {lpSecurity Attributes} Currently No Other Process Is Going On Or Needs This File So NULL Is Assigned. (0d0).
+/*[In]*/          CREATE_ALWAYS, // {dwCreateDisposition} The Current Set-up Makes Sure To Create A *CLEAN* (i.e. Turncated!) File.(0d2).
+/*[In]*/          FILE_ATTRIBUTE_NORMAL, //{dwFlagsAndAttributes} Currently The Procces Doesn't Want Nor Need Any Special Attributes, Therefor FILE_ATTRIBUTES_NORMAL Is Passed. (0x80 || 0d128).
+/*[In, Optional]*/NULL // {hTemplateFile} Currently The Procces Doesnt Need Or Require A Template File Although This Seems To Be An Extremly Usefull Arguemnt. (0d0).
 	);
 	if (hFile == INVALID_HANDLE_VALUE)//Checking If The Vessel Creation Succeeded Or Failed.
 	{
@@ -48,39 +49,40 @@ HANDLE CreateVessel(LPWSTR pPath)
 
 void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
 {
-	size_t sPathWordCount = (size_t)(wcslen(pPath) + 1);
-	LPWSTR pOriginalPath = malloc(MAX_PATH * sizeof(WCHAR));
-	wcscpy_s(pOriginalPath, sPathWordCount, pPath);
+	SIZE_T OccupiedCharacters = (SIZE_T)(wcslen(pPath) + 1);//Calculating The Amount Of Wchar's Lef
+	LPWSTR pOriginalPath = malloc(OccupiedCharacters * sizeof(WCHAR));
 	if (pOriginalPath == NULL) {
 		free(pPath);
 		PrintMemoryError(L"Original Path Copy Buffer In ChooseSubFolder");
 		exit(-11);//
 	}
-	size_t sCharacters = (MAX_PATH - wcslen(pPath) - 1) ;//
-	LPWSTR pAnswer = malloc(sCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
-	if (!pAnswer) 
+	wcscpy_s(pOriginalPath, OccupiedCharacters, pPath);
+	SIZE_T sUnOccupiedCharacters = ((size_t)MAX_PATH - OccupiedCharacters) ;//
+	LPWSTR pAnswer = malloc(sUnOccupiedCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
+	if (pAnswer == NULL) 
 	{
 		free(pPath);
 		free(pOriginalPath);
 		PrintMemoryError(L"The User's Answer In ChooseSubFolder");
 		exit(-12);
 	}
-	wscanf_s(L"%64s", pAnswer, sCharacters);//Scan for the desired folder name; options include the ID or a full string
+	wscanf_s(L"%64s", pAnswer, sUnOccupiedCharacters);//Scan for the desired folder name; options include the ID or a full string
 	int ASCII_Value = (int)pAnswer[0] - 48;
 	if (0 <= ASCII_Value && (ASCII_Value <= 9 && ASCII_Value <= i))
 	{
-		wcscpy_s(pAnswer, sCharacters, aFolders[ASCII_Value].cFileName);
+		wcscpy_s(pAnswer, sUnOccupiedCharacters, aFolders[ASCII_Value].cFileName);
 	}
-	wcscat_s(pPath, sCharacters, pAnswer);
-	wcscat_s(pPath, sCharacters, L"\\");
+	wcscat_s(pPath, sUnOccupiedCharacters, pAnswer);
+	wcscat_s(pPath, sUnOccupiedCharacters, L"\\");
 	PrintCWD(pPath);
 	if (!FolderDebugger(pPath, pOriginalPath))
 	{
+		free(pPath);
 		free(pOriginalPath);
-		//free(pPath);
 		free(pAnswer);
 		exit(-13);
 	}
+	free(pOriginalPath);
 	free(pAnswer);	
 	return;
 }

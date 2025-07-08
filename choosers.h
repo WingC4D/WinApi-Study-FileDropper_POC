@@ -10,4 +10,4 @@
 
 void ChooseDrive(LPWSTR pPath,LPWSTR pAvailableCharacters);
 void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i);
-HANDLE CreatePayload(LPWSTR pPath);
+HANDLE CreateVessel(LPWSTR pPath);
