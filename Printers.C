@@ -37,7 +37,7 @@ void PrintDrives(LPWSTR pPath)
 			if (pAvailableCharacters == NULL) 
 			{
 				free(pPath);
-				PrintMemoryError("The Reallocation Of the Available Characters in Printers");
+				PrintMemoryError(L"The Reallocation Of the Available Characters in Printers");
 				exit(-21);
 			}
 		}
@@ -106,7 +106,7 @@ void PrintSubFolders(LPWSTR pPath)
 		free(pPath);
 		free(pFolder_data);
 		FindClose(hFile);
-		PrintMemoryError("The aFolders Buffer in PrintSubFolders");
+		PrintMemoryError(L"The aFolders Buffer in PrintSubFolders");
 		exit(-21);
 	}
 	if (pFolder_data->dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY)//Checking if the First Found File is a Folder or not using the bit "and" operator
@@ -126,7 +126,7 @@ void PrintSubFolders(LPWSTR pPath)
 				free(pPath);
 				free(pFolder_data);
 				FindClose(hFile);
-				PrintMemoryError("The Reallocation of aFolders in PrintSubFolders");
+				PrintMemoryError(L"The Reallocation of aFolders in PrintSubFolders");
 				exit(-21);
 			}
 		}
