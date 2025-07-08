@@ -4,25 +4,28 @@
 
 HANDLE CreateVessel(LPWSTR pPath) 
 {
-	
-	SIZE_T sCharactersLeft = MAX_PATH - wcslen(pPath);//Calculating Dynamycally The Amount Of Character Left Out The System's Max Path Global Constant.
-	LPWSTR pAnswer = malloc(sCharactersLeft * sizeof(WCHAR));//Allocating The Amount of Memory Left Without a Syscall for teh File Name.
-	wprintf(L"Please Enter Your Desired File Name and Format Under Your Chosen Folder: \n");//Letting The User Know What Input Is Needed.
-	/* { Currently Takes In 64 Wide Characters Untill I learn How To Dynammically Choose The Amount Of Chars Scanned In C. }*/
-	wscanf_s(L"%64s", pAnswer, sCharactersLeft);//Taking In User's Input. 
+	printf("[#] Please Enter Your Desired File Name and Format Under Your Chosen Folder!\n");//Letting The User Know What Input Is Needed.
+	printf("[#] %d Characters of your Input Will Be Addmited.\n", (int)(MAX_PATH - wcslen(pPath)));
+	int iPathLength = wcslen(pPath);
+	WCHAR pAnswer[MAX_PATH] = { L'\0' };//Allocating The Amount of Memory Left Without a Syscall for teh File Name.
+	wscanf_s(L"%259s", &pAnswer, (unsigned int)_countof(pAnswer));//Taking In User's Input. 
+	for (int i = 259; i >= (MAX_PATH - iPathLength); i--)
+	{
+		printf("Index: %d\n", i);
+		pAnswer[i] = L'\0';
+	}
+	int iAnswerLength = (int)wcslen(pAnswer);
+	printf("Length Of Scanned Answer: %d\n", iAnswerLength);
 	wcscat_s(pPath, MAX_PATH, pAnswer);//Concatinating The Scanned Input Into the FilePath.
-	free(pAnswer);//Freeing Input's Buffer.
 	wprintf(L"Trying To Place Payload Vessel At: %s\n",pPath);// Printing The Path To Show The User Where The Payload/File Was Trying to Be Created. 
-	SECURITY_ATTRIBUTES SecurityAttributes_t =  {NULL}; //Initialising A Security Attributes Structre With All Data Members Set To Null
-	SecurityAttributes_t.bInheritHandle = TRUE;// Setting The Structure's InheritHandle Data Member To TRUE So Another Process Can Read The Vessel's Content's If Needed.
-	
+	//SECURITY_ATTRIBUTES SecurityAttributes_t =  {NULL}; //Initialising A Security Attributes Structre With All Data Members Set To Null
+	//SecurityAttributes_t.bInheritHandle = TRUE;// Setting The Structure's InheritHandle Data Member To TRUE So Another Process Can Read The Vessel's Content's If Needed.
 	/* 
 	* Storing The Result Of The Payload Creation Attempt To A Variable Of Type HANDLE.
 	* A HANDLE Is A DWORD Value Representing The I / O Device For The Kernel.
 	* DWORD = 4 bytes. This Means There Are 2 ^ 32 | 4,294,967,296 Values To Store The Result, I.E. a number ranging from 0 -> ({2^32} - 1).
 	*/
-	HANDLE hFile = CreateFileW //Trying To Create Said Vessel.
-	(		
+	HANDLE hFile = CreateFileW(//(Trying To Create Said Vessel.
 /*[In] */         (LPCWSTR)pPath, //{lpFileName} Casting The Program Made Path To A Long Pointer to a Constant Wide STRing &  Using It The Create The Vessel In The Dessired loaction.
 			   /*
 			    * GENERIC_READ = 0x80000000 
@@ -36,36 +39,28 @@ HANDLE CreateVessel(LPWSTR pPath)
 /*[In]*/          FILE_ATTRIBUTE_NORMAL, //{dwFlagsAndAttributes} Currently The Procces Doesn't Want Nor Need Any Special Attributes, Therefor FILE_ATTRIBUTES_NORMAL Is Passed. (0x80 || 0d128).
 /*[In, Optional]*/NULL // {hTemplateFile} Currently The Procces Doesnt Need Or Require A Template File Although This Seems To Be An Extremly Usefull Arguemnt. (0d0).
 	);
-	if (hFile == INVALID_HANDLE_VALUE)//Checking If The Vessel Creation Succeeded Or Failed.
-	{
-		printf("Failed To Create The Vessel! :(\nExiting With Error Code: %lu\n", GetLastError());//Letting The User Know The Vessel Creation Failed And Retriving The Last OS-Provided Error Code.
-		free(pPath);//Freeing The Main Buffer.
-	  /*DeleteFileW();*/ //Wanted To Implament And Saw The Inherant Race Condition.
-		CloseHandle(hFile);//Colsing The Allocated Association Made By The OS So This Process Can Manipulate It.
-		exit (-30);//Exiting The Process With Devloper-Provided Error Code -30.
-	}
 	return hFile;//Returning The Payload Vessel's File HANDLE Value To The main() Function Control Flow.
 }
 
-void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
+BOOL ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
 {
 	SIZE_T OccupiedCharacters = (SIZE_T)(wcslen(pPath) + 1);//Calculating The Amount Of Wchar's Lef
-	LPWSTR pOriginalPath = malloc(OccupiedCharacters * sizeof(WCHAR));
-	if (pOriginalPath == NULL) {
-		free(pPath);
+	LPWSTR pOriginalPath = calloc(OccupiedCharacters , sizeof(WCHAR));
+	if (pOriginalPath == NULL)
+	{ 
 		PrintMemoryError(L"Original Path Copy Buffer In ChooseSubFolder");
 		exit(-11);//
 	}
 	wcscpy_s(pOriginalPath, OccupiedCharacters, pPath);
-	SIZE_T sUnOccupiedCharacters = ((size_t)MAX_PATH - OccupiedCharacters) ;//
+	unsigned int sUnOccupiedCharacters = ((size_t)MAX_PATH - OccupiedCharacters) ;//
 	LPWSTR pAnswer = malloc(sUnOccupiedCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
 	if (pAnswer == NULL) 
 	{
-		free(pPath);
 		free(pOriginalPath);
 		PrintMemoryError(L"The User's Answer In ChooseSubFolder");
-		exit(-12);
+		return FALSE;
 	}
+	pAnswer[0] = L'\0';
 	wscanf_s(L"%64s", pAnswer, sUnOccupiedCharacters);//Scan for the desired folder name; options include the ID or a full string
 	int ASCII_Value = (int)pAnswer[0] - 48;
 	if (0 <= ASCII_Value && (ASCII_Value <= 9 && ASCII_Value <= i))
@@ -77,30 +72,21 @@ void ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 	PrintCWD(pPath);
 	if (!FolderDebugger(pPath, pOriginalPath))
 	{
-		free(pPath);
 		free(pOriginalPath);
 		free(pAnswer);
-		exit(-13);
+		return FALSE;
 	}
 	free(pOriginalPath);
 	free(pAnswer);	
-	return;
+	return TRUE;
 }
 
-void ChooseDrive(LPWSTR pPath, LPWSTR pValidCharacters)
+BOOL ChooseDrive(LPWSTR pPath, LPWSTR pValidCharacters)
 {
-	LPWSTR pAnswer = calloc(2, sizeof(WCHAR));
-	if (pAnswer == NULL)
-	{
-		PrintMemoryError(L"The User's Answer In ChooseDrive");
-		free(pPath);
-		free(pValidCharacters);
-		exit(-19);
-	}
+	WCHAR pAnswer [2];
 	wprintf(L"Please Choose a Drive\n");
 	wscanf_s(L"%1s", pAnswer, 2);
 	pAnswer[0] = towupper(pAnswer[0]);
-	wprintf(L"pAnwer: %s\n", pAnswer);
 	unsigned int uiAmount = (unsigned int)wcslen(pValidCharacters);
 	//start cut
 	for (unsigned int i = 0; i < uiAmount; i++)
@@ -111,16 +97,13 @@ void ChooseDrive(LPWSTR pPath, LPWSTR pValidCharacters)
 		}
 		if (i == uiAmount - 1)
 		{
-			free(pAnswer);
-			printf("Please Chose A Valid Drive\n");
-			return PrintDrives(pPath);
+			return FALSE;
 		}
 	}
 	//end 
 	wcscpy_s(pPath, MAX_PATH, pAnswer);
-	free(pAnswer);
 	wcscat_s(pPath, MAX_PATH, L":\\");
 	PrintCWD(pPath);
-	return;
+	return TRUE;
 }
 
