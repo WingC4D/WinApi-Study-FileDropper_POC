@@ -15,9 +15,8 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 	printf("- To Create The Specified Folder Under The Current Path Press: [ C | c ]\n- To Exit Press: [ Q | q ]\n");
 	printf("- To Retry Entring A New Folder Name Press: [ F | f ]\n- To Choose A New Drive Press: [ D | d ]\n");
 	printf("- To Discard The Inputed And Create The Payload File In The Current Path Press: [ P | p ]\n");
-	WCHAR pAnswer[2] ;
+	WCHAR pAnswer[2] = { L'\0' };
 	wscanf_s(L"%1s", pAnswer, 2);
-	pAnswer[1] = L'\0';
 	switch (pAnswer[0])
 	{
 		case 'c':

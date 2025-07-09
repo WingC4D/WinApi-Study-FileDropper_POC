@@ -12,28 +12,14 @@ void PrintMemoryError(LPCWSTR pCFPoint)
 	return;
 }
 
-BOOL PrintDrives(LPWSTR pPath, LPWSTR pAvailableCharacters)
+void PrintDrives(LPWSTR pDrives_arr) 
 {
-	
-	wprintf(L"Available Drives:\n");
-	DWORD bitmask = GetLogicalDrives();
-	if (bitmask == 0)
-	{
-		printf("[X] GetLogicalDrives Failed!\n[X] Exitig With Error Code: %x", GetLastError());
-		return FALSE;
+	unsigned short usArrayLength = (unsigned short)wcslen(pDrives_arr);
+	for (unsigned short i = 0; i < usArrayLength; i++) 
+	{	
+		wprintf(L"[#] - %c\n", pDrives_arr[i]);
 	}
-	unsigned int i = 0;
-	WCHAR cBase = L'A';
-	for (WCHAR iCount = 0; iCount < 26; iCount++)
-	{
-		if (bitmask & (1 << iCount))
-		{
-			pAvailableCharacters[i] = cBase + iCount;
-			wprintf(L"[#] %c\n", cBase + iCount);
-			i++;
-		}
-	}
-	return TRUE;
+	return;
 }
 
 void PrintCWD(LPWSTR pPath)
@@ -48,7 +34,6 @@ BOOL PrintUserName(void)
 	DWORD pSizeofusername[8] = { NULL }; //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
 	if (GetUserNameW(pUsername, pSizeofusername) == 0)
 	{
-		printf("[X] GetUserNameA API Function Failed!\n[X] Error Code: %x\n", GetLastError());
 		return FALSE;
 	}
 	wprintf(L"[#] Username: %s\n", pUsername);
@@ -80,7 +65,7 @@ BOOL PrintSubFolders(LPWSTR pPath)
 	}
 	if (folder_data_t.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY)//Checking if the First Found File is a Folder or not using the bit "and" operator
 	{
-		wprintf(L"[%d] Folder Name - %s\n", folder_data_t.cAlternateFileName, i); //print out the folder name and the id tag associated with it.
+		wprintf(L"[%d] Folder Name - %s\n", i, folder_data_t.cAlternateFileName); //print out the folder name and the id tag associated with it.
 		paFolders[i] = folder_data_t;//De-refencing the pointer tot the "FIND_DATA" struct to hold the struct itself
 		i++;//increase the value of the counter by 1
 	}

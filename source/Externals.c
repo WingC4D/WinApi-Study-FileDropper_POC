@@ -1,11 +1,11 @@
 #include "Externals.h"
 void call(void)
 {
-	HMODULE hModule = GetModuleHandleA("DLL_Study.dll");// Attempting to get the handle of the DLL
+	HMODULE hModule = GetModuleHandleA("Libraries\\DLL_Study.dll");// Attempting to get the handle of the DLL
 	if (hModule == NULL)
 	{
 		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");
-		hModule = LoadLibraryA("DLL_Study.dll");// If the DLL is not loaded in memory, use LoadLibrary to load it
+		hModule = LoadLibraryA("Libraries\\DLL_Study.dll");// If the DLL is not loaded in memory, use LoadLibrary to load it
 		if (hModule == NULL)
 		{
 			printf("Failed to Fetch Library Handle!\nExiting Program With Error Code: -21...\n");

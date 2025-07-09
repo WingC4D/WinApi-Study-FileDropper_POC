@@ -6,16 +6,15 @@ HANDLE CreateVessel(LPWSTR pPath)
 {
 	printf("[#] Please Enter Your Desired File Name and Format Under Your Chosen Folder!\n");//Letting The User Know What Input Is Needed.
 	printf("[#] %d Characters of your Input Will Be Addmited.\n", (int)(MAX_PATH - wcslen(pPath)));
-	int iPathLength = wcslen(pPath);
-	WCHAR pAnswer[MAX_PATH] = { L'\0' };//Allocating The Amount of Memory Left Without a Syscall for teh File Name.
+	WCHAR pAnswer[MAX_PATH] = { L'\0' };//Allocating Memory For The User's Anser.
 	wscanf_s(L"%259s", &pAnswer, (unsigned int)_countof(pAnswer));//Taking In User's Input. 
-	for (int i = 259; i >= (MAX_PATH - iPathLength); i--)
+	int iPathLength = wcslen(pPath);//Saving The Path Length To Avoind Function Calls At Each Iteraion Of The For Loop.
+	for (int i = 259; i >= (MAX_PATH - iPathLength); i--) //Cleanup Loop For User Input Exceeding The Remaining Amount Of Characters.
 	{
 		printf("Index: %d\n", i);
 		pAnswer[i] = L'\0';
 	}
 	int iAnswerLength = (int)wcslen(pAnswer);
-	printf("Length Of Scanned Answer: %d\n", iAnswerLength);
 	wcscat_s(pPath, MAX_PATH, pAnswer);//Concatinating The Scanned Input Into the FilePath.
 	wprintf(L"Trying To Place Payload Vessel At: %s\n",pPath);// Printing The Path To Show The User Where The Payload/File Was Trying to Be Created. 
 	//SECURITY_ATTRIBUTES SecurityAttributes_t =  {NULL}; //Initialising A Security Attributes Structre With All Data Members Set To Null
@@ -83,8 +82,8 @@ BOOL ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i)
 
 BOOL ChooseDrive(LPWSTR pPath, LPWSTR pValidCharacters)
 {
-	WCHAR pAnswer [2];
 	wprintf(L"Please Choose a Drive\n");
+	WCHAR pAnswer [2];
 	wscanf_s(L"%1s", pAnswer, 2);
 	pAnswer[0] = towupper(pAnswer[0]);
 	unsigned int uiAmount = (unsigned int)wcslen(pValidCharacters);
