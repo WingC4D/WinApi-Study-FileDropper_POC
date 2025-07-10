@@ -1,7 +1,7 @@
 #include "Printers.h"
 #include "choosers.h"
 #include "ErrorHandlers.h"
-
+#include "SystemInteractors.h"
 // Constructing a new data type that represents HelloWorld's function pointer.
 typedef void(WINAPI* HelloWorldFunctionPointer)();
 
@@ -12,12 +12,12 @@ void PrintMemoryError(LPCWSTR pCFPoint)
 	return;
 }
 
-void PrintDrives(LPWSTR pDrives_arr) 
+void PrintDrives(LPWSTR pPath) 
 {
-	unsigned short usArrayLength = (unsigned short)wcslen(pDrives_arr);
+	unsigned short usArrayLength = (unsigned short)wcslen(pPath);
 	for (unsigned short i = 0; i < usArrayLength; i++) 
 	{	
-		wprintf(L"[#] - %c\n", pDrives_arr[i]);
+		wprintf(L"[#] - %c\n", pPath[i]);
 	}
 	return;
 }
@@ -110,3 +110,13 @@ BOOL PrintSubFolders(LPWSTR pPath)
 	return TRUE;
 }
 
+BOOL UserIODrives(LPWSTR pPath)
+{
+	wprintf(L"Please Choose a Drive\n");
+	WCHAR pAnswer[2];
+	wscanf_s(L"%1s", pAnswer, 2);
+	pAnswer[0] = towupper(pAnswer[0]);
+	BOOL result = CACDrives(pPath, &pAnswer);
+	return result;
+
+}

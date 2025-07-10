@@ -4,5 +4,7 @@
 #include <stdio.h>
 
 
-WIN32_FIND_DATAW FetchSubFolders();
-BOOL FetchDrives(LPWSTR drives_arr);
+void FetchSubFolders(LPWSTR pPath);
+void FetchDrives(LPWSTR pPath);
+BOOL CACDrives(LPWSTR pPath, WCHAR* pAnswer);
+HANDLE CreateVessel(LPWSTR pPath);

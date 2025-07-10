@@ -2,7 +2,7 @@
 #include "choosers.h"
 #include "main.h"
 #include "Printers.h"
-
+#include "SystemInteractors.h"
 
 BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 {

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <shlwapi.h>
 
-void PrintDrives(LPWSTR pDrives_arr);
+void PrintDrives(LPWSTR pPath);
 void PrintCWD(LPWSTR pPath);
 BOOL PrintUserName(void);
 BOOL PrintSubFolders(LPWSTR pPath);
