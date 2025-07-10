@@ -44,7 +44,7 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 		case 'F':
 		{
 			wprintf(L"Going Back To Folder Selction In Path: %s\n", pOriginalPath);
-			PrintSubFolders(pOriginalPath);
+			PrintSubFiles(pOriginalPath);
 			return TRUE;
 		}
 		case 'd':

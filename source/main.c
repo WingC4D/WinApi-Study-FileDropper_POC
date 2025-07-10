@@ -6,8 +6,9 @@
 
 int main(void) 
 {
-	call();
-	LPWSTR pPath[MAX_PATH] = {L'\0'};
+	//call();
+	WCHAR pPath[260] = { L'\0' };
+	
 	FetchDrives(pPath);
 	if (pPath[0] == L'0')
 	{
@@ -16,24 +17,32 @@ int main(void)
 	}
 	PrintDrives(pPath);
 	BOOL result = UserIODrives(pPath);
-	while (result == FALSE)
+	while (!result)
 	{
 		wprintf(L"[X] Wrong Input!\n");
 		PrintDrives(pPath);
 		result = UserIODrives(pPath);
 	}
-	if (PrintSubFolders(pPath) == FALSE) 
+	PrintCWD(pPath);
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = FetchSubFiles(&pPath);
+	if (pFiles_arr_t == NULL) 
 	{
 		printf("[X] Folder Choosing || Printing Failed!\n[X] Exiting With Error Code : % x\n", GetLastError());
 		return -2;
 	}
+	
+	PrintSubFiles(pFiles_arr_t);
+	UserIOFolders(&pPath, pFiles_arr_t);
+	PrintCWD(pPath);
+ 	FreeFileArray(pFiles_arr_t);
 	HANDLE hFile = INVALID_HANDLE_VALUE;
-	hFile = CreateVessel(pPath);
+	hFile = CreateVessel(&pPath);
 	if (hFile == INVALID_HANDLE_VALUE) 
 	{
 		printf("[X] Failed To Fetch File Handle!\n[X] Exiting With Error Code: %x\n", GetLastError());
 		return -3;
 	}
+	CloseHandle(hFile);
 	printf("[#] Payload Created Successfully! :)\n");
 	printf("[#] Press 'Enter' To Exit! :)");
 	return 0;
