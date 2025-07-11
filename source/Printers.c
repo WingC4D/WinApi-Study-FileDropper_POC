@@ -5,13 +5,17 @@
 // Constructing a new data type that represents HelloWorld's function pointer.
 typedef void(WINAPI* HelloWorldFunctionPointer)();
 
-void PrintMemoryError(LPCWSTR pCFPoint)
+void PrintMemoryError(
+	LPCWSTR pCFPoint
+)
 {
 	wprintf(L"[X] Failed To Allocate Memory For %s!\nExiting With Error Code : % x\n", pCFPoint, GetLastError());
 	return;
 }
 
-void PrintDrives(LPWSTR pPath) 
+void PrintDrives(
+	LPWSTR pPath
+) 
 {
 	unsigned usArrayLength = (unsigned)wcslen(pPath);
 	for (unsigned i = 0; i < usArrayLength; i++) 
@@ -21,13 +25,17 @@ void PrintDrives(LPWSTR pPath)
 	return;
 }
 
-void PrintCWD(LPWSTR pPath)
+void PrintCWD(
+	LPWSTR pPath
+)
 {
 	wprintf(L"Current Working Path: %s\n", pPath);
 	return;
 }
 
-BOOL PrintUserName(void) 
+BOOL PrintUserName(
+	void
+) 
 {
 	WCHAR pUsername[MAX_PATH] = { L'\0' }; //Assigning a Buffer for the current username to land at.
 	DWORD pSizeofusername[8] = { NULL }; //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
@@ -40,7 +48,9 @@ BOOL PrintUserName(void)
 	return TRUE;
 }
 
-void PrintSubFiles(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t) 
+void PrintSubFiles(
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+) 
 {
 	for(unsigned i = 0; i < pFiles_arr_t->count; i++)
 	{

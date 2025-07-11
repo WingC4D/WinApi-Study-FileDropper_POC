@@ -11,15 +11,35 @@ typedef struct _WIN32_FILE {
 typedef struct _WIN32_FIND_DATA_ARRAYW {
     LPWIN32_FILE pFiles_arr;
     size_t count;                  // Number of actual files stored in the array
+    int OOM;
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;
 
-LPWIN32_FIND_DATA_ARRAYW CreateFilesArrayW(LPWSTR pPath);
+LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
+    LPWSTR pPath
+);
+LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW(
+    LPWSTR pPath,
+    LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+);
 
-BOOL FetchDrives(LPWSTR pPath);
+BOOL FetchDrives(
+    LPWSTR pPath
+);
 
-BOOL CACDrives(LPWSTR pPath, WCHAR* pAnswer);
+BOOL CACDrives(
+    LPWSTR pPath, 
+    WCHAR* pAnswer
+);
 
-HANDLE CreateVessel(LPWSTR pPath);
+BOOL TraverseFolders(
+    LPWSTR pPath
+);
 
-void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t);
+HANDLE CreateVessel(
+    LPWSTR pPath
+);
+
+void FreeFileArray(
+    LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+);
 

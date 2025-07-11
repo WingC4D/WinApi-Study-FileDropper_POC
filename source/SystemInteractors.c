@@ -1,6 +1,8 @@
 #include "SystemInteractors.h"
 //Automates Taking All System-Available Drive Letter And Inputing Them To A Path Buffer.
-BOOL FetchDrives(LPWSTR pPath)
+BOOL FetchDrives(
+	LPWSTR pPath
+)
 {
 	DWORD dwDrivesBitMask = GetLogicalDrives();//notice Dword 32bits If the function succeeds, the return value is a bitmask representing the currently available disk drives. Bit position 0 (the least-significant bit) is drive A, bit position 1 is drive B, bit position 2 is drive C, and so on.
 	if (dwDrivesBitMask == 0) return FALSE;// If No Bit Was Set As 1 (i.e. 0b00000000 {Which Is 0}) The Function Failed And False Is Returned
@@ -39,9 +41,85 @@ BOOL CACDrives(
 	return TRUE;//Returning True As Our Path Buffer Is ready For Further Use & Manipulation.
 }
 
+/*
+ * Shortens and Automates The Fetching of Files Under A Working Path, Using Only, Said Path .
+ * Returing All The Files In An Struct Holding The Array For Easier Further Manipulation. 
+ */
+LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
+	LPWSTR pPath
+)
+{
+	//Initilizing Data Needed.
+	HANDLE hFile = INVALID_HANDLE_VALUE;//Initializing The hFile Value as INVAILD_HANDLE_VALUE As A Net To Catch Any Reason The First File Finding Filed
+	WIN32_FIND_DATAW find_data_t;//Allocating memory for a Find_Data Structure to hold the file's info.
+	size_t sArraySize = 3;//Initail Array Size
+	LPWIN32_FILE pFiles_arr = calloc(sArraySize, sizeof(WIN32_FILE));//Creating a Dynamic Buffer To Hold The Folder Data Structs
+	if (pFiles_arr == NULL) return NULL;//If The Allocation Failed, Returns Null.
+	//Creating The Needed Search Path
+	wcscat_s(pPath, MAX_PATH, L"*");//Adding the needed wildcard for the search.
+	hFile = FindFirstFileW(pPath, &find_data_t);//using the Path With The Asteriks Wild Card to Look Under The Current Path For The First File HANDLE & Storing The WIN32_Find_DATA At An Initialized and refrenced Address.
+	//Clearing Path
+	pPath[wcslen(pPath) - 1] = L'\0';//Deleting The Asteriks Wildcard that was used for the Search.
+	//Saftey Net
+	if (hFile == INVALID_HANDLE_VALUE)  return NULL;//checking if the search for the first File succeeded or not.
+	unsigned i = 0;//Running Index
+	//File Retrival
+	while (FindNextFileW(hFile, &find_data_t)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
+	{	
+		pFiles_arr[i].data = find_data_t;//Saves The Struct To The Array In The Struct
+		pFiles_arr[i].ulindex = i;//Save The Index To The Struct.
+		if (i == sArraySize / 2) //Checks If The index Got to Half Of The Array Size
+		{//Calling The Buffer Reallocation & Checking  If The Buffer Reallocation Failed.
+			if (FileBufferRoundUP(&sArraySize, &pFiles_arr) == FALSE)
+			{//If it did, Returns NULL
+				return NULL; 
+			}
+		}// if Null Wasn't Returned Incrament The Running Index By 1.
+		i++;
+	}
+	WIN32_FIND_DATA_ARRAYW *pFiles_arr_t = malloc(i * sizeof(WIN32_FIND_DATA_ARRAYW));//Creating The Struct To Pack The Extracted Data
+	pFiles_arr_t->pFiles_arr = pFiles_arr;//Assiging The Dynamic Buffer To The "arr" Data Memeber.
+	pFiles_arr_t->count = i;//Assigns The End Result Of The index As The 'count' Data Memeber.
+	return pFiles_arr_t;//Returns The Struct.
+}
+
+//Automates The Freeing Of The Dynamic Allocation For The Files Array Struct & All Of It's Nested Dynamic Allocations.
+void FreeFileArray(
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+)
+{
+	free(pFiles_arr_t->pFiles_arr);//Free's The Array Dynamic Buffer
+	free(pFiles_arr_t);//Freein The Struct Itself.
+	return;
+}
+
+LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW(
+	LPWSTR pPath,
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+) 
+{
+	FreeFileArray(pFiles_arr_t);//Free's The Current Array.
+	return FetchFileArrayW(pPath);// Return's An Array Under The Current Path.
+}
+
+//Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
+BOOL FileBufferRoundUP(
+	size_t* sArraySize,
+	LPWIN32_FIND_DATAW* pFiles_arr
+)
+{
+	*sArraySize = *sArraySize * 2;//Doubling The Wanted Array Size
+	LPWIN32_FIND_DATAW pTemp = (LPWIN32_FIND_DATAW)realloc(*pFiles_arr, *sArraySize * sizeof(WIN32_FIND_DATAW)); //Reallocating The Scaled Up Array Size;
+	if (pTemp == NULL) return FALSE; //If The Reallction failed returning False.
+	*pFiles_arr = pTemp;//Chaniging the Pointer's Value To The New Address.
+	return TRUE;
+}
+
 //Needs Work.
-HANDLE CreateVessel(LPWSTR pPath)
-{ 
+HANDLE CreateVessel(
+	LPWSTR pPath
+)
+{
 	printf("[#] Please Enter Your Desired File Name and Format Under Your Chosen Folder!\n");//Letting The User Know What Input Is Needed.
 	printf("[#] %u Characters of your Input Will Be Addmited.\n", (unsigned)(MAX_PATH - wcslen(pPath)));
 	WCHAR pAnswer[MAX_PATH] = { L'\0' };//Allocating Memory For The User's Anser.
@@ -77,60 +155,4 @@ HANDLE CreateVessel(LPWSTR pPath)
 		/*[In, Optional]*/NULL // {hTemplateFile} Currently The Procces Doesnt Need Or Require A Template File Although This Seems To Be An Extremly Usefull Arguemnt. (0d0).
 	);
 	return hFile;//Returning The Payload Vessel's File HANDLE Value To The main() Function Control Flow.
-}
-
-//Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
-BOOL FileBufferRoundUP(size_t *sArraySize, LPWIN32_FIND_DATAW *pFiles_arr)
-{
-	*sArraySize = *sArraySize  * 2;//Doubling The Wanted Array Size
-	LPWIN32_FIND_DATAW pTemp = (LPWIN32_FIND_DATAW)realloc(*pFiles_arr, *sArraySize * sizeof(WIN32_FIND_DATAW)); //Reallocating The Scaled Up Array Size;
-	if (pTemp == NULL) return FALSE; //If The Reallction failed returning False.
-	*pFiles_arr = pTemp;//Chaniging the Pointer's Value To The New Address.
-	return TRUE;
-}
-
-//Automates The Freeing Of The Dynamic Allocation For The Files Array Struct & All Of It's Nested Dynamic Allocations.
-void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t) 
-{
-	free(pFiles_arr_t->pFiles_arr);
-	free(pFiles_arr_t);
-	return;
-}
-
-/*
- * Shortens and Automates The Fetching of Files Under A Working Path, Using Only, Said Path .
- * Returing All The Files In An Struct Holding The Array For Easier Further Manipulation. 
- */
-LPWIN32_FIND_DATA_ARRAYW CreateFilesArrayW(
-	LPWSTR pPath
-)
-{
-	//Initilizing Data Needed.
-	HANDLE hFile = INVALID_HANDLE_VALUE;//Initializing The hFile Value as INVAILD_HANDLE_VALUE As A Net To Catch Any Reason The First File Finding Filed
-	WIN32_FIND_DATAW find_data_t;//Allocating memory for a Find_Data Structure to hold the file's info.
-	size_t sArraySize = 3;//Initail Array Size
-	LPWIN32_FILE pFiles_arr = calloc(sArraySize, sizeof(WIN32_FILE));//Creating a Dynamic Buffer To Hold The Folder Data Structs
-	if (pFiles_arr == NULL) return FALSE;
-	//Creating The Needed Search Path
-	wcscat_s(pPath, MAX_PATH, L"*");//Adding the needed wildcard for the search.
-	hFile = FindFirstFileW(pPath, &find_data_t);//using the Path With The Asteriks Wild Card to Look Under The Current Path For The First File HANDLE & Storing The WIN32_Find_DATA At An Initialized and refrenced Address.
-	//Clearing Path
-	pPath[wcslen(pPath) - 1] = L'\0';//Deleting The Asteriks Wildcard that was used for the Search.
-	//Saftey Net
-	if (hFile == INVALID_HANDLE_VALUE)  return NULL;//checking if the search for the first File succeeded or not.
-	unsigned i = 0;//Running Index
-	//File Retrival
-	while (FindNextFileW(hFile, &find_data_t)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
-	{	
-		pFiles_arr[i].data = find_data_t;
-		pFiles_arr[i].ulindex = i;
-		if ((i == sArraySize / 2) && 
-			(FileBufferRoundUP(&sArraySize, &pFiles_arr) == FALSE))
-			return NULL; //If The Buffer Reallocation Failed Return NULL
-		i++;
-	}
-	WIN32_FIND_DATA_ARRAYW *pFiles_arr_t = malloc(i * sizeof(WIN32_FIND_DATA_ARRAYW));
-	pFiles_arr_t->pFiles_arr = pFiles_arr;
-	pFiles_arr_t->count = i;
-	return pFiles_arr_t;
 }
