@@ -14,8 +14,8 @@ BOOL CheckFoldersAnswer(
 	int OrderOfMagnitduted = floor(log10(pFiles_arr_t->count));
 	int Power2Raise2 = OrderOfMagnitduted;
 	int* file_index = (int*)malloc(((OrderOfMagnitduted + 1) * sizeof(int)) + 1);
-	WCHAR index_text[10];
 	if (!file_index) return FALSE;
+	WCHAR index_text[10];
 	//printf("Start Value: %d\nCurrent Power Of 10: %d\n", remainder, OrderOfMagnitduted);
 	for (unsigned i = 0; i <= OrderOfMagnitduted; i++)
 	{
@@ -23,8 +23,13 @@ BOOL CheckFoldersAnswer(
 		int current_order_valuse = max_value_in_Index_i * pow(10, Power2Raise2);
 		remainder -= current_order_valuse;
 		WCHAR ASCII_Value = pAnswer[i] - 48;
-		if (!(0 <= ASCII_Value < max_value_in_Index_i)) break;
-		//printf("Remainder: %d\n", remainder);
+		
+		if (!(0 <= ASCII_Value < max_value_in_Index_i) && i == OrderOfMagnitduted){
+			break;
+		}
+		else if (!(0 <= ASCII_Value <= 9)) {
+			break;
+		}
 		file_index[i] = (int)ASCII_Value;
 		index_text[i] = (WCHAR)pAnswer[i];
 		index_text[i + 1] = L'\0';

@@ -24,7 +24,7 @@ int main(void)
 		result = UserIODrives(pPath);
 	}
 	PrintCWD(pPath);
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = FetchSubFiles(&pPath);
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = CreateFilesArrayW(&pPath);
 	if (pFiles_arr_t == NULL) 
 	{
 		printf("[X] Folder Choosing || Printing Failed!\n[X] Exiting With Error Code : % x\n", GetLastError());
