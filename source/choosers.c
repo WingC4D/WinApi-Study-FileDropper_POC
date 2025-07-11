@@ -4,7 +4,11 @@
 #include "SystemInteractors.h"
 #include <math.h>
 
-BOOL CheckFoldersAnswer(LPWSTR pPath, LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t, LPWSTR pAnswer) {
+BOOL CheckFoldersAnswer(
+	LPWSTR pPath, 
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t, 
+	LPWSTR pAnswer
+) {
 	//Calculating How Manny Possible characters can be numbers that represent an index and the highest value of each indavidual char.
 	int remainder = pFiles_arr_t->count;
 	int OrderOfMagnitduted = floor(log10(pFiles_arr_t->count));
@@ -76,50 +80,12 @@ BOOL UserIODrives(LPWSTR pPath)
 
 }
 
-BOOL UserIOFolders(LPWSTR pPath, LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t) 
+BOOL UserIOFolders(
+	LPWSTR pPath,
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t) 
 {
 	WCHAR pAnswer[MAX_PATH] = { L'\0' };
 	wscanf_s(L"%99s", &pAnswer, 260);
 	BOOL result = CheckFoldersAnswer(pPath, pFiles_arr_t, pAnswer);
 	return result;
 }
-
-BOOL ChooseSubFolder(LPWSTR pPath, LPWIN32_FIND_DATAW aFolders, int i) 
-{
-	SIZE_T OccupiedCharacters = (SIZE_T)(wcslen(pPath) + 1);//Calculating The Amount Of Wchar's Lef
-	LPWSTR pOriginalPath = calloc(OccupiedCharacters , sizeof(WCHAR));
-	if (pOriginalPath == NULL)
-	{ 
-		PrintMemoryError(L"Original Path Copy Buffer In ChooseSubFolder");
-		exit(-11);//
-	}
-	wcscpy_s(pOriginalPath, OccupiedCharacters, pPath);
-	unsigned int sUnOccupiedCharacters = ((size_t)MAX_PATH - OccupiedCharacters) ;//
-	LPWSTR pAnswer = malloc(sUnOccupiedCharacters * sizeof(WCHAR));//creating a wchar buffer with a WinAPI datatype for the user's answer
-	if (pAnswer == NULL) 
-	{
-		free(pOriginalPath);
-		PrintMemoryError(L"The User's Answer In ChooseSubFolder");
-		return FALSE;
-	}
-	pAnswer[0] = L'\0';
-	wscanf_s(L"%64s", pAnswer, sUnOccupiedCharacters);//Scan for the desired folder name; options include the ID or a full string
-	;
-	if (1 == 1)
-	{
-		//wcscpy_s(pAnswer, sUnOccupiedCharacters, aFolders[ASCII_Value].cFileName);
-	}
-	wcscat_s(pPath, sUnOccupiedCharacters, pAnswer);
-	wcscat_s(pPath, sUnOccupiedCharacters, L"\\");
-	PrintCWD(pPath);
-	if (!FolderDebugger(pPath, pOriginalPath))
-	{
-		free(pOriginalPath);
-		free(pAnswer);
-		return FALSE;
-	}
-	free(pOriginalPath);
-	free(pAnswer);	
-	return TRUE;
-}
-

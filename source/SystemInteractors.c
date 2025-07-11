@@ -1,40 +1,45 @@
 #include "SystemInteractors.h"
-
-void FetchDrives(LPWSTR pPath)
+//Automates Taking All System-Available Drive Letter And Inputing Them To A Path Buffer.
+BOOL FetchDrives(LPWSTR pPath)
 {
 	DWORD dwDrivesBitMask = GetLogicalDrives();//notice Dword 32bits If the function succeeds, the return value is a bitmask representing the currently available disk drives. Bit position 0 (the least-significant bit) is drive A, bit position 1 is drive B, bit position 2 is drive C, and so on.
-	if (dwDrivesBitMask == 0) return FALSE;
+	if (dwDrivesBitMask == 0) return FALSE;// If No Bit Was Set As 1 (i.e. 0b00000000 {Which Is 0}) The Function Failed And False Is Returned
 	WCHAR base_wchar = L'A';//Holding the value 0x41 (0d65) as a WideChracter (A) and using it as the base character
-	unsigned drives_index = 0;
+	unsigned drives_index = 0;//An Index Used To Track The Amount Of Drives In The System, It's Needed Because Of the Choice To Not Dynamically Allocate Memory For The First Answer As The Start Of A Working Path Follows Very Strict Rulling Which Helps Avoid Said Dynamic Allocation and TF The Responsibility To Free The Data (Helps With Recursion & Reusability).
 	for (WCHAR loop_index = 0; loop_index <= 26; loop_index++)//Casting the value of the integer held under the loopcounter to be interpeted as a wide character for human readable formatting
 	{
 		if (dwDrivesBitMask & (1 << loop_index))//Checking if the loop_index binary value of the loop_index (*with one bit shifted left) is bitwise and equvilant to the bistmask's values
 		{
-			wprintf(L"%c", pPath[drives_index]);
 			pPath[drives_index] = base_wchar + loop_index;//adding the values of the loop counter + 0x41 to recive the hex value of the current wchar
-			drives_index++;
+			drives_index++;//Because A Drive Was Found Incrementing The Drives Tracking Index By 1.
 		}
 	}
-	pPath[drives_index + 1] = L'\0';
-	return;
+	pPath[drives_index + 1] = L'\0';//Making Sure That Even If The User Didn't Initiate The Path Buffer As All Null Terminators That The Wide String Will Be Handeled Correctly
+	return TRUE;//Returining True, The Function Succeeded.
 }
 
-BOOL CACDrives(LPWSTR pPath, WCHAR* pAnswer) {
-	unsigned  buffer_length = wcslen(pPath);
-	for (unsigned i = 0; i < buffer_length; i++)
+//Handles String Clean Up For The Drives As They Are Loaded Into The Path Buffer.
+BOOL CACDrives(
+	LPWSTR pPath, 
+	WCHAR* pAnswer
+) {
+	//The Buffer's Length is Always Shorter Than 260 and is Always possitive, TF uint.
+	unsigned  buffer_length = wcslen(pPath);//Retrives The Neded Amount Of Iterations To Compare User;s Input Against.
+	for (unsigned i = 0; i < buffer_length; i++)//Iterating Over The Letters Representing The Available Drives In The System.
 	{
-		if (pAnswer[0] == pPath[i])
+		if (pAnswer[0] == pPath[i])//Comparing The Users Inputed Answer {Always 1 w/char Long} To The Value In Each Index The Path.
 		{
-			pPath[0] = pPath[i];
-			pPath[1] = L'\0';
-			break;
+			pPath[0] = pPath[i];//IF It Is Taking The Value In The Index And Making It 
+			pPath[1] = L'\0';//Ending The String Early So cat/cpy Functions Will Disrigard The Rest Of The Drive Letters.
+			break;//Breaking The Loop, We Found Our Target, No Need To Waste Any More CPU Cycles.
 		}
-	}
-	if (pPath[1] != L'\0' || pPath[0] == L'\0') return FALSE;
-	wcscat_s(pPath, MAX_PATH, L":\\");
-	return TRUE;
+	}//End Of Loop Scope.
+	if (pPath[1] != L'\0' || pPath[0] == L'\0') return FALSE;//If We Reached The End Of the Loop And The Second Char Isn't A Null Terminator We Return False As The User's Input Didn't Fit Any Of The Drive Character's on The System And There Was More Than One Drive.
+	wcscat_s(pPath, MAX_PATH, L":\\");//This Phase Is Reached Only If The Buffer Is Ready For The Concatinating To The Path Staring String.
+	return TRUE;//Returning True As Our Path Buffer Is ready For Further Use & Manipulation.
 }
 
+//Needs Work.
 HANDLE CreateVessel(LPWSTR pPath)
 { 
 	printf("[#] Please Enter Your Desired File Name and Format Under Your Chosen Folder!\n");//Letting The User Know What Input Is Needed.
@@ -74,6 +79,7 @@ HANDLE CreateVessel(LPWSTR pPath)
 	return hFile;//Returning The Payload Vessel's File HANDLE Value To The main() Function Control Flow.
 }
 
+//Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
 BOOL FileBufferRoundUP(size_t *sArraySize, LPWIN32_FIND_DATAW *pFiles_arr)
 {
 	*sArraySize = *sArraySize  * 2;//Doubling The Wanted Array Size
@@ -83,6 +89,7 @@ BOOL FileBufferRoundUP(size_t *sArraySize, LPWIN32_FIND_DATAW *pFiles_arr)
 	return TRUE;
 }
 
+//Automates The Freeing Of The Dynamic Allocation For The Files Array Struct & All Of It's Nested Dynamic Allocations.
 void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t) 
 {
 	free(pFiles_arr_t->pFiles_arr);
@@ -90,9 +97,13 @@ void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t)
 	return;
 }
 
-
-
-LPWIN32_FIND_DATA_ARRAYW FetchSubFiles(LPWSTR pPath)
+/*
+ * Shortens and Automates The Fetching of Files Under A Working Path, Using Only, Said Path .
+ * Returing All The Files In An Struct Holding The Array For Easier Further Manipulation. 
+ */
+LPWIN32_FIND_DATA_ARRAYW CreateFilesArrayW(
+	LPWSTR pPath
+)
 {
 	//Initilizing Data Needed.
 	HANDLE hFile = INVALID_HANDLE_VALUE;//Initializing The hFile Value as INVAILD_HANDLE_VALUE As A Net To Catch Any Reason The First File Finding Filed
