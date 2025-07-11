@@ -13,9 +13,9 @@ typedef struct _WIN32_FIND_DATA_ARRAYW {
     size_t count;                  // Number of actual files stored in the array
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;
 
-LPWIN32_FIND_DATA_ARRAYW FetchSubFiles(LPWSTR pPath);
+LPWIN32_FIND_DATA_ARRAYW CreateFilesArrayW(LPWSTR pPath);
 
-void FetchDrives(LPWSTR pPath);
+BOOL FetchDrives(LPWSTR pPath);
 
 BOOL CACDrives(LPWSTR pPath, WCHAR* pAnswer);
 
