@@ -1,44 +1,53 @@
 #include "SystemInteractors.h"
+
 //Automates Taking All System-Available Drive Letter And Inputing Them To A Path Buffer.
 BOOL FetchDrives(
 	LPWSTR pPath
 )
 {
-	DWORD dwDrivesBitMask = GetLogicalDrives();//notice Dword 32bits If the function succeeds, the return value is a bitmask representing the currently available disk drives. Bit position 0 (the least-significant bit) is drive A, bit position 1 is drive B, bit position 2 is drive C, and so on.
-	if (dwDrivesBitMask == 0) return FALSE;// If No Bit Was Set As 1 (i.e. 0b00000000 {Which Is 0}) The Function Failed And False Is Returned
-	WCHAR base_wchar = L'A';//Holding the value 0x41 (0d65) as a WideChracter (A) and using it as the base character
-	unsigned drives_index = 0;//An Index Used To Track The Amount Of Drives In The System, It's Needed Because Of the Choice To Not Dynamically Allocate Memory For The First Answer As The Start Of A Working Path Follows Very Strict Rulling Which Helps Avoid Said Dynamic Allocation and TF The Responsibility To Free The Data (Helps With Recursion & Reusability).
-	for (WCHAR loop_index = 0; loop_index <= 26; loop_index++)//Casting the value of the integer held under the loopcounter to be interpeted as a wide character for human readable formatting
+	DWORD dwDrivesBitMask = GetLogicalDrives();
+	
+	if (dwDrivesBitMask == 0) return FALSE;
+
+	WCHAR base_wchar = L'A';
+
+	unsigned drives_index = 0;
+	
+	for (WCHAR loop_index = 0; loop_index <= 26; loop_index++)
 	{
-		if (dwDrivesBitMask & (1 << loop_index))//Checking if the loop_index binary value of the loop_index (*with one bit shifted left) is bitwise and equvilant to the bistmask's values
-		{
-			pPath[drives_index] = base_wchar + loop_index;//adding the values of the loop counter + 0x41 to recive the hex value of the current wchar
-			drives_index++;//Because A Drive Was Found Incrementing The Drives Tracking Index By 1.
+		if (dwDrivesBitMask & (1 << loop_index)) {
+			pPath[drives_index] = base_wchar + loop_index;
+			drives_index++;
 		}
 	}
 	pPath[drives_index + 1] = L'\0';//Making Sure That Even If The User Didn't Initiate The Path Buffer As All Null Terminators That The Wide String Will Be Handeled Correctly
 	return TRUE;//Returining True, The Function Succeeded.
 }
 
-//Handles String Clean Up For The Drives As They Are Loaded Into The Path Buffer.
-BOOL CACDrives(
+
+BOOL HandleStringDrives(
 	LPWSTR pPath, 
-	WCHAR* pAnswer
+	LPWSTR pAnswer
 ) {
-	//The Buffer's Length is Always Shorter Than 260 and is Always possitive, TF uint.
-	unsigned  buffer_length = wcslen(pPath);//Retrives The Neded Amount Of Iterations To Compare User;s Input Against.
-	for (unsigned i = 0; i < buffer_length; i++)//Iterating Over The Letters Representing The Available Drives In The System.
+	
+	unsigned  buffer_length = wcslen(pPath);
+	
+	for (unsigned i = 0; i < buffer_length; i++)
 	{
-		if (pAnswer[0] == pPath[i])//Comparing The Users Inputed Answer {Always 1 w/char Long} To The Value In Each Index The Path.
+		if (pAnswer[0] == pPath[i])
 		{
-			pPath[0] = pPath[i];//IF It Is Taking The Value In The Index And Making It 
-			pPath[1] = L'\0';//Ending The String Early So cat/cpy Functions Will Disrigard The Rest Of The Drive Letters.
-			break;//Breaking The Loop, We Found Our Target, No Need To Waste Any More CPU Cycles.
+			pPath[0] = pPath[i];
+			
+			pPath[1] = L'\0';
+			
+			break;
 		}
-	}//End Of Loop Scope.
-	if (pPath[1] != L'\0' || pPath[0] == L'\0') return FALSE;//If We Reached The End Of the Loop And The Second Char Isn't A Null Terminator We Return False As The User's Input Didn't Fit Any Of The Drive Character's on The System And There Was More Than One Drive.
-	wcscat_s(pPath, MAX_PATH, L":\\");//This Phase Is Reached Only If The Buffer Is Ready For The Concatinating To The Path Staring String.
-	return TRUE;//Returning True As Our Path Buffer Is ready For Further Use & Manipulation.
+	}
+	if (pPath[1] != L'\0' || pPath[0] == L'\0') return FALSE;
+	
+	wcscat_s(pPath, MAX_PATH, L":\\");
+	
+	return TRUE;
 }
 
 /*
@@ -50,36 +59,48 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
 )
 {
 	//Initilizing Data Needed.
-	HANDLE hFile = INVALID_HANDLE_VALUE;//Initializing The hFile Value as INVAILD_HANDLE_VALUE As A Net To Catch Any Reason The First File Finding Filed
-	WIN32_FIND_DATAW find_data_t;//Allocating memory for a Find_Data Structure to hold the file's info.
-	size_t sArraySize = 3;//Initail Array Size
-	LPWIN32_FILE pFiles_arr = calloc(sArraySize, sizeof(WIN32_FILE));//Creating a Dynamic Buffer To Hold The Folder Data Structs
-	if (pFiles_arr == NULL) return NULL;//If The Allocation Failed, Returns Null.
-	//Creating The Needed Search Path
-	wcscat_s(pPath, MAX_PATH, L"*");//Adding the needed wildcard for the search.
-	hFile = FindFirstFileW(pPath, &find_data_t);//using the Path With The Asteriks Wild Card to Look Under The Current Path For The First File HANDLE & Storing The WIN32_Find_DATA At An Initialized and refrenced Address.
-	//Clearing Path
-	pPath[wcslen(pPath) - 1] = L'\0';//Deleting The Asteriks Wildcard that was used for the Search.
-	//Saftey Net
-	if (hFile == INVALID_HANDLE_VALUE)  return NULL;//checking if the search for the first File succeeded or not.
-	unsigned i = 0;//Running Index
-	//File Retrival
-	while (FindNextFileW(hFile, &find_data_t)) //checks if there are any more files, while there are, the returned value is a BOOL holding "TRUE" else it is "FALSE"
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	
+	WIN32_FIND_DATAW find_data_t;
+	
+	size_t sArraySize = 3;
+	
+	LPWIN32_FILE_IN_ARRAY pFiles_arr = calloc(sArraySize, sizeof(WIN32_FILE_IN_ARRAY));
+
+	if (pFiles_arr == NULL) return NULL;
+	
+	wcscat_s(pPath, MAX_PATH, L"*");
+	
+	hFile = FindFirstFileW(pPath, &find_data_t);	
+	
+	pPath[wcslen(pPath) - 1] = L'\0';
+
+	
+	if (hFile == INVALID_HANDLE_VALUE)  return NULL;
+	
+	unsigned i = 0;
+	
+	//recursive file retrival.
+	while (FindNextFileW(hFile, &find_data_t)) 
 	{	
-		pFiles_arr[i].data = find_data_t;//Saves The Struct To The Array In The Struct
-		pFiles_arr[i].ulindex = i;//Save The Index To The Struct.
-		if (i == sArraySize / 2) //Checks If The index Got to Half Of The Array Size
-		{//Calling The Buffer Reallocation & Checking  If The Buffer Reallocation Failed.
-			if (FileBufferRoundUP(&sArraySize, &pFiles_arr) == FALSE)
-			{//If it did, Returns NULL
-				return NULL; 
-			}
-		}// if Null Wasn't Returned Incrament The Running Index By 1.
+		pFiles_arr[i].file_data = find_data_t;		
+		
+		pFiles_arr[i].index = i;
+		
+		if (i == sArraySize / 2) 
+		{
+			if (FileBufferRoundUP(&sArraySize, &pFiles_arr) == FALSE) return NULL;	
+		}
 		i++;
 	}
 	WIN32_FIND_DATA_ARRAYW *pFiles_arr_t = malloc(i * sizeof(WIN32_FIND_DATA_ARRAYW));//Creating The Struct To Pack The Extracted Data
+	
 	pFiles_arr_t->pFiles_arr = pFiles_arr;//Assiging The Dynamic Buffer To The "arr" Data Memeber.
+	
 	pFiles_arr_t->count = i;//Assigns The End Result Of The index As The 'count' Data Memeber.
+	
+	pFiles_arr_t->order_of_magnitude = floor(log10(i));//Checking The Counts Order Of Magnitude; To Be Moved
+	
 	return pFiles_arr_t;//Returns The Struct.
 }
 

@@ -8,45 +8,41 @@
 #include "SystemInteractors.h"
 
 typedef struct _UserAnswer_t {
-	LPWSTR data;
+	LPWSTR string;
 	BOOL in_index;
 	unsigned length;
 }
-UserAnswer_t,
-* pUserAnswer_t;
+UserAnswer_t,* pUserAnswer_t;
 
-BOOL ChooseSubFolder(
-	LPWSTR pPath,
-	LPWIN32_FIND_DATAW aFolders, 
-	int i
-);
-
-void FolderPathCat(
-	LPWSTR  pPath,
-	WCHAR * pAnswer,
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+void CheckIfAnswerIsIndex(
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
+	pUserAnswer_t pAnswer_t,
+	int *remainder,
+	int *pPower2Raise2,
+	int *i
 );
 
 BOOL UserIOTraverseFolders(
 	void
 );
 
-BOOL UserIODrives(
+BOOL UserInputDrives(
 	LPWSTR pPath
 );
 
-void TextFolderPathCat(
+BOOL UserInputFolders(
+	LPWSTR pPath,
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+);
+
+void AddFolder2PathString(
 	LPWSTR pPath,
 	pUserAnswer_t pAnswer_t
 );
 
-void NumFolderPathCat(
+void AddFolder2PathIndex(
 	LPWSTR pPath,
 	pUserAnswer_t pAnswer_t,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 
-BOOL UserIOFolders(
-	LPWSTR pPath,
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
-);

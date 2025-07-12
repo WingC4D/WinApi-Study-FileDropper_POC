@@ -2,157 +2,161 @@
 #include "Printers.h"
 #include "ErrorHandlers.h"
 #include "SystemInteractors.h"
-#include <math.h>
 
-BOOL UserIODrives(
+BOOL UserInputDrives(
 	LPWSTR pPath
 )
 {
 	wprintf(L"Please Choose a Drive\n");
+	
 	WCHAR pAnswer[2];
+	
 	wscanf_s(L"%1s", pAnswer, 2);
+	
 	pAnswer[0] = towupper(pAnswer[0]);
-	BOOL result = CACDrives(pPath, &pAnswer);
-	return result;
-
+	
+	return HandleStringDrives(pPath, &pAnswer);
 }
 
-BOOL UserIOFolders(
+
+BOOL UserInputFolders(
 	LPWSTR pPath,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
 	UserAnswer_t Answer_t = { NULL };
-	LPWSTR pAnswer[MAX_PATH] = { L'\0' };
-	wscanf_s(L"%259s", pAnswer, MAX_PATH);
-	Answer_t.data = &pAnswer;
-	Answer_t.length = wcslen(pAnswer);
-	CheckFoldersAnswer(
+	
+	WCHAR answer[MAX_PATH] = { L'\0' };
+	
+	wscanf_s(L"%259s", &answer, MAX_PATH);
+	
+	Answer_t.string = &answer;
+	
+	Answer_t.length = wcslen(answer);
+	
+	Answer_t.in_index = FALSE;
+	
+	CheckUserInputOuputAnswerFolders(
 		pPath,
 		pFiles_arr_t,
 		&Answer_t
 	);
+	
 	return UserIOTraverseFolders();
 }
 
-BOOL CheckFoldersAnswer(
+BOOL CheckUserInputOuputAnswerFolders(
 	LPWSTR pPath, 
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t, 
 	pUserAnswer_t pAnswer_t
 ) 
 {
-	//Calculating How Manny Possible characters can be numbers that represent an index and the highest value of each indavidual char.
-	int remainder = pFiles_arr_t->count;//Checking The count Data Member Of The Files Array Struct
-	pFiles_arr_t->OOM = floor(log10(pFiles_arr_t->count));//Checking The Counts Order Of Magnitude; To Be Moved
-	int Power2Raise2 = pFiles_arr_t->OOM;
-	WCHAR index_text[10];
-	//printf("Start Value: %d\nCurrent Power Of 10: %d\n", remainder, OrderOfMagnitduted);
-	pAnswer_t->in_index = FALSE;
-	for (unsigned i = 0; i <= pFiles_arr_t->OOM; i++)
+	int remainder = pFiles_arr_t->count;//Initilizing The Remainder with The Value Of the Count Files In The Array As None Was Scanned Yet
+	
+	int Power2Raise2 = pFiles_arr_t->order_of_magnitude;//Holding The Order Of Magnitude In A Second So We Can Manipulate This Number Without Manipulating The Original Data Member
+		
+	for (unsigned i = 0; i <= pFiles_arr_t->order_of_magnitude; i++)
 	{
-		if (pAnswer_t->length > pFiles_arr_t->OOM + 1) break;
-		int max_value_in_Index_i = floor(remainder / pow(10, Power2Raise2));
-		int current_order_value = max_value_in_Index_i * pow(10, Power2Raise2);
-		remainder -= current_order_value;
-		int ASCII_Value = pAnswer_t->data[i] - 48;
-		//wprintf(L"Value in ASCII: %d\nMax Value In Index i:%d\n", ASCII_Value, max_value_in_Index_i);
-		if ((0 < ASCII_Value  && ASCII_Value < max_value_in_Index_i) && i == 0) 
-		{
-			pAnswer_t->in_index = TRUE;
-			break;
-		}
-		else if(i == 0 && ASCII_Value == max_value_in_Index_i)
-		{
-			pAnswer_t->in_index = TRUE;
-			for (i; i <= pFiles_arr_t->OOM; i++) 
-			{
-				if (max_value_in_Index_i > ASCII_Value || ASCII_Value > 0) 
-				{
-					pAnswer_t->in_index = TRUE;
-					break;
-				}
-			}	
-			break;
-		}
-		else if ((0 <= ASCII_Value && ASCII_Value < 10)) 
-		{
-
-			pAnswer_t->in_index = TRUE;
-			break;
-		}
+		if (pAnswer_t->length > pFiles_arr_t->order_of_magnitude + 1) break;
+		CheckIfAnswerIsIndex(
+			pFiles_arr_t,
+			pAnswer_t,
+			&remainder,
+			&Power2Raise2,
+			&i
+		);
+		
+		if (pAnswer_t->in_index) break;
+		
 		Power2Raise2 -= 1;
 	}
-	FolderPathCat(
-		pPath,
-		pAnswer_t, 
-		pFiles_arr_t
-	);//Calling FolderPathCat; A Function I Built To Handle The Path Buffer Values & Append Correctly The Folder To The Path.
+	if (pAnswer_t->in_index) AddFolder2PathIndex(pPath, pAnswer_t, pFiles_arr_t);
+	
+	else AddFolder2PathString(pPath, pAnswer_t);
+	wcscat_s(pPath, MAX_PATH, L"\\");
 	return TRUE;
 }
 
-void FolderPathCat(
-	LPWSTR pPath, 
+void CheckIfAnswerIsIndex(
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
 	pUserAnswer_t pAnswer_t,
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
-) 
+	int *pRemainder,
+	int *pPower2Raise2,
+	int *pIndex
+)
 {
-	if (pAnswer_t->in_index) 
+	int max_num_in_index = floor(*pRemainder / pow(10, *pPower2Raise2));
+
+	int index_real_value = max_num_in_index * pow(10, *pPower2Raise2);
+
+	pRemainder -= index_real_value;
+
+	int ASCIIValue = pAnswer_t->string[*pIndex] - 48;
+
+	if ((0 < ASCIIValue && ASCIIValue < max_num_in_index) && pPower2Raise2 == 0)
 	{
-		NumFolderPathCat(
-			pPath,
-			pAnswer_t,
-			pFiles_arr_t
-		);
+		
+		pAnswer_t->in_index = TRUE;
+		return;
 	}
-	else 
+	else if (*pIndex == 0 && ASCIIValue == max_num_in_index)
 	{
-		TextFolderPathCat(
-			pPath,
-			pAnswer_t
-		);
+		for (int i = *pIndex; i <= pFiles_arr_t->order_of_magnitude; i++)
+		{
+			if (max_num_in_index > ASCIIValue || ASCIIValue > 0) return;
+		}
+		
+		pAnswer_t->in_index = TRUE;
+		return;
 	}
-	wcscat_s(
-		pPath,
-		MAX_PATH, 
-		L"\\\0"
-	);
-	PrintCWD(pPath);
+	
+	else if ((0 <= ASCIIValue && ASCIIValue < 10)) {
+		pAnswer_t->in_index = TRUE;
+		return;
+	}
+	
 	return;
 }
 
-void TextFolderPathCat(
+void AddFolder2PathString(
 	LPWSTR pPath,
 	pUserAnswer_t pAnswer_t
 )
 {
 	unsigned index = wcslen(pPath);
+	
 	unsigned leftchars = MAX_PATH - index;
-	unsigned AnswerLength = wcslen(pAnswer_t->data);
-	if (wcslen(pAnswer_t->data) > leftchars)
+	
+	unsigned AnswerLength = wcslen(pAnswer_t->string);
+	
+	if (wcslen(pAnswer_t->string) > leftchars)
 	{
 		for (unsigned i = 259; i > index; i--)
 		{
-			pAnswer_t->data[i] = L'\0';
+			pAnswer_t->string[i] = L'\0';
 		}
 	}
-	wcscat_s(pPath, MAX_PATH, pAnswer_t->data);
+	wcscat_s(pPath, MAX_PATH, pAnswer_t->string);
+	
 	return;
 }
 
-
-void NumFolderPathCat(
+void AddFolder2PathIndex(
 	LPWSTR pPath,
 	pUserAnswer_t pAnswer_t,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 ) 
 {
 	int index = 0;
-	for (int i = 0; i < pAnswer_t->length; i++)
-	{
-		index += (pAnswer_t->data[i] - 48) * pow(10, pAnswer_t->length - i - 1);
-	}
-	pFiles_arr_t->pFiles_arr[index].data.cFileName[wcslen(pFiles_arr_t->pFiles_arr[index].data.cFileName)] = L'\0';
-	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFiles_arr[index].data.cFileName);
+	size_t filename_length = wcslen(pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
+	
+	for (int i = 0; i < pAnswer_t->length; i++) 
+		index += (pAnswer_t->string[i] - 48) * pow(10, pAnswer_t->length - i - 1);
+
+	pFiles_arr_t->pFiles_arr[index].file_data.cFileName[filename_length] = L'\0';
+	
+	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
+	
 	return;
 }
 
@@ -162,9 +166,9 @@ BOOL UserIOTraverseFolders(
 {
 	printf("Are You Finished Traversing The System?\n");
 	BOOL result = TRUE;
-	WCHAR pAnswer[2] = { L'\0' };
-	wscanf_s(L"%1s", &pAnswer, 2);
-	switch (pAnswer[0])
+	WCHAR answer[2] = { L'\0' };
+	wscanf_s(L"%1s", &answer, 2);
+	switch (answer[0])
 	{
 	case L'y':
 	case L'Y':

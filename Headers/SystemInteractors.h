@@ -2,16 +2,20 @@
 
 #include <Windows.h>
 #include <stdio.h>
+#include <math.h>
 
-typedef struct _WIN32_FILE {
-    WIN32_FIND_DATAW data; // Pointer to the dynamically allocated array
-    unsigned long ulindex;
-}WIN32_FILE, *LPWIN32_FILE;
+
+typedef struct _WIN32_FILE_IN_ARRAY {
+    
+    WIN32_FIND_DATAW file_data; 
+    
+    unsigned long index;
+}WIN32_FILE_IN_ARRAY, *LPWIN32_FILE_IN_ARRAY;
 
 typedef struct _WIN32_FIND_DATA_ARRAYW {
-    LPWIN32_FILE pFiles_arr;
-    size_t count;                  // Number of actual files stored in the array
-    int OOM;
+    LPWIN32_FILE_IN_ARRAY pFiles_arr;
+    size_t count;                  
+    unsigned short order_of_magnitude;
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;
 
 LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
@@ -26,9 +30,9 @@ BOOL FetchDrives(
     LPWSTR pPath
 );
 
-BOOL CACDrives(
+BOOL HandleStringDrives(
     LPWSTR pPath, 
-    WCHAR* pAnswer
+    LPWSTR pAnswer
 );
 
 BOOL TraverseFolders(

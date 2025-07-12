@@ -30,7 +30,8 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 			}
 			wcscpy_s(pOriginalPath, MAX_PATH, pCandidatePath);
 			printf("Created The Desired Folder Successfully!\n");
-			return main();
+
+			
 			break;
 		}
 		case 'q':
