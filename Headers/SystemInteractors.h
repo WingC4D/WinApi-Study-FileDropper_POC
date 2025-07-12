@@ -14,6 +14,7 @@ typedef struct _WIN32_FILE_IN_ARRAY {
 
 typedef struct _WIN32_FIND_DATA_ARRAYW {
     LPWIN32_FILE_IN_ARRAY pFiles_arr;
+    HANDLE hBaseFile;
     size_t count;                  
     unsigned short order_of_magnitude;
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;

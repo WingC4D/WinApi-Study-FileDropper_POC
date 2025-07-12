@@ -148,11 +148,14 @@ void AddFolder2PathIndex(
 ) 
 {
 	int index = 0;
+	
+	
+	for (int i = 0; i < pAnswer_t->length; i++) {
+		index += (pAnswer_t->string[i] - 48) * pow(10, pAnswer_t->length - i - 1);
+	}
+	
 	size_t filename_length = wcslen(pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
 	
-	for (int i = 0; i < pAnswer_t->length; i++) 
-		index += (pAnswer_t->string[i] - 48) * pow(10, pAnswer_t->length - i - 1);
-
 	pFiles_arr_t->pFiles_arr[index].file_data.cFileName[filename_length] = L'\0';
 	
 	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
@@ -166,17 +169,28 @@ BOOL UserIOTraverseFolders(
 {
 	printf("Are You Finished Traversing The System?\n");
 	BOOL result = TRUE;
+	
 	WCHAR answer[2] = { L'\0' };
+	
 	wscanf_s(L"%1s", &answer, 2);
+	
 	switch (answer[0])
+	
 	{
 	case L'y':
+	
 	case L'Y':
+	
 		break;
+	
 	case L'n':
+	
 	case L'N':
+		
 		result = FALSE;
+		
 		break;
 	}
+	
 	return result;
 }

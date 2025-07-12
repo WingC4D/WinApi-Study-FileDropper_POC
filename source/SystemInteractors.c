@@ -20,7 +20,7 @@ BOOL FetchDrives(
 			drives_index++;
 		}
 	}
-	pPath[drives_index + 1] = L'\0';//Making Sure That Even If The User Didn't Initiate The Path Buffer As All Null Terminators That The Wide String Will Be Handeled Correctly
+	pPath[drives_index] = L'\0';//Making Sure That Even If The User Didn't Initiate The Path Buffer As All Null Terminators That The Wide String Will Be Handeled Correctly
 	return TRUE;//Returining True, The Function Succeeded.
 }
 
@@ -43,7 +43,7 @@ BOOL HandleStringDrives(
 			break;
 		}
 	}
-	if (pPath[1] != L'\0' || pPath[0] == L'\0') return FALSE;
+	if (pAnswer[0] != pPath[0]) return FALSE;
 	
 	wcscat_s(pPath, MAX_PATH, L":\\");
 	
@@ -59,45 +59,45 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
 )
 {
 	//Initilizing Data Needed.
-	HANDLE hFile = INVALID_HANDLE_VALUE;
+	;
 	
 	WIN32_FIND_DATAW find_data_t;
 	
 	size_t sArraySize = 3;
-	
-	LPWIN32_FILE_IN_ARRAY pFiles_arr = calloc(sArraySize, sizeof(WIN32_FILE_IN_ARRAY));
 
-	if (pFiles_arr == NULL) return NULL;
+	WIN32_FIND_DATA_ARRAYW* pFiles_arr_t = (WIN32_FIND_DATA_ARRAYW *)malloc(sArraySize * sizeof(WIN32_FIND_DATA_ARRAYW));
+
+	pFiles_arr_t->hBaseFile = INVALID_HANDLE_VALUE;
+	
+	pFiles_arr_t->pFiles_arr = (LPWIN32_FILE_IN_ARRAY)calloc(sArraySize, sizeof(WIN32_FILE_IN_ARRAY));
+	
+	if (pFiles_arr_t->pFiles_arr == NULL) return NULL;
 	
 	wcscat_s(pPath, MAX_PATH, L"*");
-	
-	hFile = FindFirstFileW(pPath, &find_data_t);	
+
+	pFiles_arr_t->hBaseFile = FindFirstFileW(pPath, &find_data_t);
+
+	if (pFiles_arr_t->hBaseFile == INVALID_HANDLE_VALUE) return INVALID_HANDLE_VALUE;
 	
 	pPath[wcslen(pPath) - 1] = L'\0';
 
-	
-	if (hFile == INVALID_HANDLE_VALUE)  return NULL;
-	
 	unsigned i = 0;
 	
 	//recursive file retrival.
-	while (FindNextFileW(hFile, &find_data_t)) 
+	while (FindNextFileW(pFiles_arr_t->hBaseFile, &find_data_t)) 
 	{	
-		pFiles_arr[i].file_data = find_data_t;		
+		pFiles_arr_t->pFiles_arr[i].file_data = find_data_t;
 		
-		pFiles_arr[i].index = i;
+		pFiles_arr_t->pFiles_arr[i].index = i;
 		
 		if (i == sArraySize / 2) 
 		{
-			if (FileBufferRoundUP(&sArraySize, &pFiles_arr) == FALSE) return NULL;	
+			if (FileBufferRoundUP(&sArraySize, &pFiles_arr_t->pFiles_arr) == FALSE) return NULL;	
 		}
 		i++;
 	}
-	WIN32_FIND_DATA_ARRAYW *pFiles_arr_t = malloc(i * sizeof(WIN32_FIND_DATA_ARRAYW));//Creating The Struct To Pack The Extracted Data
 	
-	pFiles_arr_t->pFiles_arr = pFiles_arr;//Assiging The Dynamic Buffer To The "arr" Data Memeber.
-	
-	pFiles_arr_t->count = i;//Assigns The End Result Of The index As The 'count' Data Memeber.
+	pFiles_arr_t->count = i;
 	
 	pFiles_arr_t->order_of_magnitude = floor(log10(i));//Checking The Counts Order Of Magnitude; To Be Moved
 	

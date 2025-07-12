@@ -8,7 +8,7 @@ int main(void)
 {
 	call();
 	
-	WCHAR pPath[260] = { L'\0' };
+	WCHAR pPath[MAX_PATH] = { L'\0' };
 	
 	FetchDrives(pPath);
 	
@@ -49,31 +49,44 @@ int main(void)
 			break;
 		}
 		pFiles_arr_t = RefetchFilesArrayW(&pPath, pFiles_arr_t);
+		if (pFiles_arr_t == NULL) {
+			printf("[!] No Files Under Current Folder.\n");
+			break;
+		}
 		PrintCWD(&pPath);
 		PrintSubFiles(pFiles_arr_t);
 	}
  	
-	FreeFileArray(pFiles_arr_t);
 	
+	wprintf(L"File Name: %s", pFiles_arr_t->pFiles_arr->file_data.cFileName);
+
+	if (pFiles_arr_t->pFiles_arr->file_data.dwFileAttributes & FILE_ATTRIBUTE_NORMAL)
+	{
+		printf("[X] You Choose  !\n[X] Exiting With Error Code : % x\n", GetLastError());
+		return -3;
+	}
+	
+	if(pFiles_arr_t != NULL)FreeFileArray(pFiles_arr_t);
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 			/*
 		 * GENERIC_READ = 0x80000000
 		 * GENERIC_WRITE = 0x40000000. (0d1073741824).
 		 * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
 		 */
-	hFile = CreateFileW(//(Trying To Create Said Vessel.
-		/*[In] */         &pPath, //{lpFileName} Casting The Program Made Path To A Long Pointer to a Constant Wide STRing &  Using It The Create The Vessel In The Dessired loaction.
-		/*[In] */         GENERIC_READ | GENERIC_WRITE, // {dwDesiredAccess} Generic Read Write So it Can Be Wrote Into and Make Sure The Content Is As Expected.
-		/*[In]*/          FILE_SHARE_READ, // {dwShareMode} Using Share_Read Security Attributes So Future Processes Can Read From It. (0d1).
-		/*[In, Optional]*/NULL, // {lpSecurity Attributes} Currently No Other Process Is Going On Or Needs This File So NULL Is Assigned. (0d0).
-		/*[In]*/          CREATE_ALWAYS, // {dwCreateDisposition} The Current Set-up Makes Sure To Create A *CLEAN* (i.e. Turncated!) File.(0d2).
-		/*[In]*/          FILE_ATTRIBUTE_NORMAL, //{dwFlagsAndAttributes} Currently The Procces Doesn't Want Nor Need Any Special Attributes, Therefor FILE_ATTRIBUTES_NORMAL Is Passed. (0x80 || 0d128).
-		/*[In, Optional]*/NULL // {hTemplateFile} Currently The Procces Doesnt Need Or Require A Template File Although This Seems To Be An Extremly Usefull Arguemnt. (0d0).
+	
+	hFile = CreateFileW(
+		&pPath,
+		GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_READ,//(0d1).
+		NULL, //(0d0).
+		CREATE_ALWAYS, //(0d2).
+		FILE_ATTRIBUTE_NORMAL,//(0x80 || 0d128).
+		NULL 
 	);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
 		printf("[X] Failed To Fetch File Handle!\n[X] Exiting With Error Code: %x\n", GetLastError());
-		return -3;
+		return -4;
 	}
 
 	CloseHandle(hFile);
