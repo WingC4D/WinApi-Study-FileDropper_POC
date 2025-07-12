@@ -21,9 +21,8 @@ The application guides the user through the following steps:
 3.  The application then lists the files and sub-folders within the chosen directory.
 4.  The user can either select a sub-folder by its index to navigate deeper or choose to create a new file in the current directory. The parsing of the numerical index for folder selection is handled by an O(log N) algorithm (where N is the count of files/folders).
 5.  If a new folder is specified but doesn't exist, the application prompts the user to create it, retry, or take other actions.
-6.  Finally, the user provides a filename and format, and the application attempts to create a "payload vessel" (the new file) at the specified location.
 
-The commented-out DLL functionality showcases how to dynamically load a DLL, obtain a pointer to an exported function, and execute it within the application's process space.
+The Call functionality showcases how to dynamically load a DLL, obtain a pointer to an exported function, and execute it within the application's process space.
 
 ### Project Structure
 
