@@ -1,3 +1,4 @@
+#include "rsrcPayloadTest.h"
 #include "Printers.h"
 #include "choosers.h"
 #include "Externals.h"
@@ -8,6 +9,12 @@ int main(void)
 {
 	call();
 	
+	PVOID pPayload = Test();
+	
+	if (pPayload == NULL) return -5;
+	
+	printf("Payload: %s\nPayload Address: %p\n", pPayload, pPayload);
+
 	WCHAR pPath[MAX_PATH] = { L'\0' };
 	
 	FetchDrives(pPath);
@@ -18,6 +25,8 @@ int main(void)
 		return -1;
 	}
 	
+	
+
 	PrintDrives(pPath);
 	
 	while (!UserInputDrives(&pPath))
