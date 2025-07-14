@@ -47,13 +47,13 @@ LPPAYLOAD Test()
 
 	memcpy(pPayloadCopy, pResource, pPayload->dwPayloadSize);
 
-	rc4Init(&Context, pKey, strlen(pKey));
+	RC4Init(&Context, pKey, strlen(pKey));
 
 	pPayload->pPayloadAddress = malloc(wcslen(pPayload) + 1);
 
 	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
 
-	rc4Cipher(&Context, pPayloadCopy, pPayload->pPayloadAddress, pPayload->dwPayloadSize);
+	RC4Encrypt(&Context, pPayloadCopy, pPayload->pPayloadAddress, pPayload->dwPayloadSize);
 
 	if (pPayload->pPayloadAddress == NULL) return NULL;
 

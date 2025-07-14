@@ -11,11 +11,6 @@ typedef struct _RC4Context
 
 }RC4CONTEXT, * PRC4CONTEXT;
 
-
-void rc4Init(PRC4CONTEXT context, const unsigned char* key, size_t length);
-
-void rc4Cipher(PRC4CONTEXT context, const unsigned char* input, unsigned char* output, size_t length);
-
 void RC4Init(
 	PRC4CONTEXT pContext_t,
 	const unsigned char *p_key,

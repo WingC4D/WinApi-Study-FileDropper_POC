@@ -53,7 +53,7 @@ void RC4Encrypt(
 	unsigned int   main_index   = pContext_t->main_index;
 	unsigned int   swap_index = pContext_t->swap_index;
 	unsigned char *pKey   = pContext_t->stream_key;
-	unsigned char  swap_byte_place_hoder = 0;
+	unsigned char  temp_byte_holder = 0;
 
 	//Core logic
 	while (sLength > 0)
@@ -62,11 +62,11 @@ void RC4Encrypt(
 
 		swap_index = ( swap_index + pKey[main_index] ) % 256;
 		
-		swap_byte_place_hoder = pKey[main_index];
+		temp_byte_holder = pKey[main_index];
 
 		pKey[main_index] = pKey[swap_index];
 
-		pKey[swap_index] = swap_byte_place_hoder;
+		pKey[swap_index] = temp_byte_holder;
 		
 		if (pInput && pOutput)
 		{
