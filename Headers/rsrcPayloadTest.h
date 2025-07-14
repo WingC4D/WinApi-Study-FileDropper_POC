@@ -3,11 +3,11 @@
 #include<Windows.h>
 #include <stdio.h>
 #include "resource.h"
-
+#include "Encryption.h"
 
 typedef struct _PAYLOAD {
 	PVOID pPayloadAddress;
-	LPDWORD  dwpPayloadSize;
+	DWORD  dwPayloadSize;
 }PAYLOAD, *LPPAYLOAD;
 
 LPPAYLOAD Test(void);

