@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by Resource.rc
+// Used by Filedropper_POC1.rc
 //
 #define IDR_RCDATA1                     101
 

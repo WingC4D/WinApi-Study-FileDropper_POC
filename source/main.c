@@ -11,8 +11,6 @@ int main(void)
 	
 	if (pPayload == NULL) return -5;
 
-	
-
 	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
 
 	unsigned char *pKey = "0xdeadbeef";
@@ -29,7 +27,7 @@ int main(void)
 
 	pPayload->pPayloadAddress = pDecryptedPayload;
 
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
+	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
 	WCHAR pPath[MAX_PATH] = { L'\0' };
 
 	FetchDrives(pPath);
