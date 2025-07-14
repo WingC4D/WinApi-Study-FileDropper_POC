@@ -1,12 +1,20 @@
 #include "rsrcPayloadTest.h"
 
-PVOID Test() 
+LPPAYLOAD Test() 
 {
-	HRSRC   hRsrc           = NULL;
-	HGLOBAL hGlobal         = NULL;
-	PVOID   pPayloadAddress = NULL;
-	SIZE_T  sPayloadSize     = NULL;
+	HRSRC   hRsrc            =  NULL ;
 	
+	HANDLE hHeap             = GetProcessHeap();
+
+	LPPAYLOAD pPayload       = HeapAlloc(hHeap, 0, sizeof(LPPAYLOAD));
+	
+	HGLOBAL hGlobal          =  NULL ;
+	
+	DWORD dwPayloadSize      =  NULL ;
+	
+	
+	
+
 	hRsrc = FindResourceW(
 		NULL,
 		MAKEINTRESOURCEW(IDR_RCDATA1),
@@ -28,26 +36,32 @@ PVOID Test()
 		return NULL;
 	}
 	
-	pPayloadAddress = LockResource(hGlobal);
+	PVOID pPayloadAddress = LockResource(hGlobal);
 
 	if (pPayloadAddress == NULL) {
 		wprintf(L"LockResource [X] Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
 
-	sPayloadSize = SizeofResource(NULL, hRsrc);
+	DWORD sPayloadSize = SizeofResource(NULL, hRsrc);
 	
-	if (sPayloadSize == NULL) {
+	if (pPayload->dwpPayloadSize == NULL) {
 		wprintf(L"[X] SizeofResource Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
-	
 	wprintf(L"[i] pPayloadAddress var : 0x%p \n", pPayloadAddress);
-	wprintf(L"[i] sPayloadSize var : %lu \n", sPayloadSize);
-
-	PVOID pPayload = HeapAlloc(GetProcessHeap(), 0, sPayloadSize);
 	
-	if (pPayload != NULL) memcpy(pPayload, pPayloadAddress, sPayloadSize);
+	pPayload->pPayloadAddress = malloc(wcslen(pPayload) * sizeof(WCHAR));
+	
+	memcpy(pPayload->pPayloadAddress, pPayloadAddress, sPayloadSize);
+	
+	if (pPayload->pPayloadAddress == NULL) return NULL;
+	
+	pPayload->dwpPayloadSize = HeapAlloc(hHeap, 0, sizeof(DWORD));
 
+	memcpy(pPayload->dwpPayloadSize, &sPayloadSize, sizeof(DWORD));
+	
+	wprintf(L"[i] dwpPayloadSize var : %lu \n", *pPayload->dwpPayloadSize);
+	
 	return pPayload;
 }

@@ -1,8 +1,7 @@
 #include "ErrorHandlers.h"
 #include "choosers.h"
-#include "main.h"
 #include "Printers.h"
-#include "SystemInteractors.h"
+#include "Win32FindDataArray.h"
 
 BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 {
@@ -45,7 +44,7 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 		case 'F':
 		{
 			wprintf(L"Going Back To Folder Selction In Path: %s\n", pOriginalPath);
-			PrintSubFiles(pOriginalPath);
+			PrintFilesArrayW(pOriginalPath);
 			return TRUE;
 		}
 		case 'd':

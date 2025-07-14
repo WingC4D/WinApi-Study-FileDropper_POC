@@ -2,10 +2,10 @@
 #pragma comment(lib, "Shlwapi.lib")
 #include <Windows.h> 
 #include <stdio.h>
-#include <string.h>
 #include <shlwapi.h>
 
-#include "SystemInteractors.h"
+#include "..\Headers\Win32FindDataArray.h"
+
 
 typedef struct _UserAnswer_t {
 	LPWSTR string;
@@ -32,17 +32,6 @@ BOOL UserInputDrives(
 
 BOOL UserInputFolders(
 	LPWSTR pPath,
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
-);
-
-void AddFolder2PathString(
-	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t
-);
-
-void AddFolder2PathIndex(
-	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 

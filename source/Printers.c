@@ -1,7 +1,6 @@
 #include "Printers.h"
 #include "choosers.h"
-#include "ErrorHandlers.h"
-#include "SystemInteractors.h"
+#include "Win32FindDataArray.h"
 // Constructing a new data type that represents HelloWorld's function pointer.
 typedef void(WINAPI* HelloWorldFunctionPointer)();
 
@@ -37,9 +36,9 @@ BOOL PrintUserName(
 	void
 ) 
 {
-	WCHAR pUsername[MAX_PATH] = { L'\0' }; //Assigning a Buffer for the current username to land at.
-	DWORD pSizeofusername[8] = { NULL }; //Assigning a buufer the Size of the username in chars (1 char = 1 byte) to land at.
-	if (GetUserNameW(pUsername, pSizeofusername) == 0)
+	WCHAR pUsername[MAX_PATH] = { L'\0' };
+	LPDWORD pSizeOfUserName  = NULL;
+	if (GetUserNameW(pUsername, pSizeOfUserName) == 0)
 	{
 		return FALSE;
 	}
@@ -48,10 +47,11 @@ BOOL PrintUserName(
 	return TRUE;
 }
 
-void PrintSubFiles(
+void PrintFilesArrayW(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 ) 
 {
+	
 	for(unsigned i = 0; i < pFiles_arr_t->count; i++)
 	{
 		wprintf(L"[%d] File Name: %s\n", i, pFiles_arr_t->pFiles_arr[i].file_data.cFileName);

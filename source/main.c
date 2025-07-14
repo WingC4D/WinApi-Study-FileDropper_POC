@@ -1,22 +1,25 @@
-#include "rsrcPayloadTest.h"
-#include "Printers.h"
-#include "choosers.h"
-#include "Externals.h"
-#include "SystemInteractors.h"
+#include "main.h"
+
+
 
 
 int main(void) 
 {
 	call();
 	
-	PVOID pPayload = Test();
+	LPPAYLOAD pPayload = Test();
 	
 	if (pPayload == NULL) return -5;
 	
-	printf("Payload: %s\nPayload Address: %p\n", pPayload, pPayload);
+	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
+	BYTE *pbKey[4] = {0xEFBEADDE};
+
+	XorByInputKey(pPayload->pPayloadAddress, *pPayload->dwpPayloadSize, &pbKey, 4);
+
+	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
 
 	WCHAR pPath[MAX_PATH] = { L'\0' };
-	
+
 	FetchDrives(pPath);
 	
 	if (pPath[0] == L'0')
@@ -25,8 +28,6 @@ int main(void)
 		return -1;
 	}
 	
-	
-
 	PrintDrives(pPath);
 	
 	while (!UserInputDrives(&pPath))
@@ -49,7 +50,7 @@ int main(void)
 		return -2;
 	}
 	
-	PrintSubFiles(pFiles_arr_t);
+	PrintFilesArrayW(pFiles_arr_t);
 	
 	while (!UserInputFolders(pPath, pFiles_arr_t)) {
 		
@@ -63,11 +64,11 @@ int main(void)
 			break;
 		}
 		PrintCWD(&pPath);
-		PrintSubFiles(pFiles_arr_t);
+		PrintFilesArrayW(pFiles_arr_t);
 	}
  	
 	
-	wprintf(L"File Name: %s", pFiles_arr_t->pFiles_arr->file_data.cFileName);
+	wprintf(L"File Name: %s", *pFiles_arr_t->pFiles_arr->file_data.cFileName);
 
 	if (pFiles_arr_t->pFiles_arr->file_data.dwFileAttributes & FILE_ATTRIBUTE_NORMAL)
 	{

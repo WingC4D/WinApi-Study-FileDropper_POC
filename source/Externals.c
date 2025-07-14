@@ -33,7 +33,7 @@ __declspec(allocate(".text")) const unsigned char ShellCodePayload[] =
 int call(void)
 {
 	HMODULE hModule = GetModuleHandleA("Libraries\\DLL_Study.dll");
-	printf("%p\n", &ShellCodePayload);
+	printf(".text Payload Address: 0x%p\n", &ShellCodePayload);
 	if (hModule == NULL)
 	{
 		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");
@@ -49,9 +49,14 @@ int call(void)
 	CircusFunctionPointer Circus = (CircusFunctionPointer)fpCircus;	
 	
 	if (Circus() == 7) printf("AHAHAHAHA Like That Would Stop The Circus\n");
+	
 	HANDLE hNotepad = INVALID_HANDLE_VALUE;
+	
 	hNotepad = OpenProcess(WRITE_DAC, TRUE, 48452);
+	
 	if (hNotepad == INVALID_HANDLE_VALUE) return -1;
+	
 	CloseHandle(hNotepad);
+	
 	return 0;
 }

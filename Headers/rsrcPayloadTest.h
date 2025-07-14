@@ -2,7 +2,12 @@
 
 #include<Windows.h>
 #include <stdio.h>
-
 #include "resource.h"
 
-PVOID Test(void);
+
+typedef struct _PAYLOAD {
+	PVOID pPayloadAddress;
+	LPDWORD  dwpPayloadSize;
+}PAYLOAD, *LPPAYLOAD;
+
+LPPAYLOAD Test(void);
