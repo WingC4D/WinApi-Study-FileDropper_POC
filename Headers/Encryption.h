@@ -3,28 +3,35 @@
 #include <stdio.h>
 #include <math.h>
 
+typedef struct _CUSTOM_USTRING 
+{
+	DWORD Length;
+	DWORD MaximumLength;
+	PVOID pBuffer;
+}USTRING, * PUSTRING;
+
 typedef struct _RC4Context
 {
 	unsigned int  main_index;
 	unsigned int  swap_index;
-	unsigned char stream_key[256];
+	unsigned char pKey[256];
 
 }RC4CONTEXT, * PRC4CONTEXT;
 
 void RC4Init(
 	PRC4CONTEXT pContext_t,
-	const unsigned char *p_key,
-	size_t s_length
+	unsigned char *pKey,
+	size_t sKeyLength
 );
 
 void RC4Encrypt(
 	PRC4CONTEXT          pContext_t,
-	const unsigned char* pInput,
-	unsigned char* pOutput,
-	size_t               sLength
+	unsigned char *pInput,
+	unsigned char       *pOutput,
+	size_t               sPayloadLength
 );
 
-VOID XorByInputKey(
+VOID BasicStreamXor(
 	IN PBYTE p_shellcode,
 	IN SIZE_T s_shellcode,
 	IN PBYTE p_key,
@@ -32,5 +39,6 @@ VOID XorByInputKey(
 );
 
 NTSTATUS SystemFunction032(
-	void 
+	PUSTRING pData,
+	PUSTRING pKey
 );

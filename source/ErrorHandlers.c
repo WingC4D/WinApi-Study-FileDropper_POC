@@ -1,5 +1,5 @@
 #include "ErrorHandlers.h"
-#include "choosers.h"
+#include "UserInput.h"
 #include "Printers.h"
 #include "Win32FindDataArray.h"
 
@@ -50,7 +50,6 @@ BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 		case 'd':
 		case 'D':
 		{
-			main();
 			return TRUE;
 			break;
 		}

