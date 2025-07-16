@@ -1,15 +1,19 @@
 #include "rsrcPayloadTest.h"
 
-LPPAYLOAD Test()
+LPTEXT Test()
 {
 	HRSRC   hRsrc = NULL;
 	HANDLE hHeap = GetProcessHeap();
 	
 	HGLOBAL hGlobal = NULL;
-	DWORD dwPayloadSize = NULL;
+	DWORD sText = NULL;
 
-	unsigned char *pKey = "0xdeadbeef";
+	unsigned char *pKey[2049] = {'\0'};
 
+	//printf("Please Enter A Key:\n");
+
+	fgets(pKey, 2048, stdin);
+	
 	hRsrc = FindResourceW(NULL,MAKEINTRESOURCEW(IDR_RCDATA1),RT_RCDATA);
 	
 	if (hRsrc == NULL) {
@@ -31,33 +35,33 @@ LPPAYLOAD Test()
 		return NULL;
 	}
 
-	LPPAYLOAD pPayload = HeapAlloc(hHeap, 0, sizeof(PAYLOAD));
+	LPTEXT pText_t = HeapAlloc(hHeap, 0, sizeof(TEXT));
 
-	RC4CONTEXT Context = { NULL };
+	Context Context = { NULL };
 
-	pPayload->dwPayloadSize = SizeofResource(NULL, hRsrc);
+	pText_t->sText = SizeofResource(NULL, hRsrc);
 
-	if (!pPayload->dwPayloadSize) {
+	if (!pText_t->sText) {
 		wprintf(L"[X] SizeofResource Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
-	wprintf(L"[i] pPayloadAddress var : 0x%p \n", pResource);
+	printf("[i] 0x%p \n", pResource);
 
-	PVOID pPayloadCopy = HeapAlloc(hHeap, 0, pPayload->dwPayloadSize);
+	pText_t->pText = HeapAlloc(hHeap, 0, pText_t->sText);
 
-	memcpy(pPayloadCopy, pResource, pPayload->dwPayloadSize);
+	memcpy(pText_t->pText, pResource, pText_t->sText);
 
-	RC4Init(&Context, pKey, strlen(pKey));
+	//SystemFunction032(pKey, pText_t->pPayloadAddress, strlen(pKey), pText_t->dwPayloadSize);
+	
+	//rInit(&Context, pKey, strlen(pKey));
 
-	pPayload->pPayloadAddress = malloc(wcslen(pPayload) + 1);
+	pText_t->pText = malloc(pText_t->sText + 1);
 
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
+	//printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pText->pText, pText_t->pText);
 
-	RC4Encrypt(&Context, pPayloadCopy, pPayload->pPayloadAddress, pPayload->dwPayloadSize);
+	//rFin(&Context, pResource, pText_t->pText, pText_t->sText);
 
-	if (pPayload->pPayloadAddress == NULL) return NULL;
+	if (pText_t->pText == NULL) return NULL;
 
-	wprintf(L"[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n", pPayload->pPayloadAddress, pPayload->pPayloadAddress);
-
-	return pPayload;
+	return pText_t;
 }

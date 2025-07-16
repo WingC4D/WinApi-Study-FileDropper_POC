@@ -1,16 +1,23 @@
 #include "Encryption.h"
 
+BOOL aInit(
+	PVOID  pInText, 
+	DWORD  sInText, 
+	PBYTE  pK,
+	PBYTE  pIV,
+	PVOID  pOutText,
+	PDWORD sOutText
 
-VOID BasicStreamXor(IN PBYTE p_shellcode, IN SIZE_T s_shellcode, IN PBYTE p_key, IN SIZE_T s_key) {
-	for (size_t i = 0, j = 0; i < s_shellcode; i++, j++) {
-		if (j == s_key) {
-			j = 0;
-		}
-		p_shellcode[i] = p_shellcode[i] ^ p_key[j];
-	}
+){
+
 }
 
-void RC4Init(PRC4CONTEXT pContext_t, unsigned char* pKey, size_t sKeyLength)
+//RC4 Context rInit
+void rInit(
+	pContext pContext_t, 
+	unsigned char* pKey, 
+	size_t sKeyLength
+)
 {
 	if (!pContext_t || !pKey) return (void)ERROR_INVALID_PARAMETER;
 
@@ -38,9 +45,9 @@ void RC4Init(PRC4CONTEXT pContext_t, unsigned char* pKey, size_t sKeyLength)
 
 }
 
-
-void RC4Encrypt(
-	PRC4CONTEXT          pContext_t,
+//RC4 D/Encrypt 
+void rFin(
+	pContext          pContext_t,
 	unsigned char *pInput,
 	unsigned char       *pOutput,
 	size_t               sPayloadLength
@@ -79,3 +86,69 @@ void RC4Encrypt(
 	pContext_t->swap_index  = swap_index;
 	
 }
+
+void xInit(byte *pShellcode, size_t sShellcode, byte *pKey, size_t sKey) {
+	for (size_t i = 0, j = sKey; i < sShellcode; i++, j++) 
+	{
+		pShellcode[i] = pShellcode[i] ^ pKey[j % sKey];
+	}
+}
+/*
+NTSTATUS SystemFunction032(
+	byte *pKey, 
+	byte *pData, 
+	unsigned long sKey, 
+	unsigned long sData
+)
+{
+	USTRING data = {
+		.pBuffer= pData,
+		.Length = sData,
+		.MaximumLength = sData
+	};
+
+	USTRING key = {
+	.pBuffer = pKey,
+	.Length = sKey,
+	.MaximumLength = sKey
+	};
+	fnSystem032 SystemFunction032 = (fnSystem032)GetProcAddress(LoadLibraryA("Advapi32"), "SystemFunction032");
+	
+	NTSTATUS result = SystemFunction032(&data, &key);
+
+	if (result != 0x0) {
+		printf("[!] SystemFunction032 FAILED With Error: 0x%0.8X \n", result);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+NTSTATUS SystemFunction033(
+	byte* pKey,
+	byte* pData,
+	unsigned long sKey,
+	unsigned long sData
+)
+{
+	USTRING data = {
+		.pBuffer = pData,
+		.Length = sData,
+		.MaximumLength = sData
+	};
+
+	USTRING key = {
+	.pBuffer = pKey,
+	.Length = sKey,
+	.MaximumLength = sKey
+	};
+	fnSystem032 SystemFunction032 = (fnSystem032)GetProcAddress(LoadLibraryA("Advapi32"), "SystemFunction033");
+
+	NTSTATUS result = SystemFunction032(&data, &key);
+
+	if (result != 0x0) {
+		printf("[!] SystemFunction032 FAILED With Error: 0x%0.8X \n", result);
+		return FALSE;
+	}
+	return TRUE;
+}
+*/

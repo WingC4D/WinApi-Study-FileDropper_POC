@@ -1,9 +1,8 @@
 #include "Externals.h"
 
-//Bonus! .rodata msvenom PayLoad Allocation!
-#pragma section(".text")
-
-__declspec(allocate(".text")) const unsigned char ShellCodePayload[] =
+//Bonus! .text msvenom PayLoad Allocation!
+//#pragma section(".text")
+/*__declspec(allocate(".text")) const unsigned char ShellCodePayload[] =
 {
 0xFC, 0x48, 0x83, 0xE4, 0xF0, 0xE8, 0xC0, 0x00, 0x00, 0x00, 0x41, 0x51,
 0x41, 0x50, 0x52, 0x51, 0x56, 0x48, 0x31, 0xD2, 0x65, 0x48, 0x8B, 0x52,
@@ -29,11 +28,11 @@ __declspec(allocate(".text")) const unsigned char ShellCodePayload[] =
 0x75, 0x05, 0xBB, 0x47, 0x13, 0x72, 0x6F, 0x6A, 0x00, 0x59, 0x41, 0x89,
 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x00
 };
-
+*/
 int call(void)
 {
 	HMODULE hModule = GetModuleHandleA("Libraries\\DLL_Study.dll");
-	printf(".text Payload Address: 0x%p\n", &ShellCodePayload);
+	//printf(".text Payload Address: 0x%p\n", &ShellCodePayload);
 	if (hModule == NULL)
 	{
 		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");

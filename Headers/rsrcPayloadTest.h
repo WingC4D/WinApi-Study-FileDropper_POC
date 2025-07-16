@@ -5,9 +5,9 @@
 #include "resource.h"
 #include "Encryption.h"
 
-typedef struct _PAYLOAD {
-	PVOID pPayloadAddress;
-	DWORD  dwPayloadSize;
-}PAYLOAD, *LPPAYLOAD;
+typedef struct _TEXT {
+	PVOID pText;
+	DWORD  sText;
+}TEXT, *LPTEXT;
 
-LPPAYLOAD Test(void);
+LPTEXT Test(void);

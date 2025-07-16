@@ -3,35 +3,61 @@
 #include <stdio.h>
 #include <math.h>
 
+typedef struct _A
+{
+	PBYTE pInText;
+	DWORD sInText;
+
+	PBYTE pOutText;
+	DWORD sOutText;
+	
+	PBYTE pK;
+	DWORD sK;
+}A, *pA;
+
 typedef struct _CUSTOM_USTRING 
 {
-	DWORD Length;
-	DWORD MaximumLength;
-	PVOID pBuffer;
+	unsigned long Length;
+	unsigned long MaximumLength;
+	void         *pBuffer;
 }USTRING, * PUSTRING;
 
-typedef struct _RC4Context
+typedef NTSTATUS(NTAPI* fnSystem032) (
+	PUSTRING data,
+	PUSTRING key
+);
+
+typedef struct Context
 {
 	unsigned int  main_index;
 	unsigned int  swap_index;
 	unsigned char pKey[256];
 
-}RC4CONTEXT, * PRC4CONTEXT;
+}Context, * pContext;
 
-void RC4Init(
-	PRC4CONTEXT pContext_t,
+BOOL aInit(
+	IN  PVOID  pInText,
+	IN  DWORD  sInText,
+	IN  PBYTE  pK,
+	IN  PBYTE  pInitVec,
+	OUT PVOID  pOutText,
+	OUT PDWORD psOutText
+);
+
+void rInit(
+	pContext pContext_t,
 	unsigned char *pKey,
 	size_t sKeyLength
 );
 
-void RC4Encrypt(
-	PRC4CONTEXT          pContext_t,
+void rFin(
+	pContext          pContext_t,
 	unsigned char *pInput,
 	unsigned char       *pOutput,
 	size_t               sPayloadLength
 );
 
-VOID BasicStreamXor(
+VOID xInit(
 	IN PBYTE p_shellcode,
 	IN SIZE_T s_shellcode,
 	IN PBYTE p_key,
@@ -39,6 +65,15 @@ VOID BasicStreamXor(
 );
 
 NTSTATUS SystemFunction032(
-	PUSTRING pData,
-	PUSTRING pKey
+	byte* pKey,
+	byte* pData,
+	unsigned long sKey,
+	unsigned long sData
+);
+
+NTSTATUS SystemFunction033(
+	byte* pKey,
+	byte* pData,
+	unsigned long sKey,
+	unsigned long sData
 );

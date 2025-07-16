@@ -1,7 +1,7 @@
 #include "UserInput.h"
 
 BOOL UserInputDrives(
-	LPWSTR pPath
+	const LPWSTR pPath
 )
 {
 	wprintf(L"Please Choose a Drive\n");
@@ -17,8 +17,8 @@ BOOL UserInputDrives(
 
 
 BOOL UserInputFolders(
-	LPWSTR pPath,
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+	const LPWSTR pPath,
+	const LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
 	UserAnswer_t Answer_t = { NULL };
@@ -43,9 +43,9 @@ BOOL UserInputFolders(
 }
 
 BOOL CheckUserInputFolders(
-	LPWSTR pPath, 
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t, 
-	pUserAnswer_t pAnswer_t
+	const LPWSTR pPath,
+	const LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
+	const pUserAnswer_t pAnswer_t
 ) 
 {
 	int remainder = pFiles_arr_t->count;
