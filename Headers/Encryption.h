@@ -11,8 +11,8 @@ typedef struct _A
 	PBYTE pOutText;
 	DWORD sOutText;
 	
-	PBYTE pK;
-	DWORD sK;
+	PBYTE pKey;
+	PBYTE pInitVec;
 }A, *pA;
 
 typedef struct _CUSTOM_USTRING 
