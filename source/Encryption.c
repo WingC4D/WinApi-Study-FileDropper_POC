@@ -7,9 +7,8 @@ BOOL aInit(
 	PBYTE  pIV,
 	PVOID  pOutText,
 	PDWORD sOutText
-
 ){
-
+	
 }
 
 //RC4 Context rInit
@@ -93,7 +92,7 @@ void xInit(byte *pShellcode, size_t sShellcode, byte *pKey, size_t sKey) {
 		pShellcode[i] = pShellcode[i] ^ pKey[j % sKey];
 	}
 }
-/*
+
 NTSTATUS SystemFunction032(
 	byte *pKey, 
 	byte *pData, 
@@ -151,4 +150,3 @@ NTSTATUS SystemFunction033(
 	}
 	return TRUE;
 }
-*/
