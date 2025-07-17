@@ -11,8 +11,8 @@ typedef struct _A
 	PBYTE pOutText;
 	DWORD sOutText;
 	
-	PBYTE pK;
-	DWORD sK;
+	PBYTE pKey;
+	PBYTE pInitVec;
 }A, *pA;
 
 typedef struct _CUSTOM_USTRING 
@@ -36,12 +36,12 @@ typedef struct Context
 }Context, * pContext;
 
 BOOL aInit(
-	IN  PVOID  pInText,
-	IN  DWORD  sInText,
-	IN  PBYTE  pK,
+	IN  PVOID  pCText,
+	IN  DWORD  sCText,
+	IN  PBYTE  pKey,
 	IN  PBYTE  pInitVec,
-	OUT PVOID  pOutText,
-	OUT PDWORD psOutText
+	OUT PVOID  pPText,
+	OUT PDWORD psPText
 );
 
 void rInit(

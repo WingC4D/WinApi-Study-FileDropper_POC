@@ -1,6 +1,8 @@
 #include "Encryption.h"
 
+//AES.WinNT init Wrapper
 BOOL aInit(
+<<<<<<< HEAD
 	PVOID  pInText, 
 	DWORD  sInText, 
 	PBYTE  pK,
@@ -9,8 +11,50 @@ BOOL aInit(
 	PDWORD sOutText
 ){
 	
-}
+=======
+	PVOID  pCText, 
+	DWORD  sCText, 
+	PBYTE  pKey,
+	PBYTE  pInitVec,
+	PVOID  pPText,
+	PDWORD psPText)
+{
+	if (!pCText || ! sCText || !pKey || !pInitVec) return FALSE;
 
+	//intitalizing the AES Struct
+	A A_t = {
+		.pKey.    = pKey,
+		.pInitVec = pInitVec,
+		.pInText  = pCText,
+		.sInText  = sCText
+	};
+	
+	if (!InstallAesEncryption(&A_t)) return FALSE;
+	
+	pPText  = A_t.pOutText;
+	psPText = A_t.sOutText;
+
+	return TRUE;
+} 
+
+
+BOOL InstallAesEncryption(pA pA_t)
+{
+	BOOL               STATE      = TRUE;
+	BCRYPT_ALG_HANDLE  hAlgorithm = NULL;
+	BCRYPT_KEY_HANDLE  hKey       = NULL;
+
+	ULONG cbresult = NULL;
+	DWORD sBlock = NULL;
+
+	DWORD cbKeyObject = NULL;
+	PBYTE pbKeyObject
+
+	PBYTE    pbCtext = NULL;
+	DWORD    cbCText = NULL;
+	NTSTATUS STATUS  = NULL;
+>>>>>>> 410a6e7d4b994db402acc24894795d23aa14f803
+}
 //RC4 Context rInit
 void rInit(
 	pContext pContext_t, 
