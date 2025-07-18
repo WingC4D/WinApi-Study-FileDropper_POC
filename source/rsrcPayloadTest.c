@@ -47,10 +47,9 @@ PBYTE Test()
 	srand(time(NULL));                      // The seed to generate the key. This is used to further randomize the key.
 	GenerateRandomBytes(pKey, KEYSIZE);     // Generating a key with the helper function
 
-	srand(time(NULL) ^ pKey[0]);            // The seed to generate the IV. Use the first byte of the key to add more randomness.
-	GenerateRandomBytes(pInitVec, IVSIZE);       // Generating the IV with the helper function
-
-	// Printing both key and IV onto the console 
+	srand(time(NULL) ^ pKey[0]);            
+	GenerateRandomBytes(pInitVec, IVSIZE);
+	
 	PrintHexData("pKey", pKey, KEYSIZE);
 	PrintHexData("pIv", pInitVec, IVSIZE);
 	PrintHexData("pText", pText, sResource);
@@ -80,6 +79,6 @@ PBYTE Test()
 	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypted Payload!\n", pTextCopy, pTextCopy);
 	
 	if (pTextCopy == NULL) return NULL;
-	free(pTextCopy);
+	
 	return pTextCopy;
 }
