@@ -2,83 +2,93 @@
 
 PBYTE Test()
 {
-	HRSRC   hRsrc = NULL;
-	HANDLE hHeap = GetProcessHeap();
+	UCHAR    pKey[KEYSIZE];
+	UCHAR    pInitVec[IVSIZE];
+	UCHAR    pInitVecCopy[IVSIZE];
+	RESOURCE resource;
 	
-	HGLOBAL hGlobal = NULL;
-	DWORD sResource = NULL;
-
-	hRsrc = FindResourceW(NULL,MAKEINTRESOURCEW(IDR_RCDATA1),RT_RCDATA);
-	if (hRsrc == NULL) {
-		wprintf(L"[X] FindResourceW Failed With Error Code: %x\n", GetLastError());
-		return NULL;
-	}
+	if (!FetchResource(&resource)) { return NULL; }
 	
-	hGlobal = LoadResource(NULL, hRsrc);
-	if (hGlobal == NULL) {
-		wprintf(L"[X] LoadResource Failed With Error Code: %x\n", GetLastError());
-		return NULL;
-	}
+	srand(time(NULL));
+	GenerateRandomBytes(pKey, KEYSIZE);
 	
-	PVOID pResource = LockResource(hGlobal);
-	if (pResource == NULL) {
-		wprintf(L"LockResource [X] Failed With Error Code: %x\n", GetLastError());
-		return NULL;
-	}
-	
-	sResource = SizeofResource(NULL, hRsrc);
-	if (!sResource) 
-	{
-		wprintf(L"[X] SizeofResource Failed With Error Code: %x\n", GetLastError());
-		return NULL;
-	}
-	printf("[i] Resource: 0x%p\n", pResource);
-
-	unsigned char *pText = malloc(sResource);
-
-	memcpy(pText, (PBYTE)pResource, sResource);
-
-	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", pText, pText);
-	
-
-	unsigned char pKey[KEYSIZE];                    // KEYSIZE is 32 bytes
-	unsigned char pInitVec[IVSIZE];                      // IVSIZE is 16 bytes
-
-	srand(time(NULL));                      // The seed to generate the key. This is used to further randomize the key.
-	GenerateRandomBytes(pKey, KEYSIZE);     // Generating a key with the helper function
-
 	srand(time(NULL) ^ pKey[0]);            
 	GenerateRandomBytes(pInitVec, IVSIZE);
 	
-	PrintHexData("pKey", pKey, KEYSIZE);
-	PrintHexData("pIv", pInitVec, IVSIZE);
-	PrintHexData("pText", pText, sResource);
+	memcpy(pInitVecCopy, pInitVec, IVSIZE);
 	
-	unsigned char *cText = NULL;
-	DWORD scText = NULL;
+	StatusCheck(pInitVecCopy, pKey, resource.pAddress, resource.sSize,"Resource");
 	
-	if (!aInit(pText, sResource, pKey, pInitVec, &cText, &scText)) return NULL;
+	PUCHAR rsrcText = malloc(resource.sSize);
+	memcpy(rsrcText, resource.pAddress, resource.sSize);
 	
-	free(pText);
+	PUCHAR pCipherText;
+	DWORD  sChiperText;
 
-	PrintHexData("cText", cText, scText);
+	if (!aInit(rsrcText, resource.sSize, pKey, pInitVecCopy, &pCipherText, &sChiperText)) { free(rsrcText); return NULL; }
 	
-	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", cText, cText);
+	free(rsrcText);
 
-	unsigned char *pTextCopy = NULL;
+	StatusCheck(pInitVecCopy, pKey, pCipherText, sChiperText,"CipherText");
 	
-	PrintHexData("pKey", pKey, KEYSIZE);
+	printf("[i] Heap Address: 0x%p\n[!] Encrypted!\n", pCipherText, pCipherText);
 
-	DWORD sText = NULL;
+	PUCHAR pPlainText = malloc(sChiperText);
+	DWORD  sPlainText = NULL;
 
-	aFin(cText, scText, pKey, pInitVec, &pTextCopy, &sText);
+	memcpy(pInitVecCopy, pInitVec, IVSIZE);
 
-	//Here im Getting not The same data as in pText
-	PrintHexData("pTextCopy", pTextCopy, sText);
+	aFin(pCipherText, sChiperText, pKey, pInitVecCopy, &pPlainText, &sPlainText);
+
+	StatusCheck(pInitVecCopy, pKey, pPlainText, sPlainText, "PlainText");
+
+	printf("[i] Heap Address: 0x%p\n[!] Decrypted!\n", pPlainText, pPlainText);
 	
-	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypted Payload!\n", pTextCopy, pTextCopy);
+	if (pPlainText == NULL) { free(pPlainText); return NULL; }
 	
-	if (pTextCopy == NULL) return NULL;
+	return pPlainText;
+}
+
+
+BOOL FetchResource(
+	OUT PRESOURCE pResource_t
+)
+{
+	HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_RCDATA1), RT_RCDATA);
+	if (!hRsrc) {
+		//printf("[X] FindResourceW Failed With Error Code: %x\n", GetLastError());
+		return FALSE;
+	}
+
+	HGLOBAL hGlobal = LoadResource(NULL, hRsrc);
+	if (!hGlobal) { 
+		//printf("[X] LoadResource Failed With Error Code: %x\n", GetLastError());
+		return FALSE; 
+	}
+
+	pResource_t->pAddress = LockResource(hGlobal);
+	if (!pResource_t->pAddress) {
+		//printf("LockResource [X] Failed With Error Code: %x\n", GetLastError()); 
+		return FALSE; 
+	}
+
+	pResource_t->sSize = SizeofResource(NULL, hRsrc);
+	if (!pResource_t->sSize) { 
+		//printf("[X] SizeofResource Failed With Error Code: %x\n", GetLastError()); 
+		return FALSE; 
+	}
 	
-	return pTextCopy;
+	return TRUE;
+}
+
+VOID StatusCheck(
+	IN PUCHAR pInitVec, 
+	IN PUCHAR pKey,
+	IN PUCHAR pData,
+	IN size_t sData,
+	IN PCHAR pName 
+) {	
+	PrintHexData("InitVec", pInitVec, IVSIZE);
+	PrintHexData("Key", pKey, KEYSIZE);
+	PrintHexData(pName, pData, sData);
 }

@@ -1,93 +1,89 @@
 #include "Encryption.h"
 
 
-//AES.WinNT init Wrapper
+//AES BCrypt encrypt wrapper
 BOOL aInit(
 IN	PVOID   pPText, 
 IN	DWORD   sPText, 
-IN	PBYTE   pKey,
+IN	PBYTE   pKeyObj,
 IN	PBYTE   pInitVec,
 OUT	PVOID  *pCText,
 OUT	DWORD  *psCText
 )
 {
-	if (!pPText || ! sPText || !pKey || !pInitVec) return FALSE;
-
-	//intitalizing the AES Struct
-	AEStruct A_t = {
-		.pKey     = pKey,
+	if (!pPText || ! sPText || !pKeyObj || !pInitVec) return FALSE;
+	AEStruct AES_t = {
+		.pKey     = pKeyObj,
 		.pInitVec = pInitVec,
 		.pPText   = pPText,
-		.sPText   = sPText
-	};
+		.sPText   = sPText,
+		.blEncrypt  = TRUE
+	};	
+	if (!InstallAes(&AES_t)) return FALSE;
 	
-	if (!InstallAes(&A_t, TRUE)) return FALSE;
-	
-	*pCText  = A_t.pCText;
-	*psCText = A_t.sCText;
+	*pCText  = AES_t.pCText;
+	*psCText = AES_t.sCText;
 
 	return TRUE;
 } 
 
+//AES BCrypt decrypt wrapper
 BOOL aFin(
 	IN  PVOID  pCText,
 	IN  DWORD  sCText,
-	IN  PBYTE  pKey,
+	IN  PBYTE  pKeyObj,
 	IN  PBYTE  pInitVec,
-	
 	OUT PVOID *pPText,
-	
 	OUT DWORD *spPText
 ) 
 {
-	if (!pCText || !sCText || !pKey || !pInitVec) return FALSE;
+	if (!pCText || !sCText || !pKeyObj || !pInitVec) return FALSE;
 	
-	AEStruct A_t = {
-		.pKey     = pKey,
+	AEStruct AES_t = {
+		.pKey     = pKeyObj,
 		.pInitVec = pInitVec,
 		.pCText   = pCText,
-		.sCText   = sCText
+		.sCText   = sCText,
+		.blEncrypt  = FALSE
 	};
 
 
-	if (!InstallAes(&A_t, FALSE)) return FALSE;
+	if (!InstallAes(&AES_t)) return FALSE;
 
-	*pPText  = A_t.pPText;
-	*spPText = A_t.sPText;
+	*pPText  = AES_t.pPText;
+	*spPText = AES_t.sPText;
 	return TRUE;
 }
 
 
 BOOL InstallAes(
-	PAEStruct pA_t, 
-	BOOL Encrypt
+	PAEStruct pA_t
 )
 {
-	BOOL               STATE      = TRUE;
-	BCRYPT_ALG_HANDLE  hAlgorithm = NULL;
-	BCRYPT_KEY_HANDLE  hKey       = NULL;
+	BCRYPT_ALG_HANDLE hAlgorithm = NULL;
+	BCRYPT_KEY_HANDLE hKey       = NULL;
 
 	ULONG cbResult = NULL;
 	DWORD sBlock   = NULL;
 
-	DWORD cbKey = NULL;
-	PBYTE pbKey = NULL;
+	DWORD cbKeyObj = NULL;
+	PBYTE pKeyObj  = NULL;
 
-	PBYTE    pbOUTText = NULL;
-	DWORD    cbOutText = NULL;
+	PBYTE pOutText = NULL;
+	DWORD sOutText = NULL;
+
+	BOOL     STATE = TRUE;
 	
-	HANDLE hHeap = GetProcessHeap();
 	
-	//Algorithm init.
 	NTSTATUS STATUS = BCryptOpenAlgorithmProvider(&hAlgorithm, BCRYPT_AES_ALGORITHM, NULL, 0);
 	
 	if (!AESSuccessCheck(&STATE, STATUS, "AlgorithmProvider")) goto _CleanUp;
-
-	//Getting the size of the key (pbKey).  
+	
+	//Getting key size.
 	STATUS = BCryptGetProperty(
 		hAlgorithm, 
 		BCRYPT_OBJECT_LENGTH, 
-		(PBYTE)&cbKey, 
+		(PBYTE)&cbKeyObj, 
 		sizeof(DWORD), 
 		&cbResult, 
 		0
@@ -109,9 +105,11 @@ BOOL InstallAes(
 	
 	if (sBlock != 16) { STATE = FALSE; goto _CleanUp; }
 	
-	pbKey = (PBYTE)HeapAlloc(hHeap, 0, cbKey);
+	HANDLE hHeap = GetProcessHeap();
 
-	if (!pbKey) { STATE = FALSE; goto _CleanUp; }
+	pKeyObj = (PBYTE)HeapAlloc(hHeap, 0, cbKeyObj);
+
+	if (!pKeyObj) { STATE = FALSE; goto _CleanUp; }
 
 	//Setting Block Cipher Mode to CBC. This uses a 32 byte key and a 16 byte IV.
 	STATUS = BCryptSetProperty(
@@ -124,23 +122,22 @@ BOOL InstallAes(
 	
 	if (!AESSuccessCheck(&STATE, STATUS, "SetProperty")) goto _CleanUp;
 	
-
-	//Genrating Key for AES Struct.
+//Genrating Key for AES Struct.
 	STATUS = BCryptGenerateSymmetricKey(
 		hAlgorithm, 
 		&hKey, 
-		pbKey, 
-		cbKey, 
-		(PBYTE)pA_t->pKey, 
+		pKeyObj, 
+		cbKeyObj, 
+		pA_t->pKey, 
 		KEYSIZE, 
 		0
 	);
 	
-	if ( !AESSuccessCheck( &STATE, STATUS, "GenerateSymmetricKey" ) ) goto  _CleanUp;
-	
+	if ( !AESSuccessCheck(&STATE, STATUS, "GenerateSymmetricKey") ) goto  _CleanUp;
 
-	if (Encrypt) {
-		//Retriving sizeof output buff
+
+	//Getting output text size. 
+	if (pA_t->blEncrypt) {
 		STATUS = BCryptEncrypt(
 			hKey,
 			pA_t->pPText,
@@ -150,15 +147,13 @@ BOOL InstallAes(
 			IVSIZE,
 			NULL,
 			0,
-			&cbOutText,//saving to here
+			&sOutText,
 			BCRYPT_BLOCK_PADDING
 		);
 		if (!AESSuccessCheck(&STATE, STATUS, "Encrypt")) goto _CleanUp;
 
-		pbOUTText = (PBYTE)HeapAlloc(hHeap, 0, cbOutText);
-		if (!pbOUTText) { STATE = FALSE; goto _CleanUp; }
-
-
+		pOutText = (PBYTE)HeapAlloc(hHeap, 0, sOutText);
+		if (!pOutText) { STATE = FALSE; goto _CleanUp; }
 
 		STATUS = BCryptEncrypt(
 			hKey,
@@ -167,8 +162,8 @@ BOOL InstallAes(
 			NULL,
 			pA_t->pInitVec,
 			IVSIZE,
-			pbOUTText,
-			cbOutText,
+			pOutText,
+			sOutText,
 			&cbResult,
 			BCRYPT_BLOCK_PADDING
 		);
@@ -177,23 +172,23 @@ BOOL InstallAes(
 	}
 	else
 	{
-		
 		STATUS = BCryptDecrypt(
 			hKey,
-			(PUCHAR)pA_t->pCText,
-			(ULONG)pA_t->sCText,
+			pA_t->pCText,
+			pA_t->sCText,
 			NULL,
 			pA_t->pInitVec,
 			IVSIZE,
 			NULL,
 			0,
-			&cbOutText,
+			&sOutText,
 			BCRYPT_BLOCK_PADDING
 		);
-		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _ADCleanUp;
+		
+		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _CleanUp;
 
-		pbOUTText = (PBYTE)HeapAlloc(hHeap, 0, cbOutText);
-		if (!pbOUTText) { STATE = FALSE; goto _CleanUp; }
+		pOutText = (PBYTE)HeapAlloc(hHeap, 0, sOutText);
+		if (!pOutText) { STATE = FALSE; goto _CleanUp; }
 
 
 		STATUS = BCryptDecrypt(
@@ -203,69 +198,57 @@ BOOL InstallAes(
 			NULL,
 			pA_t->pInitVec,
 			IVSIZE,
-			pbOUTText,
-			cbOutText,
+			pOutText,
+			sOutText,
 			&cbResult,
 			BCRYPT_BLOCK_PADDING
 		);
-		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _ADCleanUp;
+		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _CleanUp;
 	}
-	_CleanUp: 
-	
 
-	if (hKey) BCryptDestroyKey(hKey);
+_CleanUp: 
+	if (hKey) { BCryptDestroyKey(hKey); }
 
-	if (hAlgorithm) BCryptCloseAlgorithmProvider(hAlgorithm, 0);
+	if (hAlgorithm) { BCryptCloseAlgorithmProvider(hAlgorithm, 0); }
 	
-	if (pbKey) HeapFree(GetProcessHeap(), 0, pbKey);
+	if (pKeyObj) { HeapFree(GetProcessHeap(), 0, pKeyObj); }
 	
-	if (!Encrypt) goto _ADCleanUp;
+	if (!pA_t->blEncrypt) { goto _DecCleanUp; }
 	
-	if (pbOUTText && STATE) {
-		pA_t->pCText = pbOUTText;
-		pA_t->sCText = cbOutText;
-		//HeapFree(GetProcessHeap(), 0, pbOUTText);
-	}
+	if (pOutText && STATE) { pA_t->pCText = pOutText; pA_t->sCText = sOutText; }
 	
 	return STATE;
 
-_ADCleanUp:
-
-	if (pbOUTText && STATE) {
-		pA_t->pPText = pbOUTText;
-		pA_t->sPText = cbOutText;
-	//HeapFree(GetProcessHeap(), 0, pbOUTText);
-	}
-
+_DecCleanUp:
+	if (pOutText && STATE) { pA_t->pPText = pOutText; pA_t->sPText = sOutText; }
+	
 	return STATE;
 }
 
-
-// Print the input buffer as a hex char array
 VOID PrintHexData(
 	LPCSTR pName, 
 	PBYTE  pData, 
 	SIZE_T size
-) {
-
-	printf("unsigned char %s[] = {", pName);
+)
+{
+	printf("[i] %s[] = {", pName);
 
 	for (int i = 0; i < size; i++) {
-		if (i % 16 == 0) printf("\n\t");
+		if (i % 16 == 0) { printf("\n\t"); }
 
-		if (i < size - 1) printf("0x%0.2X, ", pData[i]);
+		if (i < size - 1) { printf("0x%0.2X, ", pData[i]); }
 		
 		else printf("0x%0.2X ", pData[i]);
-		
 	}
-	printf("};\n\n\n");
+	printf("};\n\n");
 }
 
 
 VOID GenerateRandomBytes(
 	PBYTE pByte, 
 	SIZE_T size
-) {
+) 
+{
 	for (int i = 0; i < size; i++) pByte[i] = (BYTE)rand() % 0xFF;
 	return;
 }
@@ -294,22 +277,26 @@ void rInit(
 	pContext_t->swap_index = 0;
 
 
-	unsigned int local_main_index;
-	unsigned int local_swap_index;
-	unsigned char temp_byte_holder;
+	unsigned int  MainIndexInit;
+	unsigned int  SwapIndexInit;
+	unsigned char TempByteHolder;
 
-	for (local_main_index = 0; local_main_index < 256; local_main_index++)
+	for (MainIndexInit = 0; MainIndexInit < 256; MainIndexInit++)
 	{
-		pContext_t->pKey[local_main_index] = local_main_index;
+		pContext_t->pKey[MainIndexInit] = MainIndexInit;
 	}
 
-	for (local_main_index = 0, local_swap_index = 0; local_main_index < 256; local_main_index++)
+	for (MainIndexInit = 0, SwapIndexInit = 0; MainIndexInit < 256; MainIndexInit++)
 	{
-		local_swap_index = (local_swap_index + pContext_t->pKey[local_main_index] + pKey[local_main_index % sKeyLength]) % 256;
+		SwapIndexInit = (
+			SwapIndexInit + 
+			pContext_t->pKey[MainIndexInit] + 
+			pKey[MainIndexInit % sKeyLength]
+			) % 256;
 
-		temp_byte_holder = pContext_t->pKey[local_main_index];
-		pContext_t->pKey[local_main_index] = pContext_t->pKey[local_swap_index];
-		pContext_t->pKey[local_swap_index] = temp_byte_holder;
+		TempByteHolder = pContext_t->pKey[MainIndexInit];
+		pContext_t->pKey[MainIndexInit] = pContext_t->pKey[SwapIndexInit];
+		pContext_t->pKey[SwapIndexInit] = TempByteHolder;
 	}
 
 }
@@ -322,37 +309,36 @@ void rFin(
 	size_t            sLength
 )
 {	
-	unsigned int   main_index       = pContext_t->main_index;
-	unsigned int   swap_index       = pContext_t->swap_index;
+	unsigned int   MainIndexFin       = pContext_t->main_index;
+	unsigned int   SwapIndexFin       = pContext_t->swap_index;
 	unsigned char *pKey             = pContext_t->pKey;
-	unsigned char  temp_byte_holder = 0;
+	unsigned char  TempByteHolder = 0;
 
 	//Core logic
 	while (sLength > 0)
 	{
-		main_index = ( main_index + 1 ) % 256;
+		MainIndexFin = ( MainIndexFin + 1 ) % 256;
 
-		swap_index = ( swap_index + pKey[main_index] ) % 256;
+		SwapIndexFin = ( SwapIndexFin + pKey[MainIndexFin] ) % 256;
 		
-		temp_byte_holder = pKey[main_index];
+		TempByteHolder = pKey[MainIndexFin];
 
-		pKey[main_index] = pKey[swap_index];
+		pKey[MainIndexFin] = pKey[SwapIndexFin];
 
-		pKey[swap_index] = temp_byte_holder;
+		pKey[SwapIndexFin] = TempByteHolder;
 		
 		if (pInput && pOutput)
 		{
-			*pOutput = *pInput ^ pKey[(pKey[main_index] + pKey[swap_index]) % 256];
+			*pOutput = *pInput ^ pKey[(pKey[MainIndexFin] + pKey[SwapIndexFin]) % 256];
 
-			pInput++;
-			pOutput++;
+			pInput++; pOutput++;
 		}
 
 		sLength--;
 	}
 
-	pContext_t->main_index = main_index;
-	pContext_t->swap_index  = swap_index;
+	pContext_t->main_index = MainIndexFin;
+	pContext_t->swap_index = SwapIndexFin;
 	
 }
 

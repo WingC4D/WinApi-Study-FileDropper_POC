@@ -23,13 +23,13 @@ BOOL UserInputFolders(
 {
 	UserAnswer_t Answer_t = { NULL };
 	
-	WCHAR answer[MAX_PATH] = { L'\0' };
+	CHAR answer[MAX_PATH] = { L'\0' };
 	
-	wscanf_s(L"%259s", &answer, MAX_PATH);
+	fgets(answer, MAX_PATH, stdin);
 	
-	Answer_t.string = &answer;
+	Answer_t.string = answer;
 
-	Answer_t.length = wcslen(answer);
+	Answer_t.length = strlen(answer);
 	
 	Answer_t.in_index = FALSE;
 	

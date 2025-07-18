@@ -11,7 +11,7 @@
 
 #define IVSIZE				16
 
-typedef struct _A
+typedef struct _AES
 {
 	PBYTE pPText;
 	DWORD sPText;
@@ -21,6 +21,8 @@ typedef struct _A
 
 	PBYTE pKey;
 	PBYTE pInitVec;
+
+	BOOL blEncrypt;
 }AEStruct, *PAEStruct;
 
 typedef struct _CUSTOM_USTRING 
@@ -62,8 +64,7 @@ BOOL aFin(
 );
 
 BOOL InstallAes(
-	IN OUT PAEStruct pA_t, 
-	IN     BOOL Encrypt
+	IN OUT PAEStruct pA_t
 );
 
 BOOL AESSuccessCheck(

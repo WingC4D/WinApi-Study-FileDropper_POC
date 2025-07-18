@@ -25,9 +25,9 @@ void AddFolder2PathIndex(
 
 typedef struct _UserAnswer_t
 {
-	LPWSTR       string;
-	BOOL         in_index;
-	unsigned int length;
+	LPSTR  string;
+	BOOL   in_index;
+	size_t length;
 }UserAnswer_t;
 
 
