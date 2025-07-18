@@ -276,9 +276,9 @@ BOOL AESSuccessCheck(PBOOL pSTATE, NTSTATUS STATUS, LPSTR function)
 	if (!NT_SUCCESS(STATUS))
 	{
 		printf("[!] BCrypt%s Failed With Error: 0x%0.8X\n", function, STATUS);
-		pSTATE = FALSE;
+		*pSTATE = FALSE;
 	}
-	return pSTATE;
+	return *pSTATE;
 }
 
 //RC4 Context rInit
