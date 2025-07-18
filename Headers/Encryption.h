@@ -1,19 +1,27 @@
 #pragma once
+#pragma comment(lib, "bcrypt.lib")
 #include <Windows.h>
 #include <stdio.h>
-#include <math.h>
+#include <bcrypt.h>
+
+
+#define NT_SUCCESS(status)	        (((NTSTATUS)(status)) > -1)
+
+#define KEYSIZE				32
+
+#define IVSIZE				16
 
 typedef struct _A
 {
-	PBYTE pInText;
-	DWORD sInText;
+	PBYTE pPText;
+	DWORD sPText;
 
-	PBYTE pOutText;
-	DWORD sOutText;
-	
+	PBYTE pCText;
+	DWORD sCText;
+
 	PBYTE pKey;
 	PBYTE pInitVec;
-}A, *pA;
+}AEStruct, *PAEStruct;
 
 typedef struct _CUSTOM_USTRING 
 {
@@ -22,7 +30,7 @@ typedef struct _CUSTOM_USTRING
 	void         *pBuffer;
 }USTRING, * PUSTRING;
 
-typedef NTSTATUS(NTAPI* fnSystem032) (
+typedef NTSTATUS(NTAPI *pfnSystem032)(
 	PUSTRING data,
 	PUSTRING key
 );
@@ -36,12 +44,43 @@ typedef struct Context
 }Context, * pContext;
 
 BOOL aInit(
+	IN  PVOID  pPText,
+	IN  DWORD  sPText,
+	IN  PBYTE  pKey,
+	IN  PBYTE  pInitVec,
+	OUT PVOID  pCText,
+	OUT PDWORD psCText
+);
+
+BOOL aFin(
 	IN  PVOID  pCText,
 	IN  DWORD  sCText,
 	IN  PBYTE  pKey,
 	IN  PBYTE  pInitVec,
-	OUT PVOID  pPText,
-	OUT PDWORD psPText
+	OUT PVOID* pPText,
+	OUT PDWORD spPText
+);
+
+BOOL InstallAes(
+	IN OUT PAEStruct pA_t, 
+	IN     BOOL Encrypt
+);
+
+BOOL AESSuccessCheck(
+	PBOOL pSTATE, 
+	NTSTATUS STATUS, 
+	LPSTR function
+);
+
+VOID PrintHexData(
+	LPCSTR pName, 
+	PBYTE pData, 
+	SIZE_T size
+);
+
+VOID GenerateRandomBytes(
+	PBYTE pByte,
+	SIZE_T size
 );
 
 void rInit(

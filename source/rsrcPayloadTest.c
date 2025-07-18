@@ -1,67 +1,103 @@
 #include "rsrcPayloadTest.h"
 
-LPTEXT Test()
+PBYTE Test()
 {
 	HRSRC   hRsrc = NULL;
 	HANDLE hHeap = GetProcessHeap();
 	
 	HGLOBAL hGlobal = NULL;
-	DWORD sText = NULL;
+	DWORD sResource = NULL;
 
-	unsigned char *pKey[2049] = {'\0'};
-
-	//printf("Please Enter A Key:\n");
-
-	fgets(pKey, 2048, stdin);
-	
 	hRsrc = FindResourceW(NULL,MAKEINTRESOURCEW(IDR_RCDATA1),RT_RCDATA);
-	
 	if (hRsrc == NULL) {
 		wprintf(L"[X] FindResourceW Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
 	
 	hGlobal = LoadResource(NULL, hRsrc);
-	
 	if (hGlobal == NULL) {
 		wprintf(L"[X] LoadResource Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
 	
 	PVOID pResource = LockResource(hGlobal);
-
 	if (pResource == NULL) {
 		wprintf(L"LockResource [X] Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
-
-	LPTEXT pText_t = HeapAlloc(hHeap, 0, sizeof(TEXT));
-
-	Context Context = { NULL };
-
-	pText_t->sText = SizeofResource(NULL, hRsrc);
-
-	if (!pText_t->sText) {
+	
+	sResource = SizeofResource(NULL, hRsrc) + 1;
+	if (!sResource) 
+	{
 		wprintf(L"[X] SizeofResource Failed With Error Code: %x\n", GetLastError());
 		return NULL;
 	}
-	printf("[i] 0x%p \n", pResource);
+	printf("[i] Resource: 0x%p\n", pResource);
 
-	pText_t->pText = HeapAlloc(hHeap, 0, pText_t->sText);
+	BYTE* pText = malloc(sResource);
 
-	memcpy(pText_t->pText, pResource, pText_t->sText);
+	//pText_t->pText = HeapAlloc(hHeap, 0, sResource);
+	memcpy(pText, (PBYTE)pResource, sResource);
+
+	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", pText, pText);
+
+
+	unsigned char pKey[KEYSIZE];                    // KEYSIZE is 32 bytes
+	unsigned char pInitVec[IVSIZE];                      // IVSIZE is 16 bytes
+
+	srand(time(NULL));                      // The seed to generate the key. This is used to further randomize the key.
+	GenerateRandomBytes(pKey, KEYSIZE);     // Generating a key with the helper function
+
+	srand(time(NULL) ^ pKey[0]);            // The seed to generate the IV. Use the first byte of the key to add more randomness.
+	GenerateRandomBytes(pInitVec, IVSIZE);       // Generating the IV with the helper function
+
+	// Printing both key and IV onto the console 
+	PrintHexData("pKey", pKey, KEYSIZE);
+	PrintHexData("pIv", pInitVec, IVSIZE);
+
+	// Defining two variables the output buffer and its respective size which will be used in SimpleEncryption
+	//PVOID pCipherText = NULL;
+	//DWORD dwCipherSize = NULL;
+	PrintHexData("pText", pText, sResource);
+	//pText_t->pText = HeapAlloc(GetProcessHeap(), 0, sResource);
+	unsigned char *cText = malloc(sResource);
+	DWORD scText = NULL;
+	
+	// Encrypting
+	if (!aInit(pText, sResource, pKey, pInitVec, &cText, &scText)) return NULL;
+	PrintHexData("cText", cText, scText);
+	// Print the encrypted buffer as a hex array
+	//if (!aInit(pTextCopy, sResource, pKey, pIv, &pText_t->pText, &sResource)) return "FAILED";
+	
+	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", cText, cText);
 
 	//SystemFunction032(pKey, pText_t->pPayloadAddress, strlen(pKey), pText_t->dwPayloadSize);
 	
 	//rInit(&Context, pKey, strlen(pKey));
+	unsigned char *pTextCopy = malloc(scText);
+	PrintHexData("pKey", pKey, KEYSIZE);
 
-	pText_t->pText = malloc(pText_t->sText + 1);
+	DWORD sText = NULL;
 
-	//printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pText->pText, pText_t->pText);
+	aFin(cText, scText, pKey, pInitVec, &pTextCopy, &sText);
+	
 
-	//rFin(&Context, pResource, pText_t->pText, pText_t->sText);
+	PrintHexData("pTextCopy", pTextCopy, sText);
+	
+	//memcpy(pText_t->pText, pResource, sResource);
+	
+	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypted Payload!\n", pTextCopy, pTextCopy);
 
-	if (pText_t->pText == NULL) return NULL;
+	//size_t sTextCopy = 0;
 
-	return pText_t;
+	//aFin(pText_t->pText, sResource, pKey, pInitVec, &pTextCopy, &sTextCopy);
+
+	//printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pTextCopy, pTextCopy);
+
+
+	//rFin(&Context, pResource, pText_t->pText, sResource);
+
+	if (pTextCopy == NULL) return NULL;
+
+	return pTextCopy;
 }

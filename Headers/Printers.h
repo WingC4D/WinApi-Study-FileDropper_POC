@@ -6,6 +6,8 @@
 #include <shlwapi.h>
 #include "Win32FindDataArray.h"
 
+void PrintAESError(int index, PBOOL pSTATE, PNTSTATUS pSTATUS);
+
 void PrintDrives(LPWSTR pPath);
 
 void PrintCWD(LPWSTR pPath);

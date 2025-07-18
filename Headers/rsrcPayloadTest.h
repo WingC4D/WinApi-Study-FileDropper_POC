@@ -4,10 +4,12 @@
 #include <stdio.h>
 #include "resource.h"
 #include "Encryption.h"
+#include <time.h>
+
 
 typedef struct _TEXT {
 	PVOID pText;
 	DWORD  sText;
 }TEXT, *LPTEXT;
 
-LPTEXT Test(void);
+PBYTE Test(void);
