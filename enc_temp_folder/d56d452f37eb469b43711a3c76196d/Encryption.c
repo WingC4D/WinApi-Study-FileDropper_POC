@@ -222,7 +222,7 @@ BOOL InstallAes(
 	if (pbOUTText && STATE) {
 		pA_t->pCText = pbOUTText;
 		pA_t->sCText = cbOutText;
-		HeapFree(GetProcessHeap(), 0, pbOUTText);
+		//HeapFree(GetProcessHeap(), 0, pbOUTText);
 	}
 	
 	return STATE;
@@ -237,7 +237,7 @@ BOOL InstallAes(
 	if (pbOUTText && STATE) {
 		pA_t->pPText = pbOUTText;
 		pA_t->sPText = cbOutText;
-		HeapFree(GetProcessHeap(), 0, pbOUTText);
+		//HeapFree(GetProcessHeap(), 0, pbOUTText);
 	}
 
 	return STATE;

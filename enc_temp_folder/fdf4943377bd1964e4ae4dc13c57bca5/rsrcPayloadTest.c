@@ -60,7 +60,7 @@ PBYTE Test()
 	//DWORD dwCipherSize = NULL;
 	PrintHexData("pText", pText, sResource);
 	//pText_t->pText = HeapAlloc(GetProcessHeap(), 0, sResource);
-	unsigned char *cText = NULL;
+	unsigned char *cText;
 	DWORD scText = NULL;
 	
 	// Encrypting
@@ -74,7 +74,7 @@ PBYTE Test()
 	//SystemFunction032(pKey, pText_t->pPayloadAddress, strlen(pKey), pText_t->dwPayloadSize);
 	
 	//rInit(&Context, pKey, strlen(pKey));
-	unsigned char *pTextCopy = NULL;
+	unsigned char *pTextCopy;
 	PrintHexData("pKey", pKey, KEYSIZE);
 
 	DWORD sText = NULL;
