@@ -26,7 +26,7 @@ PBYTE Test()
 		return NULL;
 	}
 	
-	sResource = SizeofResource(NULL, hRsrc) + 1;
+	sResource = SizeofResource(NULL, hRsrc);
 	if (!sResource) 
 	{
 		wprintf(L"[X] SizeofResource Failed With Error Code: %x\n", GetLastError());
@@ -34,13 +34,12 @@ PBYTE Test()
 	}
 	printf("[i] Resource: 0x%p\n", pResource);
 
-	BYTE* pText = malloc(sResource);
+	unsigned char *pText = malloc(sResource);
 
-	//pText_t->pText = HeapAlloc(hHeap, 0, sResource);
 	memcpy(pText, (PBYTE)pResource, sResource);
 
 	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", pText, pText);
-
+	
 
 	unsigned char pKey[KEYSIZE];                    // KEYSIZE is 32 bytes
 	unsigned char pInitVec[IVSIZE];                      // IVSIZE is 16 bytes
@@ -54,50 +53,33 @@ PBYTE Test()
 	// Printing both key and IV onto the console 
 	PrintHexData("pKey", pKey, KEYSIZE);
 	PrintHexData("pIv", pInitVec, IVSIZE);
-
-	// Defining two variables the output buffer and its respective size which will be used in SimpleEncryption
-	//PVOID pCipherText = NULL;
-	//DWORD dwCipherSize = NULL;
 	PrintHexData("pText", pText, sResource);
-	//pText_t->pText = HeapAlloc(GetProcessHeap(), 0, sResource);
+	
 	unsigned char *cText = NULL;
 	DWORD scText = NULL;
 	
-	// Encrypting
 	if (!aInit(pText, sResource, pKey, pInitVec, &cText, &scText)) return NULL;
+	
+	free(pText);
+
 	PrintHexData("cText", cText, scText);
-	// Print the encrypted buffer as a hex array
-	//if (!aInit(pTextCopy, sResource, pKey, pIv, &pText_t->pText, &sResource)) return "FAILED";
 	
 	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypted Payload!\n", cText, cText);
 
-	//SystemFunction032(pKey, pText_t->pPayloadAddress, strlen(pKey), pText_t->dwPayloadSize);
-	
-	//rInit(&Context, pKey, strlen(pKey));
 	unsigned char *pTextCopy = NULL;
+	
 	PrintHexData("pKey", pKey, KEYSIZE);
 
 	DWORD sText = NULL;
 
 	aFin(cText, scText, pKey, pInitVec, &pTextCopy, &sText);
-	
 
+	//Here im Getting not The same data as in pText
 	PrintHexData("pTextCopy", pTextCopy, sText);
 	
-	//memcpy(pText_t->pText, pResource, sResource);
-	
 	printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypted Payload!\n", pTextCopy, pTextCopy);
-
-	//size_t sTextCopy = 0;
-
-	//aFin(pText_t->pText, sResource, pKey, pInitVec, &pTextCopy, &sTextCopy);
-
-	//printf("[i] Payload in Test: %s\n[i] Payload Heap Address: 0x%p\n[!] Encrypting Payload...\n", pTextCopy, pTextCopy);
-
-
-	//rFin(&Context, pResource, pText_t->pText, sResource);
-
+	
 	if (pTextCopy == NULL) return NULL;
-
+	free(pTextCopy);
 	return pTextCopy;
 }

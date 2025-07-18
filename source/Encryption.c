@@ -205,20 +205,22 @@ BOOL InstallAes(
 			IVSIZE,
 			pbOUTText,
 			cbOutText,
-			&cbOutText,
+			&cbResult,
 			BCRYPT_BLOCK_PADDING
 		);
 		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _ADCleanUp;
 	}
 	_AECleanUp: 
-	if (!Encrypt) goto _ADCleanUp;
+	
 
 	if (hKey) BCryptDestroyKey(hKey);
 
 	if (hAlgorithm) BCryptCloseAlgorithmProvider(hAlgorithm, 0);
 	
 	if (pbKey) HeapFree(GetProcessHeap(), 0, pbKey);
-
+	
+	if (!Encrypt) goto _ADCleanUp;
+	
 	if (pbOUTText && STATE) {
 		pA_t->pCText = pbOUTText;
 		pA_t->sCText = cbOutText;
@@ -227,12 +229,7 @@ BOOL InstallAes(
 	
 	return STATE;
 
-	_ADCleanUp:
-	if (hKey) BCryptDestroyKey(hKey);
-
-	if (hAlgorithm) BCryptCloseAlgorithmProvider(hAlgorithm, 0);
-
-	if (pbKey) HeapFree(GetProcessHeap(), 0, pbKey);
+_ADCleanUp:
 
 	if (pbOUTText && STATE) {
 		pA_t->pPText = pbOUTText;
