@@ -8,7 +8,7 @@ BOOL UserInputDrives(
 	
 	WCHAR *pAnswer[2];
 	
-	wscanf_s(L"%1s", pAnswer, 2);
+	fgets(pAnswer,2, stdin);
 	
 	pAnswer[0] = towupper(pAnswer[0]);
 	
@@ -17,16 +17,22 @@ BOOL UserInputDrives(
 
 
 BOOL UserInputFolders(
-	const LPWSTR pPath,
-	const LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+	LPWSTR pPath,
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
-	UserAnswer_t Answer_t = { NULL };
+	getchar();
+	printf("Which folder would you like to choose?\n");
 	
-	CHAR answer[MAX_PATH] = { L'\0' };
+	UserAnswer_t Answer_t;
+	
+	CHAR answer[MAX_PATH];
 	
 	fgets(answer, MAX_PATH, stdin);
 	
+	answer[strlen(answer) - 1] = '\0';
+	if (strlen(answer) < 1) UserInputFolders(pPath, pFiles_arr_t);
+
 	Answer_t.string = answer;
 
 	Answer_t.length = strlen(answer);
@@ -48,10 +54,7 @@ BOOL CheckUserInputFolders(
 	const pUserAnswer_t pAnswer_t
 ) 
 {
-	int remainder = pFiles_arr_t->count;
 	
-	int curr_order_of_magnitude = pFiles_arr_t->highest_order_of_magnitude;
-
 	IsInputIndexed(
 		pFiles_arr_t,
 		pAnswer_t
@@ -123,7 +126,7 @@ BOOL UserInputContinueFolders(
 	
 	WCHAR answer[2] = { L'\0' };
 	
-	wscanf_s(L"%1s", &answer, 2);
+	fgets(answer, 2, stdin);
 	
 	switch (answer[0])
 	

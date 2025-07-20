@@ -267,7 +267,7 @@ BOOL AESSuccessCheck(PBOOL pSTATE, NTSTATUS STATUS, LPSTR function)
 //RC4 Context rInit
 void rInit(
 	pContext pContext_t, 
-	unsigned char* pKey, 
+	unsigned char *pKey,
 	size_t sKeyLength
 )
 {
@@ -311,7 +311,7 @@ void rFin(
 {	
 	unsigned int   MainIndexFin       = pContext_t->main_index;
 	unsigned int   SwapIndexFin       = pContext_t->swap_index;
-	unsigned char *pKey             = pContext_t->pKey;
+	unsigned char *pKey               = pContext_t->pKey;
 	unsigned char  TempByteHolder = 0;
 
 	//Core logic

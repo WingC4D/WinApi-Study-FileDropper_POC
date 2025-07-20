@@ -43,7 +43,7 @@ typedef struct Context
 	unsigned int  swap_index;
 	unsigned char pKey[256];
 
-}Context, * pContext;
+}Context, *pContext;
 
 BOOL aInit(
 	IN  PVOID  pPText,
@@ -86,7 +86,7 @@ VOID GenerateRandomBytes(
 
 void rInit(
 	pContext pContext_t,
-	unsigned char *pKey,
+	unsigned char pKey[256],
 	size_t sKeyLength
 );
 

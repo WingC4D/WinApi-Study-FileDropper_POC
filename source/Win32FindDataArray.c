@@ -39,7 +39,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(
 	
 	size_t sArraySize = 3;
 
-	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = (WIN32_FIND_DATA_ARRAYW *)malloc(sArraySize * sizeof(WIN32_FIND_DATA_ARRAYW));
+	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t = malloc(sArraySize * sizeof(WIN32_FIND_DATA_ARRAYW));
 	
 	pFiles_arr_t->hBaseFile = INVALID_HANDLE_VALUE;
 	

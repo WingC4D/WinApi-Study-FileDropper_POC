@@ -20,7 +20,7 @@ typedef struct _TEXT {
 
 }TEXT, *LPTEXT;
 
-PBYTE Test(void);
+PBYTE Test(int argc, char *argv[]);
 
 BOOL FetchResource(OUT PRESOURCE pResource_t);
 

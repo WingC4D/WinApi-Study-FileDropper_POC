@@ -31,12 +31,12 @@
 */
 int call(void)
 {
-	HMODULE hModule = GetModuleHandleA("Libraries\\DLL_Study.dll");
+	HMODULE hModule = GetModuleHandleA(".\DLL_Study.dll");
 	//printf(".text Payload Address: 0x%p\n", &ShellCodePayload);
 	if (hModule == NULL)
 	{
 		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");
-		hModule = LoadLibraryA("Libraries\\DLL_Study.dll");
+		hModule = LoadLibraryA(".\\DLL_Study.dll");
 		if (hModule == NULL)
 		{
 			printf("Failed to Fetch Library Handle!\nError Code: %d\n", GetLastError());
@@ -45,7 +45,7 @@ int call(void)
 	}
 	PVOID  fpCircus = GetProcAddress(hModule, "Circus");
 	
-	CircusFunctionPointer Circus = (CircusFunctionPointer)fpCircus;	
+	CircusFunctionPointer Circus = fpCircus;	
 	
 	if (Circus() == 7) printf("AHAHAHAHA Like That Would Stop The Circus\n");
 	

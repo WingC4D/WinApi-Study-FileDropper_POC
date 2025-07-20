@@ -6,3 +6,5 @@
 #include "rsrcPayloadTest.h"
 #include "Externals.h"
 #include "Encryption.h"
+#include  "dllinjection.h"
+typedef  VOID(WINAPI* fnShellCode)();

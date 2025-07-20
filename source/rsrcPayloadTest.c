@@ -1,14 +1,37 @@
 #include "rsrcPayloadTest.h"
 
-PBYTE Test()
+PBYTE Test(int argc, char *argv[])
 {
-	UCHAR    pKey[KEYSIZE];
-	UCHAR    pInitVec[IVSIZE];
-	UCHAR    pInitVecCopy[IVSIZE];
+	//if (argc < 2) { printf("No Dll Injected :(\n"); return NULL; }
+	printf("[!] injecting \".\\DLL.dll\" To the local Process of Pid: %d\n[+] Loading Dll...\n", GetCurrentProcessId());
+	
+	
+	HMODULE hLibrary = LoadLibraryA(".\\DLL.dll");
+		if (!hLibrary) { //printf("[x] Failed!\n"); 
+			return NULL; 
+		}
+	
+	//printf("[i] Successful!\n");
+	//UCHAR    pKey[KEYSIZE];
+	//UCHAR    pInitVec[IVSIZE];
+	//UCHAR    pInitVecCopy[IVSIZE];
 	RESOURCE resource;
 	
 	if (!FetchResource(&resource)) { return NULL; }
 	
+	Context context_t;
+	
+	unsigned char key[256] = { '\0' };
+	
+	fgets(key, 255, stdin);
+
+	size_t sKey = strlen(key);
+
+	//context_t.pKey = key;
+
+	rInit(&context_t, key, sKey);
+
+	/*
 	srand(time(NULL));
 	GenerateRandomBytes(pKey, KEYSIZE);
 	
@@ -18,20 +41,22 @@ PBYTE Test()
 	memcpy(pInitVecCopy, pInitVec, IVSIZE);
 	
 	StatusCheck(pInitVecCopy, pKey, resource.pAddress, resource.sSize,"Resource");
-	
-	PUCHAR rsrcText = malloc(resource.sSize);
-	memcpy(rsrcText, resource.pAddress, resource.sSize);
-	
+
+	//PUCHAR rsrcText = malloc(resource.sSize);
+	//if (!rsrcText) return NULL;
+	//memcpy(rsrcText, resource.pAddress, resource.sSize);
+
+
 	PUCHAR pCipherText;
 	DWORD  sChiperText;
 
-	if (!aInit(rsrcText, resource.sSize, pKey, pInitVecCopy, &pCipherText, &sChiperText)) { free(rsrcText); return NULL; }
+	//if (!aInit(rsrcText, resource.sSize, pKey, pInitVecCopy, &pCipherText, &sChiperText)) { free(rsrcText); return NULL; }
 	
-	free(rsrcText);
+	//free(rsrcText);
 
-	StatusCheck(pInitVecCopy, pKey, pCipherText, sChiperText,"CipherText");
+	//StatusCheck(pInitVecCopy, pKey, pCipherText, sChiperText,"CipherText");
 	
-	printf("[i] Heap Address: 0x%p\n[!] Encrypted!\n", pCipherText, pCipherText);
+	//printf("[i] Heap Address: 0x%p\n[!] Encrypted!\n", pCipherText);
 
 	PUCHAR pPlainText = malloc(sChiperText);
 	DWORD  sPlainText = NULL;
@@ -41,12 +66,21 @@ PBYTE Test()
 	aFin(pCipherText, sChiperText, pKey, pInitVecCopy, &pPlainText, &sPlainText);
 
 	StatusCheck(pInitVecCopy, pKey, pPlainText, sPlainText, "PlainText");
+	*/
+	LPTEXT Text = HeapAlloc(GetProcessHeap(), 0, sizeof(TEXT));
+	
+	Text->sText = resource.sSize;
 
-	printf("[i] Heap Address: 0x%p\n[!] Decrypted!\n", pPlainText, pPlainText);
+	Text->pText = VirtualAlloc(0, Text->sText, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);  
 	
-	if (pPlainText == NULL) { free(pPlainText); return NULL; }
+	rFin(&context_t, resource.pAddress, Text->pText, Text->sText);
+
+	//printf("[i] Result: %s\n[i] Heap Address: 0x%p\n[!] Decrypted!\n", Text->pText, Text->pText);
 	
-	return pPlainText;
+	if (Text == NULL) { VirtualFree(Text->pText, Text->sText, MEM_FREE); HeapFree(GetProcessHeap(), 0,Text);  return NULL;
+	}
+	
+	return Text;
 }
 
 

@@ -32,6 +32,11 @@ LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW(
     LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 
+BOOL FileBufferRoundUP(
+    size_t* psArray,
+    LPWIN32_FIND_DATAW* pFiles_arr
+);
+
 HANDLE CreateVessel(LPWSTR pPath);
 
 void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t);
