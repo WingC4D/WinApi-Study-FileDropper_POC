@@ -1,6 +1,49 @@
 #include "dllinjection.h"
 
-#define _CRT_SECURE_NO_WARNNINGS
+HANDLE FetchProcess(IN LPWSTR pProcessName, OUT PDWORD dwProcessId)
+{	
+	
+	HANDLE hProcess = INVALID_HANDLE_VALUE;
+	HANDLE hSnapshot;
+	HANDLE hHeap;
+	PROCESSENTRY32 pe32Process = { .dwSize = sizeof(PROCESSENTRY32) };
+	
+	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL)) == INVALID_HANDLE_VALUE) return hSnapshot;
+
+	if (!(hHeap = GetProcessHeap())) goto _cleanup;
+	
+	if (!Process32First(hSnapshot, &pe32Process)) goto _cleanup;
+
+	do
+	{
+		WCHAR local_temp[MAX_PATH] = {L'\0'};
+		for (int i = 0; i < lstrlenW(pe32Process.szExeFile); i++) 
+		{
+			local_temp[i] = (WCHAR)tolower(pe32Process.szExeFile[i]);
+		}
+		if (!wcscmp(local_temp, pProcessName)) 
+		{ 
+			hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32Process.th32ProcessID);
+			wprintf(L"[i] Opened a HANDLE to process: \"%s\" | id: %d\n", local_temp, pe32Process.th32ProcessID);
+			goto _cleanup; 
+		}
+	} while (Process32Next(hSnapshot, &pe32Process));
+
+	printf("Failed To Find The Desired, pe32Process.\n");
+_cleanup:	
+	*dwProcessId = pe32Process.th32ProcessID;
+
+	if (hHeap)HeapDestroy(hHeap);
+	
+	if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
+
+	return hProcess;
+}
+
+
+
+
+
 
 int inject_dll(void) 
 {
@@ -33,11 +76,11 @@ int inject_dll(void)
 				}
 			}
 
-			// If the lowercase'd process name matches the process we're looking for
+			// If the lowercase'd pe32Process name matches the pe32Process we're looking for
 			if (wcscmp(LowerName, szProcessname) == 0) {
 				// Save the PID
 				dwProcessId = Process.th32ProcessID;
-				// Open a handle to the process
+				// Open a handle to the pe32Process
 				HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, Process.th32ProcessID);
 				if (Process.th32ProcessID == 0)
 					printf("[!] OpenProcess Failed With Error : %d \n", GetLastError());
@@ -46,6 +89,6 @@ int inject_dll(void)
 			}
 	} while (Process32Next(hSnapshot, &Process));
 	
-	//while (Process32(hSnapshot, &Process)) wprintf(L"[#] Name: %s id: %d\n",Process.szExeFile ,Process.th32ProcessID);
+	//while (Process32(hSnapshot, &pe32Process)) wprintf(L"[#] Name: %s id: %d\n",pe32Process.szExeFile ,pe32Process.th32ProcessID);
 	return 0;
 }

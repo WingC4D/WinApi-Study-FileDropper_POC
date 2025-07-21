@@ -3,4 +3,4 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
-int inject_dll(VOID);
+HANDLE FetchProcess(LPWSTR pProcessName, PDWORD pdwProcessId);

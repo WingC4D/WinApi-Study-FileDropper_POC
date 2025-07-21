@@ -6,7 +6,10 @@
 int main(int argc, char *argv[])
 {
 	
-	inject_dll();
+	DWORD dwProcessId;
+	HANDLE hProcess =  FetchProcess(L"chrome.exe", &dwProcessId);
+	if (hProcess == INVALID_HANDLE_VALUE) { getchar(); return -1; }
+	//inject_dll();
 
 	call();
 	
