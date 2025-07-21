@@ -1,7 +1,5 @@
 #include "ErrorHandlers.h"
-#include "UserInput.h"
 #include "Printers.h"
-#include "Win32FindDataArray.h"
 
 BOOL FolderDebugger(LPWSTR pCandidatePath, LPWSTR pOriginalPath)
 {

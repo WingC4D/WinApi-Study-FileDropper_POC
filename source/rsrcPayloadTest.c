@@ -1,6 +1,6 @@
 #include "rsrcPayloadTest.h"
 
-PBYTE Test(int argc, char *argv[])
+PBYTE Test()
 {
 	//if (argc < 2) { printf("No Dll Injected :(\n"); return NULL; }
 	printf("[!] injecting \".\\DLL.dll\" To the local Process of Pid: %d\n[+] Loading Dll...\n", GetCurrentProcessId());

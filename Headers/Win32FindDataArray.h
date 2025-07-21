@@ -25,18 +25,13 @@ typedef struct _WIN32_FIND_DATA_ARRAYW {
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;
 
 
-LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(LPWSTR pPath);
 
-LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW(
-    LPWSTR pPath,
-    LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
-);
 
 BOOL FileBufferRoundUP(
     size_t* psArray,
     LPWIN32_FIND_DATAW* pFiles_arr
 );
 
-HANDLE CreateVessel(LPWSTR pPath);
+
 
 void FreeFileArray(LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t);

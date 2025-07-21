@@ -1,5 +1,6 @@
 #pragma once
 #include "UserInput.h"
+#include "SystemInteraction.h"
 #include "ErrorHandlers.h"
 #include "Printers.h"
 #include "Win32FindDataArray.h"
