@@ -4,3 +4,5 @@
 #include <stdio.h>
 
 HANDLE FetchProcess(LPWSTR pProcessName, PDWORD pdwProcessId);
+
+BOOL InjectDll(HANDLE hProcess, LPWSTR pDllName);

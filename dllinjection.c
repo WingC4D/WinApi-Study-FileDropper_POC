@@ -2,15 +2,15 @@
 
 HANDLE FetchProcess(IN LPWSTR pProcessName, OUT PDWORD dwProcessId)
 {	
-	
-	HANDLE hProcess = INVALID_HANDLE_VALUE;
 	HANDLE hSnapshot;
-	HANDLE hHeap;
+	HANDLE hHeap = INVALID_HANDLE_VALUE;
+	HANDLE hProcess = INVALID_HANDLE_VALUE;
+	
 	PROCESSENTRY32 pe32Process = { .dwSize = sizeof(PROCESSENTRY32) };
 	
-	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL)) == INVALID_HANDLE_VALUE) return hSnapshot;
+	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) == INVALID_HANDLE_VALUE) goto _cleanup;
 
-	if (!(hHeap = GetProcessHeap())) goto _cleanup;
+	if ((hHeap = GetProcessHeap()) == 0) goto _cleanup;
 	
 	if (!Process32First(hSnapshot, &pe32Process)) goto _cleanup;
 
@@ -24,71 +24,47 @@ HANDLE FetchProcess(IN LPWSTR pProcessName, OUT PDWORD dwProcessId)
 		if (!wcscmp(local_temp, pProcessName)) 
 		{ 
 			hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32Process.th32ProcessID);
-			wprintf(L"[i] Opened a HANDLE to process: \"%s\" | id: %d\n", local_temp, pe32Process.th32ProcessID);
+			wprintf(L"[i] Opened a HANDLE to process: \"%s\"\n[i] Process id: %d", local_temp, pe32Process.th32ProcessID);
 			goto _cleanup; 
 		}
 	} while (Process32Next(hSnapshot, &pe32Process));
 
-	printf("Failed To Find The Desired, pe32Process.\n");
+	printf("[x] Failed to find the desired process.\n");
 _cleanup:	
 	*dwProcessId = pe32Process.th32ProcessID;
 
-	if (hHeap)HeapDestroy(hHeap);
+	if (hSnapshot) CloseHandle(hSnapshot);
 	
-	if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
-
+	if (hHeap != INVALID_HANDLE_VALUE)HeapDestroy(hHeap);
+	
 	return hProcess;
 }
 
 
-
-
-
-
-int inject_dll(void) 
+BOOL InjectDll(HANDLE hProcess, LPWSTR DllName)
 {
-	DWORD dwProcessId;
-	LPWSTR szProcessname = L"calculatorapp.exe";
-	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
-	if (hSnapshot == INVALID_HANDLE_VALUE) return -1;
-	PROCESSENTRY32 Process = { .dwSize = sizeof(PROCESSENTRY32) };
-	if (!Process32First(hSnapshot, &Process)) {
-		printf("failed!\nexiting with errorcode: %x\n", GetLastError());
-		return -1;
-	}
-	WCHAR temp_1[MAX_PATH]; WCHAR temp_2[MAX_PATH];
-	do {
-			wprintf(L"[#] Name: %s id: %d\n", Process.szExeFile ,Process.th32ProcessID);
-			WCHAR LowerName[MAX_PATH * 2];
-
-			if (Process.szExeFile) {
-				DWORD	dwSize = lstrlenW(Process.szExeFile);
-				DWORD   i = 0;
-
-				RtlSecureZeroMemory(LowerName, sizeof(LowerName));
-
-				if (dwSize < MAX_PATH * 2) {
-
-					for (; i < dwSize; i++)
-						LowerName[i] = (WCHAR)tolower(Process.szExeFile[i]);
-
-					LowerName[i++] = '\0';
-				}
-			}
-
-			// If the lowercase'd pe32Process name matches the pe32Process we're looking for
-			if (wcscmp(LowerName, szProcessname) == 0) {
-				// Save the PID
-				dwProcessId = Process.th32ProcessID;
-				// Open a handle to the pe32Process
-				HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, Process.th32ProcessID);
-				if (Process.th32ProcessID == 0)
-					printf("[!] OpenProcess Failed With Error : %d \n", GetLastError());
-
-				break;
-			}
-	} while (Process32Next(hSnapshot, &Process));
+	BOOL state = FALSE;
+	DWORD dwSizeToWrite = lstrlenW(DllName) * sizeof(WCHAR);
 	
-	//while (Process32(hSnapshot, &pe32Process)) wprintf(L"[#] Name: %s id: %d\n",pe32Process.szExeFile ,pe32Process.th32ProcessID);
-	return 0;
+	SIZE_T BytesWritten;
+	HANDLE hThread = INVALID_HANDLE_VALUE;
+	LPVOID pLoadLibraryW;
+	LPVOID pAddress = NULL;
+	
+	if (!(pLoadLibraryW = GetProcAddress(LoadLibraryW(L"kernel32.dll"), "LoadLibraryW"))) goto _cleanup;
+			 
+	if (!(pAddress = VirtualAllocEx(hProcess, NULL, dwSizeToWrite, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) goto _cleanup;
+	
+	if (!WriteProcessMemory(hProcess, pAddress, DllName, dwSizeToWrite, &BytesWritten)) goto _cleanup;
+	
+	if ((hThread = CreateRemoteThread(hProcess, NULL, 0, pLoadLibraryW, pAddress, 0, NULL)) == INVALID_HANDLE_VALUE) goto _cleanup;
+
+	printf("[i] pAddress Allocated At : 0x%p Of Size : %d\n", pAddress, dwSizeToWrite);
+
+	state = TRUE;
+_cleanup:
+	if (pAddress) VirtualFree(pAddress, dwSizeToWrite, MEM_FREE);
+	CloseHandle(hThread);
+	getchar();
+	return state;
 }
