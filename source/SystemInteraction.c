@@ -32,15 +32,14 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(IN LPWSTR pPath)
 {
 	WIN32_FIND_DATAW find_data_t;
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t;
-	unsigned i = 0;
+	USHORT i = 0;
 	size_t sArraySize = 3;
 	if (
 		!(pFiles_arr_t = malloc(sArraySize * sizeof(WIN32_FIND_DATA_ARRAYW)))
 		) return NULL;
 	if (
-		!(pFiles_arr_t->pFiles_arr = (LPWIN32_FILE_IN_ARRAY)calloc(sArraySize, sizeof(WIN32_FILE_IN_ARRAY)))
+		!(pFiles_arr_t->pFilesNames_arr = (PWIN32_FILE_IN_ARRAY)calloc(sArraySize, sizeof(WIN32_FILE_IN_ARRAY)))
 		) return NULL;
-
 	wcscat_s(pPath, MAX_PATH, L"*");
 
 	if (
@@ -51,17 +50,20 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW(IN LPWSTR pPath)
 	
 	while (FindNextFileW(pFiles_arr_t->hBaseFile, &find_data_t))
 	{
-		if (i == sArraySize / 2 && !FileBufferRoundUP(&sArraySize, &pFiles_arr_t->pFiles_arr)) return NULL;
+		if (i == sArraySize / 2 && !FileBufferRoundUP(&sArraySize, &pFiles_arr_t->pFilesNames_arr)) return NULL;
 
-		pFiles_arr_t->pFiles_arr[i].file_data = find_data_t;
-		pFiles_arr_t->pFiles_arr[i].index = i;
+		size_t sFileName = wcslen(find_data_t.cFileName);
+
+		LPWSTR pFileName;
+		if (!(pFileName = calloc(sFileName + 1, sizeof(WCHAR)))) return NULL;
+		
+		wcscpy_s(pFileName, sFileName + 1, find_data_t.cFileName);
+		pFileName[sFileName] = '\0';
+		pFiles_arr_t->pFilesNames_arr[i].pFileName = pFileName;
+		pFiles_arr_t->pFilesNames_arr[i].index = i;
 		i++;
 	}
-
-	
 	pFiles_arr_t->count = i;
-	pFiles_arr_t->highest_order_of_magnitude = floor(log10(i));
-
 	return pFiles_arr_t;
 }
 

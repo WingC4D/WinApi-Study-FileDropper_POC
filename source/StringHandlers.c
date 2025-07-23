@@ -27,45 +27,37 @@ BOOL HandleStringDrives(
 
 void AddFolder2PathString(
 	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t
+	PWCHAR pAnswer,
+	USHORT sAnswer
 )
 {
-	unsigned index = wcslen(pPath);
+	unsigned index = strlen(pPath);
 
 	unsigned leftchars = MAX_PATH - index;
 
-	unsigned AnswerLength = wcslen(pAnswer_t->string);
-
-	if (wcslen(pAnswer_t->string) > leftchars)
+	if (sAnswer > leftchars)
 	{
 		for (unsigned i = 259; i > index; i--)
 		{
-			pAnswer_t->string[i] = L'\0';
+			pAnswer[i] = L'\0';
 		}
 	}
-	wcscat_s(pPath, MAX_PATH, pAnswer_t->string);
+	wcscat_s(pPath, MAX_PATH, pAnswer);
 
 	return;
 }
 
 void AddFolder2PathIndex(
 	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t,
+	const PWCHAR pAnswer,
+	USHORT sAnswer,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
-	int index = 0;
-
-
-	for (int i = 0; i < pAnswer_t->length; i++) {
-		index += (pAnswer_t->string[i] - 48) * pow(10, pAnswer_t->length - i - 1);
+	USHORT index = 0;
+		for (int i = 0; i < sAnswer; i++) {
+		index += (pAnswer[i] - L'0') * pow(10, sAnswer - i - 1);
 	}
-
-	size_t filename_length = wcslen(pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
-
-	pFiles_arr_t->pFiles_arr[index].file_data.cFileName[filename_length] = L'\0';
-
-	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFiles_arr[index].file_data.cFileName);
-
-	return;
+	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFilesNames_arr[index].pFileName);
+	
 }

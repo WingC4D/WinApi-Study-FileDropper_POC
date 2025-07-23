@@ -7,21 +7,18 @@
 
 typedef struct _WIN32_FILE_IN_ARRAY {
     
-    WIN32_FIND_DATAW file_data; 
-    
-    unsigned long index;
+    LPWSTR pFileName; 
+    USHORT index;
 
-}WIN32_FILE_IN_ARRAY, *LPWIN32_FILE_IN_ARRAY;
+}WIN32_FILE_IN_ARRAY, *PWIN32_FILE_IN_ARRAY;
 
 typedef struct _WIN32_FIND_DATA_ARRAYW {
-    LPWIN32_FILE_IN_ARRAY pFiles_arr;
+    PWIN32_FILE_IN_ARRAY pFilesNames_arr;
     
     HANDLE hBaseFile;
+  
+    USHORT count;                  
     
-    size_t count;                  
-    
-    unsigned short highest_order_of_magnitude;
-
 } WIN32_FIND_DATA_ARRAYW, *LPWIN32_FIND_DATA_ARRAYW;
 
 

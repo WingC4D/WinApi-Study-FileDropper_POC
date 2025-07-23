@@ -16,36 +16,29 @@ BOOL UserInputDrives(
 }
 
 
-BOOL UserInputFolders(
+void UserInputFolders(
 	LPWSTR pPath,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
+	USHORT sAnswer;
+	
 	getchar();
 	printf("Which folder would you like to choose?\n");
 	
-	UserAnswer_t Answer_t;
+	WCHAR pAnswer[MAX_PATH];
 	
-	CHAR answer[MAX_PATH];
+	fgetws(pAnswer, MAX_PATH - 1, stdin);
 	
-	fgets(answer, MAX_PATH, stdin);
+	sAnswer = wcslen(pAnswer) -1;
+	pAnswer[sAnswer] = '\0';
 	
-	answer[strlen(answer) - 1] = '\0';
-	if (strlen(answer) < 1) UserInputFolders(pPath, pFiles_arr_t);
+	if (sAnswer < 1) UserInputFolders(pPath, pFiles_arr_t);
+	
+	if (!IsInputIndexed(pFiles_arr_t, pAnswer, sAnswer)) AddFolder2PathString(pPath, pAnswer, sAnswer);
+	else AddFolder2PathIndex(pPath, pAnswer, sAnswer, pFiles_arr_t);
 
-	Answer_t.string = answer;
-
-	Answer_t.length = strlen(answer);
-	
-	Answer_t.in_index = FALSE;
-	
-	CheckUserInputFolders(
-		pPath,
-		pFiles_arr_t,
-		&Answer_t
-	);
-	
-	return UserInputContinueFolders();
+	wcscat_s(pPath, MAX_PATH,L"\\");
 }
 
 BOOL CheckUserInputFolders(
@@ -55,64 +48,58 @@ BOOL CheckUserInputFolders(
 ) 
 {
 	
-	IsInputIndexed(
-		pFiles_arr_t,
-		pAnswer_t
-	);
-		
-	if (pAnswer_t->in_index) AddFolder2PathIndex(pPath, pAnswer_t, pFiles_arr_t);
-	else AddFolder2PathString(pPath, pAnswer_t);
+	
+	
 
 	wcscat_s(pPath, MAX_PATH, L"\\");
 
 	return TRUE;
 }
 
-void IsInputIndexed(
+BOOL IsInputIndexed(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
-	pUserAnswer_t pAnswer_t
+	PWCHAR pAnswer,
+	USHORT sAnswer
 )
 {
-	int order_of_magnitude = pFiles_arr_t->highest_order_of_magnitude;
+	USHORT order_of_magnitude = floor(log10(pFiles_arr_t->count));
+	
+	USHORT remainder = pFiles_arr_t->count;
+	
+	USHORT index_char_value = floor(remainder / pow(10, order_of_magnitude));
 
-	int remainder = pFiles_arr_t->count;
-		
-	int index_char_value = floor(remainder / pow(10, order_of_magnitude));
-
-	int index_num_value = index_char_value * pow(10, order_of_magnitude);
+	USHORT index_num_value = index_char_value * pow(10, order_of_magnitude);
 
 	remainder -= index_num_value;
 
-	unsigned int curr_index = 0;
+	USHORT curr_index = 0;
 
-	int curr_ASCII_value = pAnswer_t->string[curr_index] - '0';
+	int curr_ASCII_value = pAnswer[curr_index] - '0';
 
-	if (0 < curr_ASCII_value && curr_ASCII_value < index_char_value)
+	if (0 <= curr_ASCII_value && curr_ASCII_value < index_char_value)
 	{
-		
-		pAnswer_t->in_index = TRUE;
-		return;
+		return TRUE;
 	}
+	if ((sAnswer < order_of_magnitude + 1) && (0 <= curr_ASCII_value <= 9)) return TRUE;
 	if (curr_index == 0 && curr_ASCII_value == index_char_value)
 	{
-
 		curr_index++;
-		for (curr_index; curr_index <= pFiles_arr_t->highest_order_of_magnitude; curr_index++)
+		for (curr_index; curr_index <= order_of_magnitude; curr_index++)
 		{
 
 			order_of_magnitude--;
 
-			int current_max_char = remainder / (int)pow(10, order_of_magnitude);
+			USHORT current_max_char = remainder / (int)pow(10, order_of_magnitude);
 
-			int current_character = pAnswer_t->string[curr_index] - '0';
+			USHORT current_character = pAnswer[curr_index] - '0';
 
-			if (current_max_char < current_character || (current_character) < 0) return;
+			if (current_max_char < current_character || current_character <= 0) return FALSE;
 
 			if (current_character != current_max_char) break;
 		}
-		pAnswer_t->in_index = TRUE;
-		return;
+		return TRUE;
 	}
+	return FALSE;
 }
 
 

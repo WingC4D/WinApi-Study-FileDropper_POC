@@ -1,32 +1,41 @@
 #include "Win32FindDataArray.h"
 
-
-/*
- * Shortens and Automates The Fetching of Files Under A Working Path, Using Only, Said Path .
- * Returing All The Files In An Struct Holding The Array For Easier Further Manipulation. 
- */
-
-
 //Automates The Freeing Of The Dynamic Allocation For The Files Array Struct & All Of It's Nested Dynamic Allocations.
 void FreeFileArray(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
-	FindClose(pFiles_arr_t->hBaseFile);
-	free(pFiles_arr_t->pFiles_arr);
-	free(pFiles_arr_t);
-	return;
-}
+	if (pFiles_arr_t == NULL)
+	{
+		return;
+	}
 
+	// 1. Free the "inner" data (the strings)
+	// Also, check if the inner pointer is valid before using it
+
+
+	for (USHORT i = 0; i <= pFiles_arr_t->count - 1; i++) {
+		if (pFiles_arr_t->pFilesNames_arr[i].pFileName) {
+			RtlSecureZeroMemory(pFiles_arr_t->pFilesNames_arr[i].pFileName, lstrlenW(pFiles_arr_t->pFilesNames_arr[i].pFileName) * sizeof(WCHAR));
+			free(pFiles_arr_t->pFilesNames_arr[i].pFileName);
+		}
+	}
+	if (pFiles_arr_t->hBaseFile != INVALID_HANDLE_VALUE)
+	{
+		FindClose(pFiles_arr_t->hBaseFile);
+	}
+
+	free(pFiles_arr_t);
+}
 
 //Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
 BOOL FileBufferRoundUP(
 	size_t *psArray,
-	LPWIN32_FIND_DATAW* pFiles_arr
+	LPWIN32_FIND_DATAW *pFiles_arr
 )
 {
 	*psArray = *psArray * 2;
-	LPWIN32_FIND_DATAW pTemp = (LPWIN32_FIND_DATAW)realloc(*pFiles_arr, *psArray * sizeof(WIN32_FIND_DATAW));
+	LPWIN32_FIND_DATAW pTemp = realloc(*pFiles_arr, *psArray * sizeof(LPWSTR));
 	if (pTemp == NULL) return FALSE;
 	*pFiles_arr = pTemp;
 	return TRUE;

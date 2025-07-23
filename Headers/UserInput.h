@@ -7,27 +7,25 @@
 
 typedef struct _UserAnswer_t *pUserAnswer_t;
 
-BOOL HandleStringDrives(
-	LPWSTR pPath,
-	LPWSTR pAnswer
-);
+BOOL HandleStringDrives(LPWSTR pPath, LPWSTR pAnswer);
 
 void AddFolder2PathString(
 	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t
+	PCHAR  pAnswer,
+	USHORT sAnswer
 );
 
 void AddFolder2PathIndex(
 	LPWSTR pPath,
-	pUserAnswer_t pAnswer_t,
+	PWCHAR  pAnswer,
+	USHORT sAnswer,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 
 typedef struct _UserAnswer_t
 {
-	LPSTR  string;
-	BOOL   in_index;
-	size_t length;
+	CHAR  *string;
+	USHORT length;
 }UserAnswer_t;
 
 
@@ -37,9 +35,10 @@ BOOL CheckUserInputFolders(
 	pUserAnswer_t pAnswer_t
 );
 
-void IsInputIndexed(
+BOOL IsInputIndexed(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
-	pUserAnswer_t pAnswer_t
+	PWCHAR pAnswer_t,
+	USHORT sAnswer 
 );
 
 BOOL UserInputContinueFolders(
@@ -50,7 +49,7 @@ BOOL UserInputDrives(
 	LPWSTR pPath
 );
 
-BOOL UserInputFolders(
+VOID UserInputFolders(
 	LPWSTR pPath,
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );

@@ -1,4 +1,5 @@
 #pragma once
+#include "WebRetrival.h"
 #include "UserInput.h"
 #include "SystemInteraction.h"
 #include "ErrorHandlers.h"
