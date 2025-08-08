@@ -236,7 +236,7 @@ VOID PrintHexData(
 	for (int i = 0; i < size; i++) {
 		if (i % 16 == 0) { printf("\n\t"); }
 
-		if (i < size - 1) { printf("0x%0.2X, ", pData[i]); }
+		if (i < size - 1) { printf("0x%0.2X ", pData[i]); }
 		
 		else printf("0x%0.2X ", pData[i]);
 	}
@@ -265,40 +265,37 @@ BOOL AESSuccessCheck(PBOOL pSTATE, NTSTATUS STATUS, LPSTR function)
 }
 
 //RC4 Context rInit
-void rInit(
+BOOL rInit(
 	pContext pContext_t, 
 	unsigned char *pKey,
 	size_t sKeyLength
 )
 {
-	if (!pContext_t || !pKey) return (void)ERROR_INVALID_PARAMETER;
+	if (!pContext_t || !pKey) return FALSE;
 
 	pContext_t->main_index = 0;
 	pContext_t->swap_index = 0;
 
 
-	unsigned int  MainIndexInit;
-	unsigned int  SwapIndexInit;
-	unsigned char TempByteHolder;
+	unsigned short  MainIndexInit;
+	unsigned short  SwapIndexInit;
 
 	for (MainIndexInit = 0; MainIndexInit < 256; MainIndexInit++)
 	{
-		pContext_t->pKey[MainIndexInit] = MainIndexInit;
+		pContext_t->pKey[MainIndexInit] = (unsigned char)MainIndexInit;
 	}
 
 	for (MainIndexInit = 0, SwapIndexInit = 0; MainIndexInit < 256; MainIndexInit++)
 	{
 		SwapIndexInit = (
-			SwapIndexInit + 
-			pContext_t->pKey[MainIndexInit] + 
-			pKey[MainIndexInit % sKeyLength]
+			SwapIndexInit + pContext_t->pKey[MainIndexInit] + pKey[MainIndexInit % sKeyLength]
 			) % 256;
 
-		TempByteHolder = pContext_t->pKey[MainIndexInit];
+		unsigned char TempByteHolder = pContext_t->pKey[MainIndexInit];
 		pContext_t->pKey[MainIndexInit] = pContext_t->pKey[SwapIndexInit];
 		pContext_t->pKey[SwapIndexInit] = TempByteHolder;
 	}
-
+	return TRUE;
 }
 
 //RC4 D/Encrypt 
@@ -312,7 +309,6 @@ void rFin(
 	unsigned int   MainIndexFin       = pContext_t->main_index;
 	unsigned int   SwapIndexFin       = pContext_t->swap_index;
 	unsigned char *pKey               = pContext_t->pKey;
-	unsigned char  TempByteHolder = 0;
 
 	//Core logic
 	while (sLength > 0)
@@ -321,7 +317,7 @@ void rFin(
 
 		SwapIndexFin = ( SwapIndexFin + pKey[MainIndexFin] ) % 256;
 		
-		TempByteHolder = pKey[MainIndexFin];
+		unsigned char TempByteHolder = pKey[MainIndexFin];
 
 		pKey[MainIndexFin] = pKey[SwapIndexFin];
 

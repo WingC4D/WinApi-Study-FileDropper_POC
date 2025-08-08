@@ -15,9 +15,9 @@ void FreeFileArray(
 
 
 	for (USHORT i = 0; i <= pFiles_arr_t->count - 1; i++) {
-		if (pFiles_arr_t->pFilesNames_arr[i].pFileName) {
-			RtlSecureZeroMemory(pFiles_arr_t->pFilesNames_arr[i].pFileName, lstrlenW(pFiles_arr_t->pFilesNames_arr[i].pFileName) * sizeof(WCHAR));
-			free(pFiles_arr_t->pFilesNames_arr[i].pFileName);
+		if (pFiles_arr_t->pFilesArr[i].pFileName) {
+			RtlSecureZeroMemory(pFiles_arr_t->pFilesArr[i].pFileName, lstrlenW(pFiles_arr_t->pFilesArr[i].pFileName) * sizeof(WCHAR));
+			free(pFiles_arr_t->pFilesArr[i].pFileName);
 		}
 	}
 	if (pFiles_arr_t->hBaseFile != INVALID_HANDLE_VALUE)
@@ -31,11 +31,11 @@ void FreeFileArray(
 //Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
 BOOL FileBufferRoundUP(
 	size_t *psArray,
-	LPWIN32_FIND_DATAW *pFiles_arr
+	PWIN32_FILE_IN_ARRAY *pFiles_arr
 )
 {
 	*psArray = *psArray * 2;
-	LPWIN32_FIND_DATAW pTemp = realloc(*pFiles_arr, *psArray * sizeof(LPWSTR));
+	PWIN32_FILE_IN_ARRAY pTemp = realloc(*pFiles_arr, *psArray * sizeof(PWIN32_FILE_IN_ARRAY));
 	if (pTemp == NULL) return FALSE;
 	*pFiles_arr = pTemp;
 	return TRUE;

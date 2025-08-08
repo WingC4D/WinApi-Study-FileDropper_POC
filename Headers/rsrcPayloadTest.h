@@ -1,28 +1,22 @@
 #pragma once
 
 #include<Windows.h>
+#include "SystemInteraction.h"
 #include <stdio.h>
-#include "resource.h"
 #include "Encryption.h"
 #include <time.h>
 
-typedef struct _RESOURCE {
 
-	PVOID  pAddress;
-	size_t sSize;
-
-}RESOURCE, *PRESOURCE;
-
-typedef struct _TEXT {
+typedef struct _PAYLOAD {
 	
-	PVOID pText;
-	DWORD sText;
+	PUCHAR  pText;
+	size_t sText;
 
-}TEXT, *LPTEXT;
+}PAYLOAD, *lpPAYLOAD;
 
 PBYTE Test();
 
-BOOL FetchResource(OUT PRESOURCE pResource_t);
+
 
 VOID StatusCheck(
 	IN PUCHAR pInitVec,

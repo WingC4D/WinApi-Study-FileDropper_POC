@@ -8,12 +8,12 @@
 typedef struct _WIN32_FILE_IN_ARRAY {
     
     LPWSTR pFileName; 
-    USHORT index;
+    UINT index;
 
 }WIN32_FILE_IN_ARRAY, *PWIN32_FILE_IN_ARRAY;
 
 typedef struct _WIN32_FIND_DATA_ARRAYW {
-    PWIN32_FILE_IN_ARRAY pFilesNames_arr;
+    PWIN32_FILE_IN_ARRAY pFilesArr;
     
     HANDLE hBaseFile;
   
@@ -26,7 +26,7 @@ typedef struct _WIN32_FIND_DATA_ARRAYW {
 
 BOOL FileBufferRoundUP(
     size_t* psArray,
-    LPWIN32_FIND_DATAW* pFiles_arr
+    PWIN32_FILE_IN_ARRAY *pFilesNames_arr
 );
 
 

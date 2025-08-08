@@ -2,7 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h> 
 #include <stdio.h>
-
+#include <Psapi.h>
 #include <shlwapi.h>
 #include "Win32FindDataArray.h"
 

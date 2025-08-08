@@ -84,7 +84,7 @@ VOID GenerateRandomBytes(
 	SIZE_T size
 );
 
-void rInit(
+BOOL rInit(
 	pContext pContext_t,
 	unsigned char pKey[256],
 	size_t sKeyLength
@@ -92,9 +92,9 @@ void rInit(
 
 void rFin(
 	pContext          pContext_t,
-	unsigned char *pInput,
-	unsigned char       *pOutput,
-	size_t               sPayloadLength
+	unsigned char    *pInput,
+	unsigned char    *pOutput,
+	size_t            sPayloadLength
 );
 
 VOID xInit(

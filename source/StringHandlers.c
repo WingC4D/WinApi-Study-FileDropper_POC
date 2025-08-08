@@ -31,9 +31,9 @@ void AddFolder2PathString(
 	USHORT sAnswer
 )
 {
-	unsigned index = strlen(pPath);
+	UINT index = strlen(pPath);
 
-	unsigned leftchars = MAX_PATH - index;
+	USHORT leftchars = MAX_PATH - index;
 
 	if (sAnswer > leftchars)
 	{
@@ -58,6 +58,6 @@ void AddFolder2PathIndex(
 		for (int i = 0; i < sAnswer; i++) {
 		index += (pAnswer[i] - L'0') * pow(10, sAnswer - i - 1);
 	}
-	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFilesNames_arr[index].pFileName);
+	wcscat_s(pPath, MAX_PATH, pFiles_arr_t->pFilesArr[index].pFileName);
 	
 }
