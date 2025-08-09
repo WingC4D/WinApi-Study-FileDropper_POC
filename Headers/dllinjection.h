@@ -3,6 +3,13 @@
 
 #include <stdio.h>
 
+
+BOOLEAN APCPayloadInjection
+(
+	IN     HANDLE hThread,
+	IN     PUCHAR pPayloadAddress,
+	IN	   SIZE_T sPayloadSize
+);
 BOOL InjectDll(HANDLE hProcess, LPWSTR pDllName);
 
 BOOLEAN InjectRemoteProcessShellcode

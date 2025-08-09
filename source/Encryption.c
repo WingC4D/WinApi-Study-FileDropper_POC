@@ -1,6 +1,4 @@
 #include "Encryption.h"
-
-
 //AES BCrypt encrypt wrapper
 BOOL aInit(
 IN	PVOID   pPText, 

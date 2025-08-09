@@ -8,6 +8,8 @@
 #include "resource.h"
 #include <winternl.h>
 #define CRT_SECURE_NO_WARNINGS
+
+
 typedef struct _RESOURCE
 {
 	PVOID  pAddress;
@@ -15,7 +17,8 @@ typedef struct _RESOURCE
 
 }RESOURCE, *PRESOURCE;
 
-typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation) (
+typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
+(
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
 	PVOID                    SystemInformation,
 	ULONG                    SystemInformationLength,
@@ -24,24 +27,24 @@ typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation) (
 
 __kernel_entry NTSTATUS NTQuerySystemInformation
 (
-	IN           SYSTEM_INFORMATION_CLASS SystemInfomaionClass,
-	IN OUT       PVOID                    SystemInformation,
-	IN           ULONG                    SystemInformationLength,
-	OUT OPTIONAL PULONG                   ReturnLength
+	IN              SYSTEM_INFORMATION_CLASS SystemInfomaionClass,
+	IN OUT          PVOID                    SystemInformation,
+	IN              ULONG                    SystemInformationLength,
+	   OUT OPTIONAL PULONG                   ReturnLength
 );
 
 BOOLEAN CreateSuspendedProcess
 (
 	IN     PSTR    pProcessName,
-	OUT PDWORD  pdwProcessId,
-	OUT PHANDLE phProcessHandle,
-	OUT PHANDLE phThreadHandle
+	   OUT PDWORD  pdwProcessId,
+	   OUT PHANDLE phProcessHandle,
+	   OUT PHANDLE phThreadHandle
 );
 
 BOOLEAN CreateSacrificialThread
 (
-	OUT PDWORD  pdwSacrificialThreadId,
-	OUT PHANDLE phThreadHandle
+	   OUT PDWORD  pdwSacrificialThreadId,
+	   OUT PHANDLE phThreadHandle
 );
 
 BOOLEAN HijackThread
@@ -59,14 +62,28 @@ BOOLEAN HijackLocalThread
 
 INT8 CheckVM
 (
-	void
+	IN     void
+);
+
+BOOLEAN FetchLocalAllertableThread
+(
+	IN     DWORD   dwMainThreadId,
+	   OUT PDWORD  pdwAlertedThreadId,
+	   OUT PHANDLE phAlertedThreadHandle
 );
 
 BOOLEAN FetchLocalThreadHandle
 (
 	IN     DWORD   dwMainThreadId,
 	   OUT PDWORD  pdwTargetThreadId,
-	   OUT PHANDLE phTagetThread
+	   OUT PHANDLE phThreadHandle
+);
+
+BOOLEAN FetchRemoteThreadHandle
+(
+	IN     DWORD   dwProcessId,
+	   OUT PDWORD  pdwThreadId,
+	   OUT PHANDLE phThreadHandle
 );
 
 BOOLEAN FetchResource
@@ -93,7 +110,8 @@ BOOLEAN EnumRemoteProcessHandle
 	    OUT PHANDLE  phProcess 
 );
 
-BOOLEAN EnumProcNTQuerySystemInformation(
+BOOLEAN EnumProcessNTQuerySystemInformation
+(
 	IN     LPCWSTR szProcName,
 	   OUT PDWORD pdwPid,
 	   OUT PHANDLE phProcess
@@ -108,6 +126,10 @@ LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 (
     IN     LPWSTR pPath,
     IN OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+);
+VOID TestAllertAbleThread
+(
+	HANDLE hAlertableThreadHandle
 );
 
 HANDLE CreateVessel

