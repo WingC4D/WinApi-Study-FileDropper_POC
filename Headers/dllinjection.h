@@ -17,6 +17,14 @@ BOOLEAN APCPayloadInjection
 	IN	   SIZE_T sPayloadSize
 );
 
+BOOLEAN InjectCallbackPayloadEnumDesktops
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+);
+
 BOOLEAN InjectCallbackPayloadEnumFonts
 (
 	IN     LPVOID  pPayload,
@@ -54,6 +62,14 @@ BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
 	IN     PUCHAR  pPayload,
 	IN     DWORD   sPayloadSize,
 	   OUT PHANDLE phTimerHandle,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+);
+
+BOOLEAN InjectCallbackPayloadEnumDisplayMonitors
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
 	   OUT PDWORD  pdwOldProtections,
 	   OUT PVOID  *pInjectedPayloadAddress
 );

