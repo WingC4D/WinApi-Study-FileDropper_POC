@@ -66,7 +66,6 @@ VOID AlertableFunction4()
 
 }
 
-
 VOID BenignFunction
 (
 	IN    VOID
@@ -84,7 +83,7 @@ BOOLEAN CreateLocalAlertableThread
 )
 {
 	if (!CreateThread(
-		THREAD_SET_CONTEXT,
+		NULL,
 		0,
 		(LPTHREAD_START_ROUTINE)AlertableFunction0,
 		NULL,
@@ -110,6 +109,48 @@ BOOLEAN CreateSacrificialThread
 	))) return FALSE;
 
 	if (SuspendThread(*phThreadHandle) == -1) return FALSE;
+
+	return TRUE;
+}
+
+BOOLEAN CreateDebuggedProcess
+(
+	IN     PCHAR   pProcessName,
+	   OUT PDWORD  pdwProcessId,
+	   OUT PHANDLE phProcessHandle,
+	   OUT PHANDLE phThreadHandle
+)
+{
+	if (!pProcessName || !pdwProcessId || !phProcessHandle || !phThreadHandle) return FALSE;
+	CHAR
+		pWnDr[MAX_PATH] = { '\0' },
+		pPath[MAX_PATH * 2] = { '\0' };
+	STARTUPINFOA
+		StartupInfo_t = { .cb = sizeof(STARTUPINFO), 0x00 };
+	PROCESS_INFORMATION
+		ProcessInfo_t = { 0x00 };
+
+	if (!GetEnvironmentVariableA("WINDIR", pWnDr, MAX_PATH)) return FALSE;
+
+	if (!sprintf_s(pPath, MAX_PATH, "%s\\System32\\%s", pWnDr, pProcessName)) return FALSE;
+
+	if (!CreateProcessA(
+		NULL,
+		(LPSTR)pPath,
+		NULL,
+		NULL,
+		FALSE,
+		DEBUG_PROCESS,
+		0,
+		NULL,
+		&StartupInfo_t,
+		&ProcessInfo_t)) return FALSE;
+
+	*pdwProcessId = ProcessInfo_t.dwProcessId;
+	*phProcessHandle = ProcessInfo_t.hProcess;
+	*phThreadHandle = ProcessInfo_t.hThread;
+
+	if (!*pdwProcessId || !*phProcessHandle || !phThreadHandle) return  FALSE;
 
 	return TRUE;
 }
@@ -366,6 +407,7 @@ BOOLEAN FetchLocalAllertableThread
 	CloseHandle(hSnapshot);
 	return bState;
 }
+
 BOOLEAN FetchLocalThreadHandle
 (
 	IN     DWORD   dwMainThreadId,
@@ -578,7 +620,6 @@ BOOLEAN HijackLocalThread
 	return TRUE;
 }
 
-
 VOID TestAllertAbleThread
 (
 	HANDLE hAlertableThreadHandle
@@ -590,6 +631,7 @@ VOID TestAllertAbleThread
 		SleepEx(120, TRUE);
 	}
 }
+
 LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 (
 	IN     LPWSTR pPath,

@@ -32,7 +32,13 @@ __kernel_entry NTSTATUS NTQuerySystemInformation
 	IN              ULONG                    SystemInformationLength,
 	   OUT OPTIONAL PULONG                   ReturnLength
 );
-
+BOOLEAN CreateDebuggedProcess
+(
+	IN     PCHAR   pProcessName,
+	   OUT PDWORD  pdwProcessId,
+	   OUT PHANDLE phProcessHandle,
+	   OUT PHANDLE phThreadHandle
+);
 BOOLEAN CreateSuspendedProcess
 (
 	IN     PSTR    pProcessName,

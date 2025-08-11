@@ -1,8 +1,14 @@
 ﻿#pragma once
 #include <Windows.h>
-
+#include <avrfsdk.h>
 #include <stdio.h>
-
+typedef ULONG (WINAPI* fnVerifierEnumerateResource)(
+HANDLE                           Process,
+ULONG                            Flags,
+ULONG                            ResourceType,
+AVRF_RESOURCE_ENUMERATE_CALLBACK ResourceCallback,
+PVOID                            EnumerationContext
+);
 
 BOOLEAN APCPayloadInjection
 (
@@ -10,14 +16,73 @@ BOOLEAN APCPayloadInjection
 	IN     PUCHAR pPayloadAddress,
 	IN	   SIZE_T sPayloadSize
 );
-BOOL InjectDll(HANDLE hProcess, LPWSTR pDllName);
 
-BOOLEAN InjectRemoteProcessShellcode
+BOOLEAN InjectCallbackPayloadEnumFonts
 (
-	IN     HANDLE hProcessHandle,
-	IN     PUCHAR pShellcodeAddress,
-	IN     SIZE_T sShellCodeSize,
-	   OUT PVOID* ppExternalAddress
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
 );
 
-BOOL InjectShellcode(HANDLE hProcess, PBYTE pShellcode, SIZE_T sShellcode);
+BOOLEAN InjectCallbackPayloadEnumChildWindows
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+);
+
+BOOLEAN InjectCallbackPayloadEnumUILanguagesW
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+);
+
+BOOLEAN InjectCallbackPayloadEnumThreadWindows
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+);
+
+BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
+(
+	IN     PUCHAR  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PHANDLE phTimerHandle,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+);
+
+BOOLEAN InjectCallbackPayloadVerEnumResource
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+);
+
+BOOL InjectDll
+(
+	IN     HANDLE hProcess,
+	IN     LPWSTR pDllName
+);
+
+BOOL InjectPayloadLocalProcess
+(
+	IN     HANDLE hProcess,
+	IN     PUCHAR pPayload,
+	IN     SIZE_T sPayloadSize
+);
+
+BOOLEAN InjectPayloadRemoteProcess
+(
+	IN     HANDLE hProcessHandle,
+	IN     PUCHAR pPayloadAddress,
+	IN     SIZE_T sPayloadSize,
+	   OUT PVOID *pExPayloadAddress
+);

