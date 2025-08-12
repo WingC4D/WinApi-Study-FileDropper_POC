@@ -142,3 +142,11 @@ HANDLE CreateVessel
 (
 	IN     LPWSTR pPath
 );
+
+BOOLEAN MapLocalMemory
+(
+	IN     PUCHAR  pPayload,
+	   OUT PUCHAR *pMappedAddress,
+	   OUT SIZE_T  sPayloadSize,
+	   OUT PHANDLE phFileMappingHandle 
+);

