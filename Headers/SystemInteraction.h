@@ -1,6 +1,7 @@
 #pragma once
+#pragma comment(lib, "onecore.lib")
 #pragma comment(lib, "kernel32.lib")
-#pragma comment(lib, "ntdll.lib"   )
+#pragma comment(lib, "ntdll.lib")
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <Psapi.h>
@@ -149,4 +150,14 @@ BOOLEAN MapLocalMemory
 	   OUT PUCHAR *pMappedAddress,
 	   OUT SIZE_T  sPayloadSize,
 	   OUT PHANDLE phFileMappingHandle 
+);
+
+BOOLEAN InjectPayloadRemoteMappedMemory
+(
+	IN     PUCHAR  pPayload,
+	   OUT PUCHAR *pRemoteMappedAddress,
+	   OUT PUCHAR *pLocalMappedAddress,
+	IN	   SIZE_T  sPayloadSize,
+	   OUT PHANDLE phRemoteFileMappingHandle,
+	IN     HANDLE  hProcess
 );

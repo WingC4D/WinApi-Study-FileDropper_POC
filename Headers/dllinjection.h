@@ -2,6 +2,8 @@
 #include <Windows.h>
 #include <avrfsdk.h>
 #include <stdio.h>
+#include "SystemInteraction.h"
+
 typedef ULONG (WINAPI* fnVerifierEnumerateResource)(
 HANDLE                           Process,
 ULONG                            Flags,
@@ -102,3 +104,5 @@ BOOLEAN InjectPayloadRemoteProcess
 	IN     SIZE_T sPayloadSize,
 	   OUT PVOID *pExPayloadAddress
 );
+
+
