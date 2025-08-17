@@ -106,3 +106,9 @@ BOOLEAN InjectPayloadRemoteProcess
 );
 
 
+BOOL StompFunction
+(
+	IN     PVOID  pTargetFuncAddress,
+	IN	   PUCHAR pPayload,
+	IN     SIZE_T sPayloadSize
+);

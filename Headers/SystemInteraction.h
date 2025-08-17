@@ -8,7 +8,9 @@
 #include "Win32FindDataArray.h"
 #include "resource.h"
 #include <winternl.h>
-#define CRT_SECURE_NO_WARNINGS
+#include <setupAPI.h>
+
+#define		CRT_SECURE_NO_WARNINGS
 
 
 typedef struct _RESOURCE
@@ -161,3 +163,12 @@ BOOLEAN InjectPayloadRemoteMappedMemory
 	   OUT PHANDLE phRemoteFileMappingHandle,
 	IN     HANDLE  hProcess
 );
+
+BOOL FetchStompingTarget
+(
+	IN     LPSTR  pSacrificialDllName,
+	IN     LPSTR  pSacrificialFuncName,
+	   OUT PVOID *pTargetFunctionAddress
+);
+
+
