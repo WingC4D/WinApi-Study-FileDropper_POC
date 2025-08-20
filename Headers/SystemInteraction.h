@@ -3,6 +3,7 @@
 #pragma comment(lib, "kernel32.lib")
 #pragma comment(lib, "ntdll.lib")
 #include <Windows.h>
+#include <stdlib.h>
 #include <TlHelp32.h>
 #include <Psapi.h>
 #include "Win32FindDataArray.h"
@@ -178,5 +179,6 @@ BOOLEAN SpoofParentProcessId
 	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
 	   OUT PDWORD  pdwMaliciousProcessPID,
 	   OUT PHANDLE phMaliciousProcessHandle,
-	   OUT PDWORD  phMaliciousThreadHandle
+	   OUT PDWORD  pdwMaliciousThreadId,
+	   OUT PHANDLE phMaliciousThreadHandle
 );

