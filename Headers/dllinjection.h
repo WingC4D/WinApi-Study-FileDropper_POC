@@ -84,10 +84,14 @@ BOOLEAN InjectCallbackPayloadVerEnumResource
 	   OUT PVOID  *pInjectedPayloadAddress
 );
 
-BOOL InjectDll
+BOOL InjectRemoteDll
 (
-	IN     HANDLE hProcess,
-	IN     LPWSTR pDllName
+	IN     PVOID   pPayload,
+	IN	   HANDLE  hProcess, 
+	IN	   LPSTR   TargetDllName,
+	IN     LPSTR   TargetFunctionName,
+	IN     SIZE_T  sSizeToWrite,
+	   OUT PVOID  *pRemoteFunctionAddress
 );
 
 BOOL InjectPayloadLocalProcess
@@ -106,9 +110,17 @@ BOOLEAN InjectPayloadRemoteProcess
 );
 
 
-BOOL StompFunction
+BOOL StompLocalFunction
 (
 	IN     PVOID  pTargetFuncAddress,
+	IN	   PUCHAR pPayload,
+	IN     SIZE_T sPayloadSize
+);
+
+BOOL StompRemoteFunction
+(
+	IN     PVOID  pTargetFuncAddress,
+	IN     HANDLE hTargetProcess,
 	IN	   PUCHAR pPayload,
 	IN     SIZE_T sPayloadSize
 );

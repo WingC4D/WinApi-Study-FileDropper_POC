@@ -172,3 +172,11 @@ BOOL FetchStompingTarget
 );
 
 
+BOOLEAN SpoofParentProcessId
+(
+	IN     LPSTR   pMaliciousProcessName, 
+	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
+	   OUT PDWORD  pdwMaliciousProcessPID,
+	   OUT PHANDLE phMaliciousProcessHandle,
+	   OUT PDWORD  phMaliciousThreadHandle
+);

