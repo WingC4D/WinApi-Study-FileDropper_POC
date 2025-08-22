@@ -5,7 +5,7 @@
 #include <bcrypt.h>
 
 
-#define NT_SUCCESS(status)	        (((NTSTATUS)(status)) > -1)
+#define NT_SUCCESS(status) (((NTSTATUS)(status)) > -1)
 
 #define KEYSIZE				32
 
