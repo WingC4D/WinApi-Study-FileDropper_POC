@@ -199,17 +199,32 @@ BOOLEAN SpoofParentProcessId
 	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
 	   OUT PDWORD  pdwMaliciousProcessPID,
 	   OUT PHANDLE phMaliciousProcessHandle,
-	   OUT PDWORD  pdwMaliciousThreadId,
-	   OUT PHANDLE phMaliciousThreadHandle
+	   OUT PHANDLE phMaliciousThreadHandle,
+	   OUT PDWORD  pdwMaliciousThreadId
 );
 
-BOOLEAN SpoofParentProcessId2
+BOOLEAN SpoofCommandLineArguments
 (
-	IN     LPWSTR   pSpoofedCommandLine,
-	IN	   LPWSTR   pMaliciousCommandLine,
+	IN     LPWSTR  pSpoofedCommandLine,
+	IN	   LPWSTR  pMaliciousCommandLine,
+	IN     DWORD   dwSpoofedcmdLineLength,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PDWORD  pdwProcessId,
-	   OUT PDWORD  pdwThreadId 
+	   OUT PHANDLE phThreadHandle,
+	   OUT PDWORD  pdwThreadId
+);
+
+BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Process IDentifier
+(
+	IN	    LPWSTR  pSpoofedCommandLine,
+	IN      HANDLE  hSpoofedParentProcessHandle,
+	IN      LPWSTR  pMaliciousCommandLine,
+	IN      DWORD   dwExposedCommandLineLength,
+	IN      PCH    pTargetSpoofedPathName,
+	   OUT 	PHANDLE phMaliciousProcessHandle,
+	   OUT  PDWORD  pdwMaliciousProcessId,
+	   OUT	PHANDLE phMalicousThreadHandle,
+	   OUT  PDWORD  pdwMaliciousThreadId 
 );
 
 BOOLEAN ReadFromTargetProcess
@@ -217,7 +232,8 @@ BOOLEAN ReadFromTargetProcess
 	IN     HANDLE hTargetProcess, 
 	IN     PVOID  pPEBBaseAddress, 
 	   OUT PVOID *pReadBufferAddress, 
-	IN     DWORD  dwBufferSize
+	IN     DWORD  dwBufferSize,
+	IN     HANDLE hHeap
 );
 
 BOOLEAN WriteToTargetProcess

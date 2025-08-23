@@ -15,5 +15,8 @@
 
 #define		SACRIFICIAL_DLL          "User32.dll"
 #define		SACRIFICIAL_FUNC         "MessageBoxA"
+#define     SPOOFED_COMMAND_LINE     L"powershell.exe Totally Legit Argument"
+#define		MALICIOUS_COMMAND_LINE   L"powershell.exe -NoExit calc.exe"
+
 
 typedef  VOID(WINAPI* fnShellCode)();
