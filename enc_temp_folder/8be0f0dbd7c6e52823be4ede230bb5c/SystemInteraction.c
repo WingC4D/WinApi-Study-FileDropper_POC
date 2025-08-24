@@ -753,7 +753,7 @@ UCHAR FetchImageHeaders
 	PRTL_USER_PROCESS_PARAMETERS  pProcessUserParameters     = NULL;
 	PROCESS_BASIC_INFORMATION	  ProcessBasicInfoBlock_t	 = { 0 };
 	IMAGE_FILE_HEADER			  ImageFileHeader_t			 = { 0 };
-	IMAGE_OPTIONAL_HEADER		  ImageOptionalHeader_t		 = { 0 };
+	IMAGE_OPTIONAL_HEADER		  ImageOptionalHeader_t = { 0 };;
 
 	if ((hHeap = GetProcessHeap()) == INVALID_HANDLE_VALUE) return 1;
 
@@ -1072,6 +1072,53 @@ EndOfFunc:
 	if (pProcessUserParameters) HeapFree(hHeap, 0, pProcessUserParameters);
 
 	return bState;
+	}
+
+
+	BOOL ReadPeFile(LPCSTR lpFileName, PBYTE* pPe, SIZE_T* sPe) {
+
+		HANDLE	hFile = INVALID_HANDLE_VALUE;
+		PBYTE	pBuff = NULL;
+		DWORD	dwFileSize = NULL,
+			dwNumberOfBytesRead = NULL;
+
+		printf("[i] Reading \"%s\" ... ", lpFileName);
+
+		hFile = CreateFileA(lpFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE) {
+			printf("[!] CreateFileA Failed With Error : %d \n", GetLastError());
+			goto _EndOfFunction;
+		}
+
+		dwFileSize = GetFileSize(hFile, NULL);
+		if (dwFileSize == 0) {
+			printf("[!] GetFileSize Failed With Error : %d \n", GetLastError());
+			goto _EndOfFunction;
+		}
+
+		pBuff = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwFileSize);
+		if (pBuff == NULL) {
+			printf("[!] HeapAlloc Failed With Error : %d \n", GetLastError());
+			goto _EndOfFunction;
+		}
+
+		if (!ReadFile(hFile, pBuff, dwFileSize, &dwNumberOfBytesRead, NULL) || dwFileSize != dwNumberOfBytesRead) {
+			printf("[!] ReadFile Failed With Error : %d \n", GetLastError());
+			printf("[!] Bytes Read : %d of : %d \n", dwNumberOfBytesRead, dwFileSize);
+			goto _EndOfFunction;
+		}
+
+		printf("[+] DONE \n");
+
+
+	_EndOfFunction:
+		*pPe = (PBYTE)pBuff;
+		*sPe = (SIZE_T)dwFileSize;
+		if (hFile)
+			CloseHandle(hFile);
+		if (*pPe == NULL || *sPe == 0)
+			return FALSE;
+		return TRUE;
 	}
 
 BOOLEAN ReadFromTargetProcess

