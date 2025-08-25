@@ -322,7 +322,12 @@ BOOL InjectRemoteDll
 	return TRUE;
 }
 
-BOOL InjectShellcode(HANDLE hProcess, PBYTE pLocalShellcode, SIZE_T sShellcode)
+BOOL InjectShellcode
+(
+	HANDLE hProcess, 
+	PBYTE pLocalShellcode, 
+	SIZE_T sShellcode
+)
 {
 	PVOID  pExternalShellcode;
 	DWORD  dwOldProtection;

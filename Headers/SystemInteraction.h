@@ -232,7 +232,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 	   OUT  PDWORD  pdwMaliciousThreadId 
 );
 
-BOOLEAN ReadFromTargetProcess
+BOOLEAN ReadFromTargetProcessEnvironmentBlock
 (
 	IN     HANDLE hTargetProcess, 
 	IN     PVOID  pPEBBaseAddress, 
@@ -241,7 +241,7 @@ BOOLEAN ReadFromTargetProcess
 	IN     HANDLE hHeap
 );
 
-BOOLEAN WriteToTargetProcess
+BOOLEAN WriteToTargetProcessEnvironmentBlock
 (
 	IN      HANDLE hProcess,
 	IN      PVOID pAddressToWriteTo,
