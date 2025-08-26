@@ -1,5 +1,5 @@
 ﻿#include "main.h"
-typedef void(WINAPI* pdllMainFunction)();
+
 int main()
 {
 	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hThread2= 0, hPayloadObjectHandle = 0;
@@ -12,14 +12,38 @@ int main()
 	LPWSTR TargetProcessName = L"svchost.exe";
 	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
 	PPEB   pProcessEnvironmentBlock_t = NULL;
+	HANDLE hHeap = GetProcessHeap();
+	PBYTE  pImageData = NULL;
 
-	if(!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+	PIMAGE_DOS_HEADER			  pImageDOSHeader_t			= NULL;
+	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= NULL;
+	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= NULL;
+	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= NULL;
+	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = NULL;
+	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= NULL;
+	
+	//if(!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
 
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
 
 	//if (EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) return -2;
 
+	FetchImageData(L"C:\\Windows\\System32\\calc.exe", hHeap, &pImageData);
+
+	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
+
+	FetchImageNtHeaders(pImageData, &pImageNtHeaders_t);
+
+	FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t);
+
+	FetchImageTlsDirectory(pImageData, &pImageTlsDirectory_t);
+
+	FetchImageRtFuncDirectory(pImageData, &pImageRtFuncDirectory_t);
+
+
+
 	FetchImageHeaders(hProcess, &pProcessEnvironmentBlock_t);
+
 
 	//getchar();
 

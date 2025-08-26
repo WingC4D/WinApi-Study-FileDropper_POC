@@ -733,6 +733,38 @@ BOOL FetchStompingTarget
 	return TRUE;
 }
 
+BOOLEAN FetchImageDOSHeaderFromPath
+(
+	IN     LPWCH			  lpImagePath,
+	   OUT PIMAGE_DOS_HEADER *pImageDOSHeader_tBaseAddress,
+	   OUT PBYTE			 *pImageDataBaseAddress
+)
+{
+	if (!lpImagePath || !pImageDOSHeader_tBaseAddress || !pImageDataBaseAddress) return FALSE;
+
+	DWORD  dwFileSize = 0;
+	HANDLE hHeap	  = INVALID_HANDLE_VALUE;
+	
+
+	if ((hHeap = GetProcessHeap()) == INVALID_HANDLE_VALUE) return FALSE;
+
+	if (*pImageDataBaseAddress)
+	{
+		free(*pImageDataBaseAddress);
+
+		*pImageDataBaseAddress = HeapAlloc(hHeap, 0, sizeof(dwFileSize));
+	}
+
+
+	return TRUE;
+
+FailCleanUp:
+
+	HeapFree(hHeap, 0,  *pImageDataBaseAddress);
+
+	return FALSE;
+}
+
 UCHAR FetchImageHeaders
 (
 	IN     HANDLE hTargetProcess,
