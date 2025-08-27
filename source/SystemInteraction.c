@@ -215,8 +215,8 @@ BOOLEAN CreateSuspendedProcess
 BOOLEAN EnumProcessNTQuerySystemInformation
 (
 	IN     LPCWSTR szProcName,
-	OUT PDWORD  pdwPid,
-	OUT PHANDLE phProcess
+	   OUT PDWORD  pdwPid,
+	   OUT PHANDLE phProcess
 )
 {
 	ULONG                        uReturnLen1, uReturnLen2;
@@ -802,16 +802,16 @@ UCHAR FetchImageHeaders
 
 	if((pProcessEnvironmentBlock_t = HeapAlloc(hHeap, 0, sizeof(PEB))) == NULL) return 3;
 
-	if (!ReadFromTargetProcessEnvironmentBlock(hTargetProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcessEnvironmentBlock_t, sizeof(PEB), hHeap)) return 4;
+	if (!ReadStructureFromProcess(hTargetProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcessEnvironmentBlock_t, sizeof(PEB), hHeap)) return 4;
 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		hTargetProcess, pProcessEnvironmentBlock_t->ProcessParameters,
 		(PVOID *) &pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
 		hHeap)) return 5;
 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		hTargetProcess, pProcessUserParameters->ImagePathName.Buffer,
-		(PVOID *)&pProcessUserParameters->ImagePathName.Buffer, pProcessUserParameters->ImagePathName.Length,
+		(PVOID*)&pProcessUserParameters->ImagePathName.Buffer, pProcessUserParameters->ImagePathName.Length,
 		hHeap)) return 5;
 
 	if ((hFile		= CreateFileW(pProcessUserParameters->ImagePathName.Buffer, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) return 6;
@@ -905,7 +905,7 @@ BOOLEAN SpoofCommandLineArguments
 
 	pProcEnvBlock_t = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		ProcessInformation_t.hProcess,
 		ProcessBasicInfoBlock_t.PebBaseAddress,
 		(PVOID *)&pProcEnvBlock_t,
@@ -913,7 +913,7 @@ BOOLEAN SpoofCommandLineArguments
 		hHeap
 	)) goto EndOfFunc;
 	 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		ProcessInformation_t.hProcess, pProcEnvBlock_t->ProcessParameters, 
 		&pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, 
 		hHeap )) goto EndOfFunc;
@@ -1086,13 +1086,13 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	pProcEnvBlock_t = (PPEB)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress,
 		(PVOID*)&pProcEnvBlock_t,sizeof(PEB),
 		hHeap
 	)) goto EndOfFunc;
 
-	if (!ReadFromTargetProcessEnvironmentBlock(
+	if (!ReadStructureFromProcess(
 		ProcessInformation_t.hProcess,pProcEnvBlock_t->ProcessParameters, 
 		(PVOID *)&pProcessUserParameters,sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
 		hHeap
@@ -1127,9 +1127,9 @@ EndOfFunc:
 	if (pProcessUserParameters) HeapFree(hHeap, 0, pProcessUserParameters);
 
 	return bState;
-	}
+}
 
-BOOLEAN ReadFromTargetProcessEnvironmentBlock
+BOOLEAN ReadStructureFromProcess
 (
 	IN     HANDLE hTargetProcess, 
 	IN     PVOID  pPEBBaseAddress, 

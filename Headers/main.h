@@ -1,4 +1,5 @@
 #pragma once
+#pragma comment(lib, "onecore.lib")
 #pragma comment(lib, "kernel32.lib")
 #include "RegstryPayloadStaging.h"
 #include "Obfuscation.h"

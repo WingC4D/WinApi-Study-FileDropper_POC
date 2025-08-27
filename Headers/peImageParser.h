@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include <winternl.h>
 
 #ifdef PROCESSOR_ARCHITECTURE_AMD64
 
@@ -13,6 +14,30 @@
 
 #endif
 
+typedef NTSTATUS(NTAPI* fnNtQueryProcessInformation)
+(
+    IN              HANDLE           ProcessHandle,
+    IN              PROCESSINFOCLASS ProcessInformationClass,
+       OUT          PVOID            ProcessInformation,
+    IN              ULONG            ProcessInformationLength,
+       OUT OPTIONAL PULONG           ReturnLength
+    );
+
+__kernel_entry NTSTATUS NtQueryProcessInformation
+(
+    IN              HANDLE           ProcessHandle,
+    IN              PROCESSINFOCLASS ProcessInformationClass,
+       OUT          PVOID            ProcessInformation,
+    IN              ULONG            ProcessInformationLength,
+       OUT OPTIONAL PULONG           ReturnLength
+);
+
+BOOLEAN FetchImageBaseRelocDirectory
+(
+	IN     PBYTE				   pImageData,
+	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocDirectory_tBaseAddress
+);
+
 BOOLEAN FetchImageData
 (
 	IN	   LPWSTR lpImagePath,
@@ -24,6 +49,25 @@ BOOLEAN FetchImageDosHeader
 (
 	IN     PBYTE			  pImageData,
 	   OUT PIMAGE_DOS_HEADER* pImageDOSHeader_tBaseAddress
+);
+
+BOOLEAN FetchImageExportDirectory
+(
+	IN     PBYTE					pImageData,
+	   OUT PIMAGE_EXPORT_DIRECTORY *pImageFileExportDirectory_tBaseAddress
+);
+
+
+BOOLEAN FetchImageFileHeader
+(
+	IN     PBYTE			   pImageData,
+	   OUT PIMAGE_FILE_HEADER *pImageFileHeader_tBaseAddress
+);
+
+BOOLEAN FetchImageImportDirectory
+(
+	IN     PBYTE					 pImageData,
+	   OUT PIMAGE_IMPORT_DESCRIPTOR *pImageImportDirectory_tBaseAddress
 );
 
 BOOLEAN FetchImageNtHeaders
@@ -47,9 +91,22 @@ BOOLEAN FetchImageTlsDirectory
 BOOLEAN FetchImageRtFuncDirectory
 (
 	IN     PBYTE						  pImageData,
-	   OUT PIMAGE_RUNTIME_FUNCTION_ENTRY *pImageRtFuncDirectory
+	   OUT PIMAGE_RUNTIME_FUNCTION_ENTRY *pImageRtFuncDirectory_tBaseAddress
 );
 
+BOOLEAN FetchPathFromRunningProcess
+(
+	IN     HANDLE  hTargetImageProcessHandle,
+	   OUT LPWSTR *pImagePathBufferAddress
+);
 
+BOOLEAN ReadStructFromProcess
+(
+	IN     HANDLE hTargetProcess, 
+	IN     PVOID  pStructBaseAddress, 
+	IN     DWORD  dwBufferSize,
+	IN     HANDLE hHeapHandle,
+	   OUT PVOID *pReadBufferAddress
+);
 
-// PIMAGE_SECTION_HEADER PIMAGE_EXPORT_DIRECTORY PIMAGE_IMPORT_DESCRIPTOR PIMAGE_TLS_DIRECTORY PIMAGE_RUNTIME_FUNCTION_ENTRY PIMAGE_BASE_RELOCATION
+// PIMAGE_SECTION_HEADER PIMAGE_EXPORT_DIRECTORY PIMAGE_BASE_RELOCATION
