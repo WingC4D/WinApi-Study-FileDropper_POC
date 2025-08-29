@@ -11,7 +11,7 @@ BOOLEAN CheckBuffer
 
 	if (*pBufferAddress != NULL && *pBufferAddress != UNINIT_PVOID_VALUE && *pBufferAddress != 0) return TRUE;
 
-	*pBufferAddress = HeapAlloc(hHeapHandle, 0, dwSizeToAllocate);
+	*pBufferAddress = HeapAlloc(hHeapHandle, HEAP_ZERO_MEMORY, dwSizeToAllocate);
 
 	if (*pBufferAddress == NULL) return FALSE;
 
@@ -23,7 +23,7 @@ UCHAR CheckDataForDOSHeader
 	IN	  PBYTE	 pCandidateData
 )
 {
-	if (!*pCandidateData) return 1;
+	if (pCandidateData == NULL) return FALSE;
 
 	PIMAGE_DOS_HEADER pPotentialHeader = (PIMAGE_DOS_HEADER)pCandidateData;
 
@@ -270,23 +270,6 @@ BOOLEAN FetchImageOptionalHeaders
 	return TRUE;
 }
 
-BOOLEAN FetchImageTlsDirectory
-(
-	IN     PBYTE				 pImageData,
-	   OUT PIMAGE_TLS_DIRECTORY *pImageTlsDirectory_tBaseAddress
-)
-{
-	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
-
-	PIMAGE_OPTIONAL_HEADER pImageOptionalHeaders_t = NULL;
-
-	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
-
-	*pImageTlsDirectory_tBaseAddress = (PIMAGE_TLS_DIRECTORY)(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
-
-	return TRUE;
-}
-
 BOOLEAN FetchImageRtFuncDirectory
 (
 	IN     PBYTE						  pImageData,
@@ -303,6 +286,90 @@ BOOLEAN FetchImageRtFuncDirectory
 
 	return TRUE;
 }
+
+BOOLEAN FetchImageSection
+(
+	IN     PBYTE 				  pImageData,
+	   OUT PIMAGE_SECTION_HEADER *pImageSectionHeader_tBaseAddress
+)
+{
+	if (!pImageData || !pImageSectionHeader_tBaseAddress) return FALSE;
+ 	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
+
+	PIMAGE_NT_HEADERS pImageNtHeader = NULL;
+
+	if(!FetchImageNtHeaders(pImageData, &pImageNtHeader)) return FALSE;
+
+	*pImageSectionHeader_tBaseAddress = (PIMAGE_SECTION_HEADER)((PBYTE)pImageNtHeader + (DWORD)sizeof(IMAGE_NT_HEADERS));
+
+	return TRUE;	
+}
+
+BOOLEAN FetchImageTlsDirectory
+(
+	IN     PBYTE				 pImageData,
+	   OUT PIMAGE_TLS_DIRECTORY *pImageTlsDirectory_tBaseAddress
+)
+{
+	if (!pImageData || !pImageTlsDirectory_tBaseAddress) return FALSE;	
+	
+	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
+
+	PIMAGE_OPTIONAL_HEADER pImageOptionalHeaders_t = NULL;
+
+	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
+
+	*pImageTlsDirectory_tBaseAddress = (PIMAGE_TLS_DIRECTORY)(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
+
+	return TRUE;
+}
+
+PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
+(
+	IN			   LPSTR				 pTagetSectionName,
+	IN	  OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
+	IN	  OPTIONAL WORD					 number_of_sections,
+	IN	  OPTIONAL PBYTE				 pImageData
+
+)
+{
+	if ((pImageData == NULL && pImageTextSection == NULL) || 
+		pTagetSectionName == NULL || 
+		pTagetSectionName[0] == 0x0) return NULL;
+	PIMAGE_FILE_HEADER pImageFileHeader = NULL;
+	if (number_of_sections == 0)
+	{
+		if (pImageTextSection != NULL)
+		{
+			if (strcmp((char*)pImageTextSection->Name, ".text") != 0)
+			{
+				if (pImageData == NULL) return NULL;
+
+				if (FetchImageSection(pImageData, &pImageTextSection) == FALSE) return NULL;
+			}
+
+			pImageFileHeader = (PIMAGE_FILE_HEADER)((PBYTE)pImageTextSection - sizeof(IMAGE_NT_HEADERS) + sizeof(DWORD));
+			
+		} else
+		{
+
+			if (FetchImageSection(pImageData, &pImageTextSection) == FALSE) return NULL;
+
+			if (FetchImageFileHeader(pImageData, &pImageFileHeader) == FALSE) return NULL;
+		}
+		number_of_sections = pImageFileHeader->NumberOfSections;
+	}
+	PIMAGE_SECTION_HEADER pImageSectionHeader = NULL;
+
+	for (WORD i = 0; i < number_of_sections; i++) 
+	{
+		pImageSectionHeader = (PIMAGE_SECTION_HEADER)((PBYTE)pImageTextSection + i * sizeof(IMAGE_SECTION_HEADER));
+
+		if (strcmp(pTagetSectionName, (char *)pImageSectionHeader->Name) == 0x0) return pImageSectionHeader;
+	}
+		return NULL;
+}
+
 
 BOOLEAN ReadStructFromProcess
 (

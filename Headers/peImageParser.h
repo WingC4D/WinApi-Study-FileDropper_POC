@@ -40,9 +40,9 @@ BOOLEAN FetchImageBaseRelocDirectory
 
 BOOLEAN FetchImageData
 (
-	IN	   LPWSTR lpImagePath,
-	IN OUT HANDLE hHeapHandle,
-	   OUT PBYTE *pImageDataBaseAddress		   
+	IN				LPWSTR lpImagePath,
+		   OPTIONAL HANDLE hHeapHandle,
+	   OUT			PBYTE *pImageDataBaseAddress		   
 );
 
 BOOLEAN FetchImageDosHeader
@@ -82,6 +82,12 @@ BOOLEAN FetchImageOptionalHeaders
 	   OUT	PIMAGE_OPTIONAL_HEADER *pImageOptionalHeaders_tBaseAddress
 );
 
+BOOLEAN FetchImageSection
+(
+	IN     PBYTE 				   pImageData,
+	   OUT PIMAGE_SECTION_HEADER* pImageSectionHeader_tBaseAddress
+);
+
 BOOLEAN FetchImageTlsDirectory
 (
 	IN     PBYTE				 pImageData,
@@ -100,6 +106,15 @@ BOOLEAN FetchPathFromRunningProcess
 	   OUT LPWSTR *pImagePathBufferAddress
 );
 
+PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
+(
+	IN			   LPSTR				 pTagetSectionName,
+	IN	  OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
+	IN	  OPTIONAL BYTE					 number_of_sections,
+	IN	  OPTIONAL PBYTE				 pImageData
+
+);
+
 BOOLEAN ReadStructFromProcess
 (
 	IN     HANDLE hTargetProcess, 
@@ -109,4 +124,3 @@ BOOLEAN ReadStructFromProcess
 	   OUT PVOID *pReadBufferAddress
 );
 
-// PIMAGE_SECTION_HEADER PIMAGE_EXPORT_DIRECTORY PIMAGE_BASE_RELOCATION

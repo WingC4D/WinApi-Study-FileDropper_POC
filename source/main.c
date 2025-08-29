@@ -40,6 +40,7 @@ int main()
 	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= NULL;
 	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= NULL;
 	PIMAGE_FILE_HEADER			  pImageFileHeader_t		= NULL;
+	PIMAGE_SECTION_HEADER		  pImageSection_Entry		= NULL;
 	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= NULL;
 	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = NULL;
 	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= NULL;
@@ -48,7 +49,7 @@ int main()
 	LPSTR						  pTargetProcessName		= "RuntimeBroker.exe";
 	LPWSTR						  TargetProcessName			= L"svchost.exe";
 
-	//if(!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+	//if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
 
 	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
 
@@ -57,6 +58,8 @@ int main()
 	if (!FetchPathFromRunningProcess(hProcess, &pImagePath)) return -3;
 
 	FetchImageData(pImagePath, hHeap, &pImageData);
+
+	pImageSection_Entry = FindImageSectionHeaderByName(".rdata", NULL, 0, pImageData);
 
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
@@ -76,7 +79,18 @@ int main()
 
 	FetchImageExportDirectory(pImageData, &pImageExportDirectory);
 
-	//getchar();
+	FetchImageSection(pImageData, &pImageSection_Entry);
+
+
+
+
+	for (DWORD i = 0; i < pImageFileHeader_t->NumberOfSections; i++) {
+		PIMAGE_SECTION_HEADER candidate = (PIMAGE_SECTION_HEADER)((PBYTE)pImageSection_Entry + sizeof(IMAGE_SECTION_HEADER) * i);
+		printf("%s\n", (char *)candidate->Name);
+
+	}
+
+	if (!getchar())return 2;
 
 	FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget);
 
