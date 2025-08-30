@@ -1,4 +1,6 @@
-#include "../Headers/peImageParser.h"
+#include "peImageParser.h"
+
+#include "SystemInteraction.h"
 
 BOOLEAN CheckBuffer
 (
@@ -63,9 +65,9 @@ BOOLEAN FetchPathFromRunningProcess
 
 	if ((hHeapHandle = GetProcessHeap()) == INVALID_HANDLE_VALUE) return FALSE;
 		
-	if ((NtQueryInformationProcess = (fnNtQueryProcessInformation)GetProcAddress(GetModuleHandleW(L"NTDLL.dll"), "NtQueryInformationProcess")) == NULL) return FALSE;
+	if ((NtQueryInformationProcess = (fnNtQueryProcessInformation)GetProcessAddressReplacement(GetModuleHandleReplacement(L"NTDLL.dll"), "NtQueryInformationProcess")) == NULL) return FALSE;
 
-	NtQueryInformationProcess(hTargetImageProcessHandle, ProcessBasicInformation, &process_basic_info_t, sizeof(PROCESS_BASIC_INFORMATION), &NtQueryReturnValue);
+	if (NtQueryInformationProcess(hTargetImageProcessHandle, ProcessBasicInformation, &process_basic_info_t, sizeof(PROCESS_BASIC_INFORMATION), &NtQueryReturnValue) != 0x0) return FALSE;
 
 	if (!CheckBuffer(sizeof(PEB), hHeapHandle, (PVOID*)&process_environment_block_t)) return FALSE;
 
@@ -75,13 +77,7 @@ BOOLEAN FetchPathFromRunningProcess
 
 	if (!ReadStructFromProcess(hTargetImageProcessHandle, process_environment_block_t->ProcessParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, (PVOID*)&process_user_parameters)) goto FailCleanup;
 
-	if (!ReadStructFromProcess(
-		hTargetImageProcessHandle,
-		process_user_parameters->ImagePathName.Buffer,
-		process_user_parameters->ImagePathName.Length,
-		hHeapHandle,
-		(PVOID*)pImagePathBufferAddress
-	)) return FALSE;
+	if (!ReadStructFromProcess( hTargetImageProcessHandle, process_user_parameters->ImagePathName.Buffer, process_user_parameters->ImagePathName.Length, hHeapHandle, (PVOID*)pImagePathBufferAddress)) return FALSE;
 
 	HeapFree(hHeapHandle, 0, process_environment_block_t);
 
@@ -189,7 +185,7 @@ BOOLEAN FetchImageExportDirectory
 
 	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
 
-	*pImageFileExportDirectory_tBaseAddress = (PIMAGE_EXPORT_DIRECTORY)(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+	*pImageFileExportDirectory_tBaseAddress = (PIMAGE_EXPORT_DIRECTORY)(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
 
 	return TRUE;
 }
@@ -223,7 +219,7 @@ BOOLEAN FetchImageImportDirectory
 
 	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
 
-	*pImageImportDirectory_tBaseAddress = (PIMAGE_IMPORT_DESCRIPTOR)(pImageData+ pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+	*pImageImportDirectory_tBaseAddress = (PIMAGE_IMPORT_DESCRIPTOR)(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
 	return TRUE;
 }
@@ -256,16 +252,16 @@ BOOLEAN FetchImageOptionalHeaders
 {
 	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
 
-	PIMAGE_NT_HEADERS	  pImageNtHeaders     = NULL;
-	IMAGE_OPTIONAL_HEADER potential_structure = { 0 };
+	PIMAGE_NT_HEADERS	   pImageNtHeaders     = NULL;
+	PIMAGE_OPTIONAL_HEADER potential_structure = NULL;
 
 	if (!FetchImageNtHeaders(pImageData, &pImageNtHeaders)) return FALSE;
 
-	potential_structure = pImageNtHeaders->OptionalHeader;
+	potential_structure = &pImageNtHeaders->OptionalHeader;
 
-	if (potential_structure.Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC) return FALSE;
+	if (potential_structure->Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC) return FALSE;
 
-	*pImageOptionalHeaders_tBaseAddress = &potential_structure;
+	*pImageOptionalHeaders_tBaseAddress = potential_structure;
 
 	return TRUE;
 }
@@ -326,17 +322,21 @@ BOOLEAN FetchImageTlsDirectory
 
 PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 (
-	IN			   LPSTR				 pTagetSectionName,
-	IN	  OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
-	IN	  OPTIONAL WORD					 number_of_sections,
-	IN	  OPTIONAL PBYTE				 pImageData
+	IN		   	    LPSTR				  pTagetSectionName,
+	IN OUT OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
+	IN	   OPTIONAL WORD				  number_of_sections,
+	IN	   OPTIONAL PBYTE				  pImageData
 
 )
 {
-	if ((pImageData == NULL && pImageTextSection == NULL) || 
-		pTagetSectionName == NULL || 
-		pTagetSectionName[0] == 0x0) return NULL;
+	if (
+		(pImageData == NULL && pImageTextSection == NULL) ||
+		pTagetSectionName == NULL ||
+		pTagetSectionName[0] == 0x0
+		) return NULL;
+
 	PIMAGE_FILE_HEADER pImageFileHeader = NULL;
+
 	if (number_of_sections == 0)
 	{
 		if (pImageTextSection != NULL)
@@ -352,13 +352,14 @@ PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 			
 		} else
 		{
-
 			if (FetchImageSection(pImageData, &pImageTextSection) == FALSE) return NULL;
 
 			if (FetchImageFileHeader(pImageData, &pImageFileHeader) == FALSE) return NULL;
 		}
+
 		number_of_sections = pImageFileHeader->NumberOfSections;
 	}
+
 	PIMAGE_SECTION_HEADER pImageSectionHeader = NULL;
 
 	for (WORD i = 0; i < number_of_sections; i++) 
@@ -367,9 +368,9 @@ PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 
 		if (strcmp(pTagetSectionName, (char *)pImageSectionHeader->Name) == 0x0) return pImageSectionHeader;
 	}
-		return NULL;
-}
 
+	return NULL;
+}
 
 BOOLEAN ReadStructFromProcess
 (

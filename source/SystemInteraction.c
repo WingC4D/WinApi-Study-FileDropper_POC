@@ -1,5 +1,8 @@
 #include "SystemInteraction.h"
 
+#include "peImageParser.h"
+
+
 VOID AlertableFunction0
 (
 	void
@@ -212,87 +215,6 @@ BOOLEAN CreateSuspendedProcess
 	return TRUE;
 }
 
-BOOLEAN EnumProcessNTQuerySystemInformation
-(
-	IN     LPCWSTR szProcName,
-	   OUT PDWORD  pdwPid,
-	   OUT PHANDLE phProcess
-)
-{
-	ULONG                        uReturnLen1, uReturnLen2;
-	PSYSTEM_PROCESS_INFORMATION  SystemProcInfo;
-	BOOLEAN                      bState = FALSE;
-	fnNtQuerySystemInformation   pNtQuerySystemInformation;
-
-	if (!(pNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcAddress(GetModuleHandleA("NTDLL.DLL"), "NtQuerySystemInformation"))) return FALSE;
-
-	pNtQuerySystemInformation(SystemProcessInformation, NULL, 0, &uReturnLen1);
-
-	if ((SystemProcInfo = (PSYSTEM_PROCESS_INFORMATION)LocalAlloc(LPTR, uReturnLen1)) == NULL) return FALSE;
-
-	PVOID pValueToFree = (PVOID)SystemProcInfo;
-
-	if (pNtQuerySystemInformation(SystemProcessInformation, SystemProcInfo, uReturnLen1, &uReturnLen2) != 0) goto _cleanup;
-	while (TRUE) {
-		if (SystemProcInfo->ImageName.Length && _wcsicmp(SystemProcInfo->ImageName.Buffer, szProcName) == 0) {
-			*pdwPid = (DWORD)SystemProcInfo->UniqueProcessId;
-			*phProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, *pdwPid);
-			if (!*phProcess) goto _cleanup;
-			bState = TRUE;
-		_cleanup:
-			if (SystemProcInfo != NULL) LocalFree(pValueToFree);
-			return bState;
-		}
-
-		if (!SystemProcInfo->NextEntryOffset) goto _cleanup;
-		SystemProcInfo = (PSYSTEM_PROCESS_INFORMATION)((ULONG_PTR)SystemProcInfo + SystemProcInfo->NextEntryOffset);
-	}
-}
-
-BOOLEAN EnumRemoteProcessHandle
-(
-	IN        LPWSTR   szProcName,
-	   OUT    PDWORD   pdwPID,
-	   OUT    HANDLE  *phProcess
-)
-{
-	if (!szProcName || !pdwPID || !phProcess) return FALSE;
-	HMODULE hModule = NULL;
-	BOOLEAN bState = FALSE;
-	WCHAR   szProcess[MAX_PATH] = { L'\0' };
-	DWORD dwProcesses_arr[2048], dwReturnLen1, dwReturnLen2;
-
-	if (!EnumProcesses(dwProcesses_arr, sizeof(dwProcesses_arr), &dwReturnLen1)) return FALSE;
-
-	USHORT dwPIDAmount = (USHORT)(dwReturnLen1 / sizeof(DWORD));
-
-	for (USHORT i = 0; i < dwPIDAmount; i++)
-	{
-		HANDLE  hProcess;
-		if (!(hProcess = OpenProcess(
-			PROCESS_ALL_ACCESS, //Stealthier approach than 
-			FALSE,
-			dwProcesses_arr[i]
-		))) continue;
-
-		if (!EnumProcessModules(hProcess, &hModule, sizeof(HMODULE), &dwReturnLen2)) goto InnerCleanUp;
-
-		if (!GetModuleBaseName(hProcess, hModule, szProcess, sizeof(szProcess) / sizeof(WCHAR))) goto InnerCleanUp;
-
-		if (_wcsicmp(szProcess, szProcName) == 0)
-		{
-			*pdwPID = dwProcesses_arr[i];
-			*phProcess = hProcess;
-			bState = TRUE;
-			break;
-		}
-	InnerCleanUp:
-		if (hProcess) CloseHandle(hProcess);
-	}
-
-	return bState;
-}
-
 BOOLEAN FetchDrives
 (
 	IN OUT LPWSTR pPath
@@ -451,37 +373,148 @@ cleanup:
 	return bState;
 }
 
-BOOLEAN FetchProcess
-(
-	IN     LPWSTR  pProcessName,
-	   OUT PDWORD  dwProcessId,
-	   OUT PHANDLE phProcessHandle
+PPEB FetchProcessEnvironmentBlock
+( 
+	IN     VOID 
 )
 {
-	if (!pProcessName || !dwProcessId || !phProcessHandle) return FALSE;
+#ifdef _WIN64
+	PPEB pPeb = (PEB*)(__readgsqword(0x60));
+#elif  _WIN32
+	PPEB pPeb = (PEB*)(__readfsdword(0x30));
+#endif
+	return pPeb;
+}
 
-	HANDLE hSnapshot;
+BOOLEAN FetchProcessHandleEnumProcesses
+(
+	IN     LPWSTR    lpTagetProcessName,
+	   OUT PDWORD    pdwTargetProcessId,
+	   OUT HANDLE   *phTargetProcessHandle
+)
+{
+	if (!lpTagetProcessName || !pdwTargetProcessId || !phTargetProcessHandle) return FALSE;
+
+	BOOLEAN  bState						   = FALSE;
+	DWORD    dwReturnLen1				   = 0,
+			 dwReturnLen2				   = 0,
+			 dwProcesses_arr[2048]		   = { 0 };
+	WCHAR    wcEnumeratedProcess[MAX_PATH] = { 0 };
+	HMODULE	 EnumeratedModule			   = NULL;
+	HANDLE	 hProcess					   = INVALID_HANDLE_VALUE;
+
+	if (!EnumProcesses(dwProcesses_arr, sizeof(dwProcesses_arr), &dwReturnLen1)) return FALSE;
+
+	USHORT dwPIDAmount = (USHORT)(dwReturnLen1 / sizeof(DWORD));
+
+	for (USHORT i = 0; i < dwPIDAmount; i++)
+	{
+		
+		if ((hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcesses_arr[i])) == 0) continue;
+
+		if (!EnumProcessModules(hProcess, &EnumeratedModule, sizeof(HMODULE), &dwReturnLen2)) goto InnerCleanUp;
+
+		if (!GetModuleBaseName(hProcess, EnumeratedModule, wcEnumeratedProcess, sizeof(wcEnumeratedProcess) / sizeof(WCHAR))) goto InnerCleanUp;
+
+		if (_wcsicmp(wcEnumeratedProcess, lpTagetProcessName) == 0)
+		{
+			*pdwTargetProcessId = dwProcesses_arr[i];
+			*phTargetProcessHandle = hProcess;
+			bState = TRUE;
+			break;
+		}
+	InnerCleanUp:
+		if (hProcess) CloseHandle(hProcess);
+	}
+
+	return bState;
+}
+
+BOOLEAN FetchProcessHandleHelpTool32
+(
+	IN     LPWSTR  pwTargetProcessName,
+	   OUT PDWORD  pdwTargetProcessIdAddress,
+	   OUT PHANDLE phTargetProcessHandleAddress
+)
+{
+	if (!pwTargetProcessName || !pdwTargetProcessIdAddress || !phTargetProcessHandleAddress) return FALSE;
+
+	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
 	BOOLEAN bState = FALSE;
-	PROCESSENTRY32 pe32Process = { .dwSize = sizeof(PROCESSENTRY32) };
+	PROCESSENTRY32 process_entry32_t = { .dwSize = sizeof(PROCESSENTRY32) };
 
 	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) == INVALID_HANDLE_VALUE) goto _cleanup;
 
-	if (!Process32First(hSnapshot, &pe32Process)) goto _cleanup;
+	if (!Process32First(hSnapshot, &process_entry32_t)) goto _cleanup;
 
 	do
 	{
-		if (_wcsicmp(pe32Process.szExeFile, pProcessName) == 0)
-		{
-			*phProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32Process.th32ProcessID);
-			*dwProcessId = pe32Process.th32ProcessID;
-			bState = TRUE;
-			goto _cleanup;
-		}
-	} while (Process32Next(hSnapshot, &pe32Process));
+		if (_wcsicmp(process_entry32_t.szExeFile, pwTargetProcessName) != 0) continue;
+
+		*phTargetProcessHandleAddress = OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_entry32_t.th32ProcessID);
+		*pdwTargetProcessIdAddress = process_entry32_t.th32ProcessID;
+		bState = TRUE;
+		break;
+
+	} while (Process32Next(hSnapshot, &process_entry32_t));
 
 _cleanup:
 	if (hSnapshot) CloseHandle(hSnapshot);
 	return bState;
+}
+
+BOOLEAN FetchProcessHandleNtQuerySystemInformation
+(
+	IN     LPCWSTR szProcName,
+	   OUT PDWORD  pdwPid,
+	   OUT PHANDLE phProcess
+)
+{
+	ULONG                        ulReturnedLengthValue1		 = 0,
+								 ulReturnedLengthValue2		 = 0;
+	PSYSTEM_PROCESS_INFORMATION  pSystemProcessInformation_t = NULL;
+	BOOLEAN                      bState						 = FALSE;
+	fnNtQuerySystemInformation   pfNtQuerySystemInformation	 = NULL;
+	HMODULE						 hModule					 = GetModuleHandleReplacement(L"NTDLL.dll");
+
+	if ((pfNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcessAddressReplacement(hModule, "NtQuerySystemInformation")) == NULL) return FALSE;
+
+	pfNtQuerySystemInformation(SystemProcessInformation, NULL, 0, &ulReturnedLengthValue1);
+
+	if ((pSystemProcessInformation_t = (PSYSTEM_PROCESS_INFORMATION)LocalAlloc(LPTR, ulReturnedLengthValue1)) == NULL) return FALSE;
+
+	PVOID pValueToFree = pSystemProcessInformation_t;
+
+	if (pfNtQuerySystemInformation(SystemProcessInformation, pSystemProcessInformation_t, ulReturnedLengthValue1, &ulReturnedLengthValue2) != 0) goto _cleanup;
+
+	while (TRUE)
+	{
+		if (pSystemProcessInformation_t->ImageName.Length && _wcsicmp(pSystemProcessInformation_t->ImageName.Buffer, szProcName) == 0) 
+		{
+			*pdwPid	   = (DWORD)pSystemProcessInformation_t->UniqueProcessId;
+			*phProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, *pdwPid);
+
+			if (*phProcess == 0 || *phProcess == INVALID_HANDLE_VALUE) 
+			{
+				pSystemProcessInformation_t = (PSYSTEM_PROCESS_INFORMATION)((ULONG_PTR)pSystemProcessInformation_t + pSystemProcessInformation_t->NextEntryOffset);
+				continue;
+			}
+
+			bState = TRUE;
+
+		_cleanup:
+
+			if (pSystemProcessInformation_t != NULL) LocalFree(pValueToFree);
+
+			pSystemProcessInformation_t = NULL;
+
+			return bState;
+		}
+
+		if (!pSystemProcessInformation_t->NextEntryOffset) goto _cleanup;
+
+		pSystemProcessInformation_t = (PSYSTEM_PROCESS_INFORMATION)((ULONG_PTR)pSystemProcessInformation_t + pSystemProcessInformation_t->NextEntryOffset);
+	}
 }
 
 BOOLEAN FetchRemoteThreadHandle
@@ -554,6 +587,71 @@ BOOLEAN FetchResource
 	}
 
 	return TRUE;
+}
+
+HMODULE GetModuleHandleReplacement
+(
+	IN LPWSTR lpwTargetModuleName
+)
+{
+	PPEB				  pProcessEnvironmentBlock = FetchProcessEnvironmentBlock();
+	PLDR_DATA_TABLE_ENTRY pLDRDataTableEntry	   = (PLDR_DATA_TABLE_ENTRY)pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList.Flink;
+	PLIST_ENTRY			  pListHead				   = &pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList;
+	PLIST_ENTRY			  pCurrentListNode		   = pListHead->Flink;
+
+	do
+	{
+		if (pLDRDataTableEntry->FullDllName.Length != 0) 
+		{
+			if (_wcsicmp(pLDRDataTableEntry->FullDllName.Buffer, lpwTargetModuleName) == 0) 
+			{
+
+				return (HMODULE)pLDRDataTableEntry->Reserved2[0];
+			}
+
+			pLDRDataTableEntry = (PLDR_DATA_TABLE_ENTRY)(pCurrentListNode->Flink);
+
+			pCurrentListNode   = pCurrentListNode->Flink;
+		}
+	}
+	while (pListHead != pCurrentListNode);
+	
+	return NULL;
+}
+
+FARPROC GetProcessAddressReplacement
+(
+	IN     HMODULE Target_hModule,
+	IN     LPSTR   lpTargetApiName
+)
+{
+	PBYTE					pModuleBaseAddress			= (PBYTE)Target_hModule;
+	PIMAGE_EXPORT_DIRECTORY pModuleExportDirectory		= NULL;
+	PDWORD					pdwFunctionsNamesRVA_arr	= NULL,
+							pdwFunctionsRVA_arr			= NULL;
+	PWORD					pwFunctionsRVAOrdinals_arr  = NULL;
+	FARPROC				    fnTargetFunction			= NULL;
+
+	if (FetchImageExportDirectory(pModuleBaseAddress, &pModuleExportDirectory) == FALSE) return  NULL;
+
+	pdwFunctionsNamesRVA_arr   = (PDWORD)(pModuleBaseAddress + pModuleExportDirectory->AddressOfNames);
+
+	pdwFunctionsRVA_arr		   = (PDWORD)(pModuleBaseAddress + pModuleExportDirectory->AddressOfFunctions);
+
+	pwFunctionsRVAOrdinals_arr = (PWORD)(pModuleBaseAddress  + pModuleExportDirectory->AddressOfNameOrdinals);
+
+	for (DWORD i = 0; i < pModuleExportDirectory->NumberOfNames; i++)
+	{
+		if (strcmp(lpTargetApiName, (char *)pModuleBaseAddress + pdwFunctionsNamesRVA_arr[i]) != 0) continue;
+
+		WORD w_function_ordinal = pwFunctionsRVAOrdinals_arr[i];
+
+		fnTargetFunction = (FARPROC)(pModuleBaseAddress + pdwFunctionsRVA_arr[w_function_ordinal]);
+
+		break;
+	}
+
+	return fnTargetFunction;
 }
 
 BOOLEAN HijackThread
@@ -765,95 +863,6 @@ FailCleanUp:
 	return FALSE;
 }
 
-UCHAR FetchImageHeaders
-(
-	IN     HANDLE hTargetProcess,
-	   OUT PPEB  *pPEB
-)
-{
-	DWORD						  dwFileSize				 = 0,
-								  dwBytesRead				 = 0;
-	ULONG						  ulRetren					 = 0;
-	HANDLE						  hHeap						 = 0,
-							      hFile						 = 0;
-	NTSTATUS					  NtStatus					 = 0;
-	PPEB						  pProcessEnvironmentBlock_t = NULL;
-	PBYTE						  pImageData_t				 = NULL;
-	PIMAGE_NT_HEADERS			  pImageNtHeaders			 = NULL;
-	PIMAGE_DOS_HEADER			  pImageDOSHeader			 = NULL;
-	fnNTQueryProcessInformation   NtQueryProcInfo		     = NULL;
-	PRTL_USER_PROCESS_PARAMETERS  pProcessUserParameters     = NULL;
-	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir    = NULL;
-	PIMAGE_TLS_DIRECTORY 		  pImageTLSDirectory		 = NULL;
-	PIMAGE_SECTION_HEADER         pImageSectionHeader		 = NULL;
-	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRTFuncEntry_t		 = NULL;
-	PIMAGE_IMPORT_DESCRIPTOR      pImageImportDescriptor     = NULL;
-	PIMAGE_EXPORT_DIRECTORY 	  pImageExportDirectory_t    = NULL;
-	PROCESS_BASIC_INFORMATION	  ProcessBasicInfoBlock_t	 = { 0 };
-	IMAGE_FILE_HEADER			  ImageFileHeader_t			 = { 0 };
-	IMAGE_OPTIONAL_HEADER		  ImageOptionalHeader_t		 = { 0 };
-	IMAGE_DATA_DIRECTORY 		  ImageDataDirectory		 = { 0 };
-
-	if ((hHeap = GetProcessHeap()) == INVALID_HANDLE_VALUE) return 1;
-
-	if ((NtQueryProcInfo = (fnNTQueryProcessInformation)GetProcAddress(GetModuleHandleW(L"NTDLL"), "NtQueryInformationProcess")) == NULL) return 2;
-
-	if ((NtStatus = NtQueryProcInfo(hTargetProcess, ProcessBasicInformation, &ProcessBasicInfoBlock_t, sizeof(PROCESS_BASIC_INFORMATION), &ulRetren)) != 0) return 3;
-
-	if((pProcessEnvironmentBlock_t = HeapAlloc(hHeap, 0, sizeof(PEB))) == NULL) return 3;
-
-	if (!ReadStructureFromProcess(hTargetProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcessEnvironmentBlock_t, sizeof(PEB), hHeap)) return 4;
-
-	if (!ReadStructureFromProcess(
-		hTargetProcess, pProcessEnvironmentBlock_t->ProcessParameters,
-		(PVOID *) &pProcessUserParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,
-		hHeap)) return 5;
-
-	if (!ReadStructureFromProcess(
-		hTargetProcess, pProcessUserParameters->ImagePathName.Buffer,
-		(PVOID*)&pProcessUserParameters->ImagePathName.Buffer, pProcessUserParameters->ImagePathName.Length,
-		hHeap)) return 5;
-
-	if ((hFile		= CreateFileW(pProcessUserParameters->ImagePathName.Buffer, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) return 6;
-
-	if ((dwFileSize = GetFileSize(hFile, NULL)) == 0) return 8;
-
-	if ((pImageData_t = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwFileSize)) == NULL) return 9;
-
-	if (ReadFile(hFile, pImageData_t, dwFileSize, &dwBytesRead, NULL) == FALSE || dwBytesRead != dwFileSize) return 10;
-
-	pImageDOSHeader			= (PIMAGE_DOS_HEADER)pImageData_t;
-
-	if (pImageDOSHeader->e_magic != IMAGE_DOS_SIGNATURE) return 11;
-
-	pImageNtHeaders			= (PIMAGE_NT_HEADERS)(pImageData_t + pImageDOSHeader->e_lfanew);
-
-	if (pImageNtHeaders->Signature != IMAGE_NT_SIGNATURE) return 12;
-
-	ImageFileHeader_t		= pImageNtHeaders->FileHeader;
-
-	ImageOptionalHeader_t	= pImageNtHeaders->OptionalHeader;
-
-	if (ImageOptionalHeader_t.Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC) return 13;
-
-	pImageSectionHeader		= (PIMAGE_SECTION_HEADER)((PBYTE)pImageNtHeaders + sizeof(IMAGE_NT_HEADERS));
-
-	ImageDataDirectory		= ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-
-	pImageExportDirectory_t = (PIMAGE_EXPORT_DIRECTORY)(pImageData_t	   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-
-	pImageImportDescriptor  = (PIMAGE_IMPORT_DESCRIPTOR)(pImageData_t	   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-	pImageTLSDirectory		= (PIMAGE_TLS_DIRECTORY)(pImageData_t		   + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
-
-	pImageRTFuncEntry_t     = (PIMAGE_RUNTIME_FUNCTION_ENTRY)(pImageData_t + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress);
-
-	pImageBaseRelocationDir = (PIMAGE_BASE_RELOCATION)(pImageData_t        + ImageOptionalHeader_t.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
-
-	getchar();
-	return 0;
-}
-
 BOOLEAN SpoofCommandLineArguments
 (
 	IN     LPWSTR  pSpoofedCommandLine,
@@ -942,7 +951,6 @@ EndOfFunc:
 
 	return bState;
 }
-
 
 BOOLEAN SpoofParentProcessId
 (
