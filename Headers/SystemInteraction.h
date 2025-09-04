@@ -3,24 +3,22 @@
 #include <Psapi.h>
 #include <stdlib.h>
 #include <TlHelp32.h>
-
 #include <setupAPI.h>
 #include <winternl.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "Encryption.h"
-
 #include "Win32FindDataArray.h"
-
 #include "resource.h"
+
 #ifdef __cplusplus
 }
 #endif
 
-#include "../HashingAPI.h"
-
+#include "HashingAPI.h"
 #include "CompileTimeHashEngine.h"
 
 #define HASHA(lpStringToHash, dwSeed)(HashStringJenkinsOneEachTime32BitA((LPSTR)(lpStringToHash), (DWORD)(dwSeed)))
@@ -87,7 +85,7 @@ BOOLEAN CreateDebuggedProcess
 	   OUT PHANDLE phThreadHandle
 );
 
-BOOLEAN CreateSuspendedProcess
+static BOOLEAN CreateSuspendedProcess
 (
 	IN     PSTR    pProcessName,
 	   OUT PHANDLE phProcessHandle,
@@ -150,11 +148,10 @@ BOOLEAN FetchDrives
 	IN OUT LPWSTR pPath
 );
 
-
 BOOLEAN FetchProcessHandleHelpTool32
 (
-	IN	   LPWSTR  pwTargetProcessName,
-	IN     PDWORD  pdwProcessId,
+	IN     LPWSTR  pwTargetProcessName,
+	   OUT PDWORD  pdwTargetProcessIdAddress,
 	   OUT PHANDLE phTargetProcessHandleAddress
 );
 
@@ -177,12 +174,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	IN     LPWSTR pPath
 );
 
-LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
-(
-    IN     LPWSTR pPath,
-    IN OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
-);
-VOID TestAllertAbleThread
+VOID TestAlertableThread
 (
 	HANDLE hAlertableThreadHandle
 );
@@ -215,11 +207,6 @@ BOOL FetchStompingTarget
 	IN     LPSTR  pSacrificialDllName,
 	IN     LPSTR  pSacrificialFuncName,
 	   OUT PVOID *pTargetFunctionAddress
-);
-UCHAR FetchImageHeaders
-(
-	IN     HANDLE hTargetProcess,
-	   OUT PPEB  *pPEB
 );
 
 HMODULE GetModuleHandleReplacement
@@ -285,6 +272,12 @@ BOOLEAN ReadStructureFromProcess
 	   OUT PVOID *pReadBufferAddress, 
 	IN     DWORD  dwBufferSize,
 	IN     HANDLE hHeap
+);
+
+LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
+(
+    IN     LPWSTR pPath,
+    IN OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 
 BOOLEAN WriteToTargetProcessEnvironmentBlock

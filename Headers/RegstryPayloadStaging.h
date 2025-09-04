@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <Windows.h>
 #include <stdio.h>
-BOOLEAN WritePayloadToRegistery
+BOOLEAN WritePayloadToRegistry
 (
 	IN PUCHAR pPayload,
 	IN DWORD  dwPayloadSize

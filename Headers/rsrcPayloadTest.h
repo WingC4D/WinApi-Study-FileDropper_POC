@@ -14,7 +14,7 @@ typedef struct _PAYLOAD {
 
 }PAYLOAD, *lpPAYLOAD;
 
-PBYTE Test();
+lpPAYLOAD Test();
 
 
 

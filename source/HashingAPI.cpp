@@ -1,5 +1,8 @@
-#include "../HashingAPI.h"
-extern"C" {
+#include "HashingAPI.h"
+#ifdef __cplusplus
+extern"C"
+{
+#endif
 	DWORD HashStringDjb2A
 	(
 		IN	   LPSTR  pStringToHash,
@@ -172,4 +175,6 @@ extern"C" {
 
 		return dwHash;
 	}
+#ifdef __cplusplus
 }
+#endif

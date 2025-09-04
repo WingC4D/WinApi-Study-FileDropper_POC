@@ -2,13 +2,11 @@
 
 #include <Windows.h>
 #include <winternl.h>
-
 #include "SystemInteraction.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #ifdef PROCESSOR_ARCHITECTURE_AMD64
 
 	#define UNINIT_PVOID_VALUE (PVOID)0xCCCCCCCCCCCCCCCC
@@ -39,7 +37,6 @@ __kernel_entry NTSTATUS NtQueryProcessInformation
        OUT OPTIONAL PULONG           ReturnLength
 );
 
-
 BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN     PBYTE				   pImageData,
@@ -64,7 +61,6 @@ BOOLEAN FetchImageExportDirectory
 	IN     PBYTE					pImageData,
 	   OUT PIMAGE_EXPORT_DIRECTORY *pImageFileExportDirectory_tBaseAddress
 );
-
 
 BOOLEAN FetchImageFileHeader
 (
@@ -120,7 +116,6 @@ PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 	IN	  OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
 	IN	  OPTIONAL WORD					 number_of_sections,
 	IN	  OPTIONAL PBYTE				 pImageData
-
 );
 
 BOOLEAN ReadStructFromProcess

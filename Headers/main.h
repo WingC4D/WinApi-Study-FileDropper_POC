@@ -3,10 +3,11 @@
 #pragma comment(lib, "kernel32.lib")
 
 #include "CompileTimeHashEngine.h"
-#include "../HashingAPI.h"
+#include "HashingAPI.h"
 #include "Externals.h"
 #include "SystemInteraction.h"
-
+#include "rsrcPayloadTest.h"
+#include "peImageParser.h"
 #ifdef __cplusplus
 extern "C"
 {
@@ -20,12 +21,9 @@ extern "C"
 	#include "Printers.h"
 	#include "ErrorHandlers.h"
 	#include "Win32FindDataArray.h"
-	#include "rsrcPayloadTest.h"
 
 	#include "dllinjection.h"
-	
-	#include "dllinjection.h"
-	#include "peImageParser.h" // If this header is for C code
+ // If this header is for C code
 #include "Encryption.h"
 	#define		SACRIFICIAL_DLL          "User32.dll"
 	#define		SACRIFICIAL_FUNC         "MessageBoxA"

