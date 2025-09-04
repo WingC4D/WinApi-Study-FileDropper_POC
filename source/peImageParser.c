@@ -1,8 +1,7 @@
 #include "peImageParser.h"
 
-#include "SystemInteraction.h"
 
-BOOLEAN CheckBuffer
+static BOOLEAN CheckBuffer
 (
 	IN     DWORD  dwSizeToAllocate,
 	IN     HANDLE hHeapHandle,
@@ -20,12 +19,12 @@ BOOLEAN CheckBuffer
 	return TRUE;
 }
 
-UCHAR CheckDataForDOSHeader
+static UCHAR CheckDataForDOSHeader
 (
 	IN	  PBYTE	 pCandidateData
 )
 {
-	if (pCandidateData == NULL) return FALSE;
+	if (pCandidateData == NULL) return 1;
 
 	PIMAGE_DOS_HEADER pPotentialHeader = (PIMAGE_DOS_HEADER)pCandidateData;
 
@@ -60,12 +59,12 @@ BOOLEAN FetchPathFromRunningProcess
 	fnNtQueryProcessInformation  NtQueryInformationProcess 	 = NULL;
 	PPEB						 process_environment_block_t = NULL;
 	PRTL_USER_PROCESS_PARAMETERS process_user_parameters     = NULL;
-	PROCESS_BASIC_INFORMATION	 process_basic_info_t		 = { 0 };
+	PROCESS_BASIC_INFORMATION	 process_basic_info_t        = { 0 };
 	HANDLE						 hHeapHandle			 	 = INVALID_HANDLE_VALUE;
 
 	if ((hHeapHandle = GetProcessHeap()) == INVALID_HANDLE_VALUE) return FALSE;
 		
-	if ((NtQueryInformationProcess = (fnNtQueryProcessInformation)GetProcessAddressReplacement(GetModuleHandleReplacement(L"NTDLL.dll"), "NtQueryInformationProcess")) == NULL) return FALSE;
+	if ((NtQueryInformationProcess = (fnNtQueryProcessInformation)(GetProcessAddressReplacement(GetModuleHandleReplacement((LPWSTR)(L"NTDLL.dll")), (LPSTR)("NtQueryInformationProcess")))) == NULL) return FALSE;
 
 	if (NtQueryInformationProcess(hTargetImageProcessHandle, ProcessBasicInformation, &process_basic_info_t, sizeof(PROCESS_BASIC_INFORMATION), &NtQueryReturnValue) != 0x0) return FALSE;
 
@@ -99,7 +98,7 @@ FailCleanup:
 	return FALSE;
 }
 
-BOOLEAN FetchImageBaseRelocDirectory
+BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN     PBYTE				   pImageData,
 	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocDirectory_tBaseAddress
@@ -140,11 +139,11 @@ BOOLEAN FetchImageData
 
 	if (!ReadFile(hFileHandle, pImageData, dwFileSize, &dwBytesRead, NULL) || dwBytesRead != dwFileSize) goto FailureCleanup;
 
-	if (CheckDataForDOSHeader((PBYTE)pImageData) != 0) goto FailureCleanup;
+	if (CheckDataForDOSHeader((PBYTE)(pImageData)) != 0) goto FailureCleanup;
 
 	CloseHandle(hFileHandle);
 
-	*pImageDataBaseAddress = (PBYTE)pImageData;
+	*pImageDataBaseAddress = (PBYTE)(pImageData);
 
 	return TRUE;
 
@@ -168,7 +167,7 @@ BOOLEAN FetchImageDosHeader
 
 	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
 
- 	*pImageDOSHeader_tBaseAddress = (PIMAGE_DOS_HEADER)pImageData;
+ 	*pImageDOSHeader_tBaseAddress = (PIMAGE_DOS_HEADER)(pImageData);
 
 	return TRUE;
 }
@@ -290,7 +289,8 @@ BOOLEAN FetchImageSection
 )
 {
 	if (!pImageData || !pImageSectionHeader_tBaseAddress) return FALSE;
- 	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
+
+	if (CheckDataForDOSHeader(pImageData) != 0) return FALSE;
 
 	PIMAGE_NT_HEADERS pImageNtHeader = NULL;
 
@@ -341,14 +341,14 @@ PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 	{
 		if (pImageTextSection != NULL)
 		{
-			if (strcmp((char*)pImageTextSection->Name, ".text") != 0)
+			if (strcmp((char *)(pImageTextSection->Name), ".text") != 0)
 			{
 				if (pImageData == NULL) return NULL;
 
 				if (FetchImageSection(pImageData, &pImageTextSection) == FALSE) return NULL;
 			}
 
-			pImageFileHeader = (PIMAGE_FILE_HEADER)((PBYTE)pImageTextSection - sizeof(IMAGE_NT_HEADERS) + sizeof(DWORD));
+			pImageFileHeader = (PIMAGE_FILE_HEADER)((PBYTE)(pImageTextSection) - sizeof(IMAGE_NT_HEADERS) + sizeof(DWORD));
 			
 		} else
 		{

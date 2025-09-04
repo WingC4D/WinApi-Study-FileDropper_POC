@@ -31,23 +31,20 @@
 */
 int call(void)
 {
-	HMODULE hModule = GetModuleHandleA(".\DLL_Study.dll");
-	//printf(".text Payload Address: 0x%p\n", &ShellCodePayload);
-	if (hModule == NULL)
+	HMODULE hModule = GetModuleHandleA(".\\DLL_Study.dll");
+	if (hModule == nullptr)
 	{
-		printf("Failed To Find In Memory The Desired DLL Handle!\nAttempting To Fetch Library...\n");
 		hModule = LoadLibraryA(".\\DLL_Study.dll");
-		if (hModule == NULL)
+		if (hModule == nullptr)
 		{
-			printf("Failed to Fetch Library Handle!\nError Code: %d\n", GetLastError());
-			return;
+			return -2;
 		}
 	}
-	PVOID  fpCircus = GetProcAddress(hModule, "Circus");
+	PVOID  fpCircus = reinterpret_cast<PVOID>(GetProcAddress(hModule, "Circus"));
 	
-	CircusFunctionPointer Circus = fpCircus;	
+	CircusFunctionPointer Circus = reinterpret_cast<CircusFunctionPointer>(fpCircus);
 	
-	if (Circus() == 7) printf("AHAHAHAHA Like That Would Stop The Circus\n");
+	if (Circus() == 7) printf("Ahahahaha have you really thought that would stop the Circus that's about to unfold?!\n");
 	
 	HANDLE hNotepad = INVALID_HANDLE_VALUE;
 	

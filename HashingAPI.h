@@ -1,5 +1,8 @@
 #pragma once
 #include <Windows.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 DWORD HashStringDjb2W
 (
@@ -50,3 +53,6 @@ DWORD HashStringRotr32W
 	IN     LPWSTR pStringToHash,
 	IN	   DWORD  dwInitialSeed
 );
+#ifdef __cplusplus
+}
+#endif

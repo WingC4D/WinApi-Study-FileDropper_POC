@@ -54,21 +54,20 @@ BOOL aFin(
 }
 
 
-BOOL InstallAes(
+BOOL InstallAes
+(
 	PAEStruct pA_t
 )
 {
 	BCRYPT_ALG_HANDLE hAlgorithm = NULL;
 	BCRYPT_KEY_HANDLE hKey       = NULL;
 
-	ULONG cbResult = NULL;
-	DWORD sBlock   = NULL;
-
-	DWORD cbKeyObj = NULL;
-	PBYTE pKeyObj  = NULL;
-
-	PBYTE pOutText = NULL;
-	DWORD sOutText = NULL;
+	DWORD cbResult = 0,
+		  sBlock   = 0,
+	      cbKeyObj = 0,
+		  sOutText = 0;
+	PBYTE pKeyObj  = NULL,
+		  pOutText = NULL;
 
 	BOOL     STATE = TRUE;
 	
@@ -77,7 +76,6 @@ BOOL InstallAes(
 	
 	if (!AESSuccessCheck(&STATE, STATUS, "AlgorithmProvider")) goto _CleanUp;
 	
-	//Getting key size.
 	STATUS = BCryptGetProperty(
 		hAlgorithm, 
 		BCRYPT_OBJECT_LENGTH, 
@@ -89,7 +87,6 @@ BOOL InstallAes(
 	
 	if (!AESSuccessCheck(&STATE, STATUS, "BCryptGetProperty")) goto _CleanUp;
 	
-	//Getting the block Size
 	STATUS = BCryptGetProperty(
 		hAlgorithm, 
 		BCRYPT_BLOCK_LENGTH, 
@@ -109,7 +106,6 @@ BOOL InstallAes(
 
 	if (!pKeyObj) { STATE = FALSE; goto _CleanUp; }
 
-	//Setting Block Cipher Mode to CBC. This uses a 32 byte key and a 16 byte IV.
 	STATUS = BCryptSetProperty(
 		hAlgorithm, 
 		BCRYPT_CHAINING_MODE, 
@@ -119,8 +115,7 @@ BOOL InstallAes(
 	);
 	
 	if (!AESSuccessCheck(&STATE, STATUS, "SetProperty")) goto _CleanUp;
-	
-//Genrating Key for AES Struct.
+
 	STATUS = BCryptGenerateSymmetricKey(
 		hAlgorithm, 
 		&hKey, 
@@ -133,10 +128,10 @@ BOOL InstallAes(
 	
 	if ( !AESSuccessCheck(&STATE, STATUS, "GenerateSymmetricKey") ) goto  _CleanUp;
 
-
-	//Getting output text size. 
-	if (pA_t->blEncrypt) {
-		STATUS = BCryptEncrypt(
+	if (pA_t->blEncrypt) 
+	{
+		STATUS = BCryptEncrypt
+		(
 			hKey,
 			pA_t->pPText,
 			pA_t->sPText,
@@ -148,12 +143,15 @@ BOOL InstallAes(
 			&sOutText,
 			BCRYPT_BLOCK_PADDING
 		);
+
 		if (!AESSuccessCheck(&STATE, STATUS, "Encrypt")) goto _CleanUp;
 
 		pOutText = (PBYTE)HeapAlloc(hHeap, 0, sOutText);
+
 		if (!pOutText) { STATE = FALSE; goto _CleanUp; }
 
-		STATUS = BCryptEncrypt(
+		STATUS = BCryptEncrypt
+		(
 			hKey,
 			pA_t->pPText,
 			pA_t->sPText,
@@ -170,7 +168,8 @@ BOOL InstallAes(
 	}
 	else
 	{
-		STATUS = BCryptDecrypt(
+		STATUS = BCryptDecrypt
+		(
 			hKey,
 			pA_t->pCText,
 			pA_t->sCText,
@@ -186,10 +185,11 @@ BOOL InstallAes(
 		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _CleanUp;
 
 		pOutText = (PBYTE)HeapAlloc(hHeap, 0, sOutText);
+
 		if (!pOutText) { STATE = FALSE; goto _CleanUp; }
 
-
-		STATUS = BCryptDecrypt(
+		STATUS = BCryptDecrypt
+		(
 			hKey,
 			pA_t->pCText,
 			pA_t->sCText,
@@ -201,6 +201,7 @@ BOOL InstallAes(
 			&cbResult,
 			BCRYPT_BLOCK_PADDING
 		);
+
 		if (!AESSuccessCheck(&STATE, STATUS, "Decrypt")) goto _CleanUp;
 	}
 

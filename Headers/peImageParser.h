@@ -1,6 +1,13 @@
 #pragma once
+
 #include <Windows.h>
 #include <winternl.h>
+
+#include "SystemInteraction.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef PROCESSOR_ARCHITECTURE_AMD64
 
@@ -32,7 +39,8 @@ __kernel_entry NTSTATUS NtQueryProcessInformation
        OUT OPTIONAL PULONG           ReturnLength
 );
 
-BOOLEAN FetchImageBaseRelocDirectory
+
+BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN     PBYTE				   pImageData,
 	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocDirectory_tBaseAddress
@@ -108,9 +116,9 @@ BOOLEAN FetchPathFromRunningProcess
 
 PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 (
-	IN			   LPSTR				 pTagetSectionName,
+	IN			   LPCSTR				 pTagetSectionName,
 	IN	  OPTIONAL PIMAGE_SECTION_HEADER pImageTextSection,
-	IN	  OPTIONAL BYTE					 number_of_sections,
+	IN	  OPTIONAL WORD					 number_of_sections,
 	IN	  OPTIONAL PBYTE				 pImageData
 
 );
@@ -124,3 +132,8 @@ BOOLEAN ReadStructFromProcess
 	   OUT PVOID *pReadBufferAddress
 );
 
+
+
+#ifdef __cplusplus
+}
+#endif
