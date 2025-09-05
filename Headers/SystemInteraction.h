@@ -211,7 +211,7 @@ BOOL FetchStompingTarget
 
 HMODULE GetModuleHandleReplacement
 (
-	IN    LPWSTR lpwTargetModuleName
+	IN    LPCWSTR lpwTargetModuleName
 );
 
 HMODULE GetModuleHandleReplacementH
@@ -231,6 +231,11 @@ FARPROC GetProcessAddressReplacementH
 	IN     DWORD   dwTargetApiHash
 );
 
+BOOLEAN LogConsoleMouseClicks
+(
+	IN	   VOID
+);
+
 BOOLEAN SpoofParentProcessId
 (
 	IN     LPSTR   pMaliciousProcessName, 
@@ -245,7 +250,7 @@ BOOLEAN SpoofCommandLineArguments
 (
 	IN     LPWSTR  pSpoofedCommandLine,
 	IN	   LPWSTR  pMaliciousCommandLine,
-	IN     DWORD   dwSpoofedcmdLineLength,
+	IN     DWORD   dwSpoofedCLALength,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PDWORD  pdwProcessId,
 	   OUT PHANDLE phThreadHandle,

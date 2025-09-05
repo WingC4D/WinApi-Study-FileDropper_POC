@@ -8,6 +8,9 @@
 #include "SystemInteraction.h"
 #include "rsrcPayloadTest.h"
 #include "peImageParser.h"
+#include "dllinjection.h"
+#include "Hooks.h"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -22,7 +25,6 @@ extern "C"
 	#include "ErrorHandlers.h"
 	#include "Win32FindDataArray.h"
 
-	#include "dllinjection.h"
  // If this header is for C code
 #include "Encryption.h"
 	#define		SACRIFICIAL_DLL          "User32.dll"

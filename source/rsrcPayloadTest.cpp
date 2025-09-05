@@ -31,7 +31,7 @@ lpPAYLOAD Test()
 
 	rFin(&context_t, static_cast<PBYTE>(resource.pAddress), pPayload_t->pText, pPayload_t->sText);
 
-	if (strlen(reinterpret_cast<PCHAR>(pPayload_t->pText)) == 0x00000000) VirtualFree(pPayload_t->pText, pPayload_t->sText, MEM_FREE); HeapFree(GetProcessHeap(), 0, pPayload_t);  return nullptr;
+	if (strlen(reinterpret_cast<PCHAR>(pPayload_t->pText)) == NULL) VirtualFree(pPayload_t->pText, pPayload_t->sText, MEM_FREE); HeapFree(GetProcessHeap(), 0, pPayload_t);  return nullptr;
 	
 	return pPayload_t;
 

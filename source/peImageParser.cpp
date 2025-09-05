@@ -105,7 +105,7 @@ FailCleanup:
 BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN     PBYTE				   pImageData,
-	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocDirectory_tBaseAddress
+	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocationDirectory_tBaseAddress
 )
 {
 	if (anonymous::CheckDataForDOSHeader(pImageData) != 0) return FALSE;
@@ -114,7 +114,7 @@ BOOLEAN FetchImageBaseRelocationDirectory
 
 	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
 
-	*pImageBaseRelocDirectory_tBaseAddress = reinterpret_cast<PIMAGE_BASE_RELOCATION>(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+	*pImageBaseRelocationDirectory_tBaseAddress = reinterpret_cast<PIMAGE_BASE_RELOCATION>(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
 
 	return TRUE;
 }

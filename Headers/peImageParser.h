@@ -3,10 +3,11 @@
 #include <Windows.h>
 #include <winternl.h>
 #include "SystemInteraction.h"
-
+/*
 #ifdef __cplusplus
 extern "C" {
 #endif
+*/
 #ifdef PROCESSOR_ARCHITECTURE_AMD64
 
 	#define UNINIT_PVOID_VALUE (PVOID)0xCCCCCCCCCCCCCCCC
@@ -40,7 +41,7 @@ __kernel_entry NTSTATUS NtQueryProcessInformation
 BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN     PBYTE				   pImageData,
-	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocDirectory_tBaseAddress
+	   OUT PIMAGE_BASE_RELOCATION *pImageBaseRelocationDirectory_tBaseAddress
 );
 
 BOOLEAN FetchImageData
@@ -127,8 +128,8 @@ BOOLEAN ReadStructFromProcess
 	   OUT PVOID *pReadBufferAddress
 );
 
-
-
+/*
 #ifdef __cplusplus
 }
 #endif
+*/
