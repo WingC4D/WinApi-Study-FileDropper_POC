@@ -111,6 +111,18 @@ BOOLEAN FetchPathFromRunningProcess
 	   OUT LPWSTR *pImagePathBufferAddress
 );
 
+PPROCESS_BASIC_INFORMATION FetchPBINtQuerySystemInformation
+(
+	IN     HANDLE  hTargetImageProcessHandle
+);
+
+PPEB FetchRemoteProcessEnvironmentBlock
+(
+	IN	   OPTIONAL	HANDLE					   hTargetImageProcessHandle,
+	IN				HANDLE					   hHeapHandle,
+	IN     OPTIONAL PPROCESS_BASIC_INFORMATION pProcessBasicInformation_t
+);
+
 PIMAGE_SECTION_HEADER FindImageSectionHeaderByName
 (
 	IN			   LPCSTR				 pTagetSectionName,

@@ -1,7 +1,8 @@
 #include "Win32FindDataArray.h"
 
 //Automates The Freeing Of The Dynamic Allocation For The Files Array Struct & All Of It's Nested Dynamic Allocations.
-void FreeFileArray(
+void FreeFileArray
+(
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 )
 {
@@ -10,16 +11,16 @@ void FreeFileArray(
 		return;
 	}
 
-	// 1. Free the "inner" data (the strings)
-	// Also, check if the inner pointer is valid before using it
-
-
-	for (USHORT i = 0; i <= pFiles_arr_t->count - 1; i++) {
-		if (pFiles_arr_t->pFilesArr[i].pFileName) {
+	for (USHORT i = 0; i <= pFiles_arr_t->count - 1; i++) 
+	{
+		if (pFiles_arr_t->pFilesArr[i].pFileName) 
+		{
 			RtlSecureZeroMemory(pFiles_arr_t->pFilesArr[i].pFileName, lstrlenW(pFiles_arr_t->pFilesArr[i].pFileName) * sizeof(WCHAR));
+
 			free(pFiles_arr_t->pFilesArr[i].pFileName);
 		}
 	}
+
 	if (pFiles_arr_t->hBaseFile != INVALID_HANDLE_VALUE)
 	{
 		FindClose(pFiles_arr_t->hBaseFile);
@@ -28,21 +29,28 @@ void FreeFileArray(
 	free(pFiles_arr_t);
 }
 
-//Handles Dynamic Small (RN Not As Possible) Memory Allocation For The Creation Of The Files Array Struct.
-BOOL FileBufferRoundUP(
-	size_t *psArray,
-	PWIN32_FILE_IN_ARRAY *pFiles_arr
+BOOLEAN FileBufferRoundUP
+(
+	PDWORD                pdwArraySize,
+	PWIN32_FILE_IN_ARRAY* pFilesNames_arrAddress
 )
 {
-	*psArray = *psArray * 2;
-	PWIN32_FILE_IN_ARRAY pTemp = realloc(*pFiles_arr, *psArray * sizeof(PWIN32_FILE_IN_ARRAY));
-	if (pTemp == NULL) return FALSE;
-	*pFiles_arr = pTemp;
+	if (pdwArraySize == NULL || *pdwArraySize == 0 || pFilesNames_arrAddress == NULL || *pFilesNames_arrAddress == NULL) return FALSE;
+
+	PWIN32_FILE_IN_ARRAY pTemp = NULL;
+
+	if ((pdwArraySize = realloc(*pFilesNames_arrAddress, *pdwArraySize * 2 * sizeof(PWIN32_FILE_IN_ARRAY))) == NULL) return FALSE;
+
+	*pdwArraySize = *pdwArraySize * 2;
+
+	*pFilesNames_arrAddress = pTemp;
+
 	return TRUE;
 }
 
 //Needs Work.
-HANDLE CreateVessel(
+HANDLE CreateVessel
+(
 	LPWSTR pPath
 )
 {

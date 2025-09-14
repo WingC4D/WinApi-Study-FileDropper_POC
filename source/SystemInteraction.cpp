@@ -1,8 +1,5 @@
 #include "SystemInteraction.h"
 
-#include "peImageParser.h"
-
-
 static VOID AlertableFunction0
 (
 	IN     VOID
@@ -225,7 +222,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 {
 	WIN32_FIND_DATAW		 find_data_t	 = {  };
 	LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t	 = nullptr;
-	USHORT					 usFileLoopIndex = 0x0000;
+	USHORT					 usFileLoopIndex = NULL;
 	SIZE_T					 sArraySize		 = 0x00000003,
 							 sFileName		 = NULL;
 	LPWSTR					 pFileName		 = nullptr;
@@ -243,8 +240,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 
 	while (FindNextFileW(pFiles_arr_t->hBaseFile, &find_data_t))
 	{
-		if (usFileLoopIndex >= sArraySize / 2 && !FileBufferRoundUP(&sArraySize, &pFiles_arr_t->pFilesArr)) return nullptr;
-		
+		if (usFileLoopIndex >= sArraySize / 2 && !FileBufferRoundUP(reinterpret_cast<PDWORD>(&sArraySize), &pFiles_arr_t->pFilesArr)) return nullptr;
 
 		if (usFileLoopIndex == 0xFFFF) usFileLoopIndex = static_cast<DWORD>(usFileLoopIndex);
 
@@ -276,26 +272,26 @@ BOOLEAN FetchAlertableThread
 	   OUT PHANDLE phAlertedThreadHandle
 )
 {
-	if (!dwMainThreadId || !pdwAlertedThreadId || !phAlertedThreadHandle) return FALSE;
+	if (dwMainThreadId == NULL || pdwAlertedThreadId == nullptr|| phAlertedThreadHandle == nullptr) return FALSE;
 
-	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
-
-	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, dwTargetPID)) == INVALID_HANDLE_VALUE) return FALSE;
-
+	BOOLEAN		  bState			= FALSE;
+	HANDLE		  hSnapshot			= INVALID_HANDLE_VALUE;
 	THREADENTRY32 th32ThreadEntry_t = { };
 
 	th32ThreadEntry_t.dwSize = sizeof(THREADENTRY32);
 
-	if (!Thread32First(hSnapshot, &th32ThreadEntry_t)) return FALSE;
+	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, dwTargetPID)) == INVALID_HANDLE_VALUE) return FALSE;
 
-	BOOLEAN bState = FALSE;
+	if (Thread32First(hSnapshot, &th32ThreadEntry_t) ==  FALSE) return FALSE;
+
+	
 	do
 	{
 		if (dwTargetPID == th32ThreadEntry_t.th32OwnerProcessID && dwMainThreadId != th32ThreadEntry_t.th32ThreadID)
 		{
 			HANDLE hCandidateThread = INVALID_HANDLE_VALUE;
 
-			if ((hCandidateThread = OpenThread(THREAD_SET_CONTEXT, FALSE, th32ThreadEntry_t.th32ThreadID)) == INVALID_HANDLE_VALUE) return FALSE;
+			if ((hCandidateThread = OpenThread(THREAD_SET_CONTEXT, FALSE, th32ThreadEntry_t.th32ThreadID)) == INVALID_HANDLE_VALUE || hCandidateThread == nullptr) return FALSE;
 
 			if (QueueUserAPC((PAPCFUNC)AlertableFunction0, hCandidateThread, 0))
 			{
@@ -355,7 +351,7 @@ success:
 	bState = TRUE;
 
 cleanup:
-	if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
+	if (hSnapshot != INVALID_HANDLE_VALUE && hSnapshot != nullptr) CloseHandle(hSnapshot);
 
 	return bState;
 }
@@ -376,7 +372,7 @@ static PHANDLE FetchMouseHandle
 
 	GetRawInputBuffer(reinterpret_cast<PRAWINPUT>(&mosue_t), &uiDataSize,sizeof(RAWINPUT));
 
-	if (GetRawInputDeviceList(nullptr, &uiArrayLength, sizeof(RAWINPUTDEVICE)) != 0x00)
+	if (GetRawInputDeviceList(nullptr, &uiArrayLength, sizeof(RAWINPUTDEVICE)) != NULL)
 	{
 		printf("[!] Failed to Retrieve Input Devices Array Size!\n[i] ErrorCode: %lx", GetLastError());
 
@@ -439,7 +435,7 @@ static PHANDLE FetchMouseHandle
 	return pMiceHandles;
 }
 
-namespace Anonymous
+namespace check
 {
 	static PPEB FetchProcessEnvironmentBlock
 	(
@@ -447,9 +443,9 @@ namespace Anonymous
 	)
 	{
 #ifdef _WIN64
-		PPEB pPeb = (PEB*)__readgsqword(0x60);
+		PPEB pPeb = reinterpret_cast<PPEB>(__readgsqword(0x60));
 #elif  _WIN32
-		PPEB pPeb = (PEB*)(__readfsdword(0x30));
+		PPEB pPeb = reinterpret_cast<PPEB>(__readfsdword(0x30));
 #endif
 		return pPeb;
 	}
@@ -471,15 +467,15 @@ BOOLEAN FetchProcessHandleEnumProcesses
 	WCHAR    wcEnumeratedProcess[MAX_PATH] = { NULL };
 	HMODULE	 EnumeratedModule			   = nullptr;
 	HANDLE	 hProcess					   = INVALID_HANDLE_VALUE;
+	USHORT	 usPIDAmount				   = NULL;
 
 	if (!EnumProcesses(dwProcesses_arr, sizeof(dwProcesses_arr), &dwReturnLen1)) return FALSE;
 
-	USHORT dwPIDAmount					   = static_cast<USHORT>(dwReturnLen1 / sizeof(DWORD));
+	usPIDAmount = static_cast<USHORT>(dwReturnLen1 / sizeof(DWORD));
 
-	for (USHORT i = 0; i < dwPIDAmount; i++)
+	for (USHORT i = 0; i < usPIDAmount; i++)
 	{
-		
-		if ((hProcess					   = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcesses_arr[i])) == nullptr) continue;
+		if ((hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcesses_arr[i])) == nullptr) continue;
 
 		if (!EnumProcessModules(hProcess, &EnumeratedModule, sizeof(HMODULE), &dwReturnLen2)) goto InnerCleanUp;
 
@@ -545,7 +541,7 @@ _cleanup:
 BOOLEAN FetchProcessHandleNtQuerySystemInformation
 (
 	IN     LPCWSTR szProcName,
-	IN OUT PDWORD  pdwPid,
+	   OUT PDWORD  pdwPid,
 	   OUT PHANDLE phProcess
 )
 {
@@ -687,7 +683,7 @@ HMODULE GetModuleHandleReplacement
 	IN     LPCWSTR lpwTargetModuleName
 )
 {
-	PPEB				  pProcessEnvironmentBlock = Anonymous::FetchProcessEnvironmentBlock();
+	PPEB				  pProcessEnvironmentBlock = check::FetchProcessEnvironmentBlock();
 	PLDR_DATA_TABLE_ENTRY pLDRDataTableEntry	   = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead				   = &pProcessEnvironmentBlock->Ldr->InMemoryOrderModuleList,
 						  pCurrentListNode		   = pListHead->Flink;
@@ -714,7 +710,7 @@ HMODULE GetModuleHandleReplacementH
 	IN    DWORD dwTargetModuleName
 )
 {
-	PPEB				  pProcessEnvironmentBlock_t = Anonymous::FetchProcessEnvironmentBlock();
+	PPEB				  pProcessEnvironmentBlock_t = check::FetchProcessEnvironmentBlock();
 	PPEB_LDR_DATA		  pLoaderDataTable_t		 = pProcessEnvironmentBlock_t->Ldr;
 	PLDR_DATA_TABLE_ENTRY pDataEntryDataTable_t		 = reinterpret_cast<PLDR_DATA_TABLE_ENTRY>(pLoaderDataTable_t->InMemoryOrderModuleList.Flink);
 	PLIST_ENTRY			  pListHead					 = &pProcessEnvironmentBlock_t->Ldr->InMemoryOrderModuleList,
@@ -746,6 +742,7 @@ FARPROC GetProcessAddressReplacement
 	IN     LPSTR   lpTargetApiName
 )
 {
+	WORD					wFunctionOrdinal			= NULL;
 	PBYTE					pModuleBaseAddress			= reinterpret_cast<PBYTE>(Target_hModule);
 	PIMAGE_EXPORT_DIRECTORY pModuleExportDirectory		= nullptr;
 	PDWORD					pdwFunctionsNamesRVA_arr	= nullptr,
@@ -765,9 +762,9 @@ FARPROC GetProcessAddressReplacement
 	{
 		if (strcmp(lpTargetApiName, reinterpret_cast<PCHAR>(pModuleBaseAddress + pdwFunctionsNamesRVA_arr[i])) != 0) continue;
 
-		WORD wFunctionsOrdinal	= pwFunctionsRVAOrdinals_arr[i];
+		wFunctionOrdinal	   = pwFunctionsRVAOrdinals_arr[i];
 
-		fnTargetFunction		= reinterpret_cast<FARPROC>(pModuleBaseAddress + pdwFunctionsRVA_arr[wFunctionsOrdinal]);
+		fnTargetFunction	   = reinterpret_cast<FARPROC>(pModuleBaseAddress + pdwFunctionsRVA_arr[wFunctionOrdinal]);
 
 		break;
 	}
@@ -913,12 +910,51 @@ BOOLEAN LogConsoleMouseClicks
 			dwClicksToCatch++;
 		}
 	}
-
 	return TRUE;
 }
 
 VOID MiceHandlesTests()
 {
+	PRAWINPUTDEVICELIST pRawInputData_arr		= nullptr;
+	PRAWINPUTDEVICE		pRawInputDevice_arr		= nullptr;
+	PRAWINPUTDEVICE		pRawInputDeviceData_arr = nullptr;
+	UINT				uiHeaderSize			= sizeof(RAWINPUTDEVICELIST),
+						uiAmountOfDevices		= NULL;
+	HANDLE				hHeap					= INVALID_HANDLE_VALUE;
+	DWORD				dwLoopsIndex			= NULL,
+						dwOrdinalsIndex			= NULL;
+	PDWORD				pdwOrdinals_arr			= nullptr;
+	HRAWINPUT			hRawInput				= { };
+
+	hHeap = GetProcessHeap();
+
+	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return;
+
+	if (GetRawInputDeviceList(nullptr, &uiAmountOfDevices, uiHeaderSize) != 0) return;
+
+	pRawInputData_arr = static_cast<PRAWINPUTDEVICELIST>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, uiAmountOfDevices * sizeof(RAWINPUTDEVICE)));
+
+	if (pRawInputData_arr == nullptr) return;
+
+	pdwOrdinals_arr = static_cast<PDWORD>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, uiAmountOfDevices * sizeof(DWORD)));
+	
+	if (pdwOrdinals_arr == nullptr) return;
+
+	if (GetRawInputDeviceList(pRawInputData_arr, &uiAmountOfDevices, uiHeaderSize) != uiAmountOfDevices) return;
+
+	for (dwLoopsIndex = 0; dwLoopsIndex < uiAmountOfDevices; dwLoopsIndex++)
+	{
+		if (pRawInputData_arr[dwLoopsIndex].dwType == NULL)
+		{
+			printf("[i] I am a Mouse!\n");
+
+			pdwOrdinals_arr[dwOrdinalsIndex] = dwLoopsIndex;
+
+			dwOrdinalsIndex++;
+		}
+	}
+
+
 	/*
 	if ((lresult = DefWindowProcA(GetConsoleWindow(), WM_MBUTTONDBLCLK, wParam, uiDeviceDataSize)) != 0)
 	{
@@ -929,11 +965,11 @@ VOID MiceHandlesTests()
 
 	while (true)
 	{
-		if (WindowProc(GetConsoleWindow(), WM_MBUTTONDBLCLK, GET_RAWINPUT_CODE_WPARAM(MK_LBUTTON | MK_CONTROL | MK_MBUTTON | MK_RBUTTON),
-			reinterpret_cast<LPARAM>(&uiDeviceDataSize)) == uiDeviceDataSize) printf("Some Bullshit\n");
+		if (WindowProc(GetConsoleWindow(), WM_MBUTTONDBLCLK, GET_RAWINPUT_CODE_WPARAM(MK_LBUTTON | MK_CONTROL | MK_MBUTTON | MK_RBUTTON),reinterpret_cast<LPARAM>(&uiDeviceDataSize)) == uiDeviceDataSize) printf("Some Bullshit\n");
 	}
 
 	//pNtQuerySystemInfo = reinterpret_cast<fnNtQuerySystemInformation>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"ntdll.dll"), const_cast<LPSTR>("NtQuerySystemInformation")));
+
 	if (GET_RAWINPUT_CODE_WPARAM(1, pRawMouse) == 0 ) printf("%p\n",pRawMouse);
 
 	phMiceHandleArray = FetchMouseHandle(&wAmountOfMice);
@@ -944,28 +980,22 @@ VOID MiceHandlesTests()
 
 	if (pMouseData_t_arr == nullptr) return FALSE;
 
-
-
 	for (WORD i = 0; i < wAmountOfMice; i++)
 	{
-
-
-
 		pMouseData_t_arr[i] = static_cast<PRID_DEVICE_INFO>(LocalAlloc(LPTR, uiDeviceDataSize));
 
 		if (pMouseData_t_arr[i] == nullptr) return FALSE;
 
 		if (GetRawInputDeviceInfoA(phMiceHandleArray[i], RIDI_DEVICEINFO, pMouseData_t_arr[i], &uiDeviceDataSize) <= 0)
 		{
-
 			printf("[!] Failed to Retrieve Mouse Data!\n[i] ErrorCode: %lx", GetLastError());
 
 			return FALSE;
 		}
+
 		if (pMouseData_t_arr[i]->dwType == RIM_TYPEMOUSE)
 		{
 			printf("[!] This is a Mouse!\n");
-
 
 			if (pRawMouse == nullptr)
 			{

@@ -7,7 +7,7 @@ BOOLEAN RtlMacToStrA
 	IN     SIZE_T  NmbrOfElements,
 	IN     UCHAR   ucPaddedBytes,
 	   OUT PUCHAR *pClearPayloadAddress,
-	   OUT PSIZE_T pClearPayloadSize
+	   OUT PDWORD pClearPayloadSize
 )
 {
 	if (!pPayloadArray || !NmbrOfElements || !*pClearPayloadAddress || !pClearPayloadSize) return FALSE;
@@ -52,7 +52,7 @@ BOOLEAN RtlIpv4toStrA
 	IN     SIZE_T  NmbrOfElements,
 	IN     UCHAR   ucPaddedBytes,
 	   OUT PUCHAR *pClearPayloadAddress,
-	   OUT PSIZE_T psClearPayloadSize
+	   OUT PDWORD psClearPayloadSize
 )
 {
 	if (!Ipv4Array || !NmbrOfElements || !pClearPayloadAddress || !psClearPayloadSize) return FALSE;
@@ -95,7 +95,7 @@ BOOLEAN RtlIpv6ToStrA
 	IN     SIZE_T  NmbrOfElements,
 	IN     UCHAR   ucPaddedBytes,
 	   OUT PUCHAR *pClearPayloadAddress,
-	   OUT PSIZE_T psClearPayloadSize
+	   OUT PDWORD psClearPayloadSize
 )
 {
 	if (!Ipv6AddressesArray || !NmbrOfElements || !pClearPayloadAddress || !psClearPayloadSize) return FALSE;

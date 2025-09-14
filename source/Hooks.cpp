@@ -1,5 +1,38 @@
 #include <Hooks.h>
 
+fnMessageBoxA g_pMessageBoxA = MessageBoxA;
+namespace Anonymous
+{
+	 static BOOLEAN PrintDetourStatus
+    (
+        IN     DWORD dwDetourStatus
+    )
+    {
+        printf("Detours Failed With ErrorCode: 0x%lx\n", dwDetourStatus);
+
+        return FALSE;
+    }
+
+}
+
+
+INT WINAPI HookedMessageBoxA
+(
+    HWND   hWindowHandle,
+    LPCSTR lpEditedBodyText,
+    LPCSTR lpEditedHeaderText,
+    UINT   uiType
+)
+{
+    printf("[!] Success! Hooked MessageBoxA!\n");
+
+    printf("Intercepted Vars Are:\n\t1. %s\n\t2. %s\n", lpEditedHeaderText, lpEditedBodyText);
+
+    return g_pMessageBoxA(nullptr, lpEditedBodyText, lpEditedHeaderText, uiType);
+}
+
+
+
 BOOLEAN HookWithVirtualAlloc
 (
     IN     PVOID  pFunctionToHook,
@@ -9,58 +42,105 @@ BOOLEAN HookWithVirtualAlloc
 {
     if (sHookLength < 5) return FALSE;
 
-    DWORD dwOldProtectionConstant  = NULL,
-		  dwRelativeVirtualAddress = NULL;
+    DWORD    dwOldProtectionConstant  = NULL,
+			 dwRelativeVirtualAddress = NULL,
+			 dwFunctionStatus	      = NULL,
+			 dwFileSize               = NULL;
+    
+    HANDLE   hProcess                 = INVALID_HANDLE_VALUE,
+			 hHeap                    = INVALID_HANDLE_VALUE,
+			 hFile                    = INVALID_HANDLE_VALUE;
 
-    HANDLE hProcess = INVALID_HANDLE_VALUE;// OpenProcess(PROCESS_ALL_ACCESS, FALSE, 49176);
+	// OpenProcess(PROCESS_ALL_ACCESS, FALSE, 49176);
+    HMODULE  hModule                  = nullptr;
+    CHAR     lpFilePath[MAX_PATH]     = { };
+    PBYTE    pFunctionData            = nullptr;
+
+    if ((dwFunctionStatus = GetEnvironmentVariableA("WinDir", lpFilePath, MAX_PATH)) == NULL) return FALSE;
+
+    if (strcat_s(lpFilePath, MAX_PATH, "\\System32\\kernel32.dll") != ERROR_SUCCESS) return FALSE;
+
+    hModule = GetModuleHandleA(const_cast<LPCSTR>("kernel32.dll"));
+
+    if (hModule == nullptr) return FALSE;
+
+	hFile = CreateFileA(lpFilePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+
+    if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) return  FALSE;
+
+	if((dwFileSize = GetFileSize(hFile, nullptr))== NULL) return FALSE;
+
+	hHeap = GetProcessHeap();
+
+    if (hHeap == INVALID_HANDLE_VALUE || hHeap == nullptr) return FALSE;
+
+    pFunctionData = static_cast<PBYTE>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwFileSize));
+
+    if (pFunctionData == nullptr) return FALSE;
+
+    ReadFile(hFile, pFunctionData, dwFileSize, &dwFunctionStatus, nullptr);
+
+    if (dwFunctionStatus  !=  dwFileSize || pFunctionData == nullptr) return FALSE;
 
     if (VirtualProtect(pFunctionToHook, sHookLength, PAGE_READWRITE, &dwOldProtectionConstant) == FALSE) return FALSE;
 
-    memset(pFunctionToHook, static_cast<SIZE_T>(sHookLength), 0x90);
+    //ReadProcessMemory(GetCurrentProcess(), pFunctionToHook, )
 
-    dwRelativeVirtualAddress = reinterpret_cast<DWORD>(pAddressOfMyCode) - reinterpret_cast<DWORD>(pFunctionToHook) - 0x05;
+
+
+
+    memset(pFunctionToHook, 0x90, sHookLength);
+
+    dwRelativeVirtualAddress = static_cast<DWORD>(reinterpret_cast<DWORD64>(pAddressOfMyCode) - reinterpret_cast<DWORD64>(pFunctionToHook) - 0x05);
 
     if (VirtualProtect(pAddressOfMyCode, sHookLength, dwOldProtectionConstant, &dwOldProtectionConstant) == FALSE) return FALSE;
-
-
 
 	return FALSE;
 }
 
-
-
-
-
-
-
-void LogAndPrintLMBClick()
+BOOLEAN HookLocalThreadUsingDetours
+(
+	IN     PVOID   fnFunctionToHook,
+    IN     PVOID   pDetourFunction,
+    IN     HANDLE  hThreadToHook
+)
 {
-	
+    if (fnFunctionToHook == nullptr || hThreadToHook == nullptr || hThreadToHook == INVALID_HANDLE_VALUE) return FALSE;
+
+    DWORD dwDetoursStatus = NO_ERROR;
+
+    if  ((dwDetoursStatus = DetourTransactionBegin()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+
+    if  ((dwDetoursStatus = DetourUpdateThread(hThreadToHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+
+    if  ((dwDetoursStatus = DetourAttach(reinterpret_cast<PVOID *>(&g_pMessageBoxA), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+
+    if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+
+	return TRUE;
 }
 
+BOOLEAN UnHookLocalThreadUsingDetours
+(
+    IN     PVOID   fnOriginalHookedFunction,
+    IN     PVOID   pDetourFunction,
+    IN     HANDLE  hThreadToUnHook
+)
+{
+    if (fnOriginalHookedFunction == nullptr || pDetourFunction == nullptr || hThreadToUnHook== nullptr) return FALSE;
 
+	DWORD dwDetoursStatus = NO_ERROR;
 
+    if  ((dwDetoursStatus = DetourTransactionBegin()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
+    if  ((dwDetoursStatus = DetourUpdateThread(hThreadToUnHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
+    if  ((dwDetoursStatus = DetourDetach(reinterpret_cast<PVOID *>(&g_pMessageBoxA), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
+    if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return TRUE;
+}
 
 
 

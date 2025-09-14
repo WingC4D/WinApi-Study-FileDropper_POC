@@ -42,7 +42,7 @@ _cleanup:
 BOOLEAN ReadRegKeys
 (
 	OUT PUCHAR **pPayloadAddress,
-	OUT PSIZE_T psPayloadSize
+	OUT PDWORD psPayloadSize
 )
 {
 	DWORD dwBytesRead;

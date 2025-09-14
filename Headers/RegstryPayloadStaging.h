@@ -9,5 +9,5 @@ BOOLEAN WritePayloadToRegistry
 BOOLEAN ReadRegKeys
 (
 	OUT unsigned char **pPayloadAddress[],
-	OUT PSIZE_T psPayloadSize
+	OUT PDWORD psPayloadSize
 );

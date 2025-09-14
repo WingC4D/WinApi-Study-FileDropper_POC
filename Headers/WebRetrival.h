@@ -5,7 +5,7 @@
 #include <wininet.h>
 
 
-BOOL FetchPayloadHttpStatic(LPWSTR pURL, DWORD sPayload, LPVOID pPayload);
+BOOL FetchPayloadHttpStatic(LPWSTR lpwURLString, DWORD dwPayloadSize, PBYTE *pPayloadAddress);
 
 
-BOOL FetchPayloadHttpDynamic(LPWSTR pURL, PBYTE *pPayload, PSIZE_T psPayload);
+BOOL FetchPayloadHttpDynamic(LPWSTR lpwURLString, PBYTE *pPayloadAddress, PDWORD pdwPayloadSize);

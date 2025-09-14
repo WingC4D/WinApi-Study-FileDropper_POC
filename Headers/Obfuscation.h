@@ -66,7 +66,7 @@ BOOLEAN RtlIpv4toStrA
 	IN     SIZE_T  NmbrOfElements,
 	IN     UCHAR   ucPaddedBytes,
 	   OUT PBYTE* pClearPayloadAddress,
-	   OUT PSIZE_T psClearPayloadSize
+	   OUT PDWORD psClearPayloadSize
 );
 
 BOOLEAN RtlIpv6ToStrA
@@ -75,7 +75,7 @@ BOOLEAN RtlIpv6ToStrA
 	IN     SIZE_T  NmbrOfElements,
 	IN     UCHAR   ucPaddedBytes,
 	   OUT PBYTE  *pCleanPayloadAddress,
-	   OUT PSIZE_T pClearPayloadSize
+	   OUT PDWORD pClearPayloadSize
 );
 
 #endif

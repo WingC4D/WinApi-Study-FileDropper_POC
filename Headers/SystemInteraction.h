@@ -5,7 +5,6 @@
 #include <TlHelp32.h>
 #include <setupAPI.h>
 #include <winternl.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,14 +19,13 @@ extern "C" {
 
 #include "HashingAPI.h"
 #include "CompileTimeHashEngine.h"
+#include "peImageParser.h"
 
 #define HASHA(lpStringToHash, dwSeed)(HashStringJenkinsOneEachTime32BitA((LPSTR)(lpStringToHash), (DWORD)(dwSeed)))
-
 #define HASHW(lpStringToHash, dwSeed)(GenerateCompileTimeHashW((PWSTR)(lpStringToHash)))
 
 #define NtCustomCurrentProcess() ((HANDLE)-1) 
 #define NtCustomCurrentThread()  ((HANDLE)-2) 
-
 
 typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)
 (
@@ -63,7 +61,6 @@ __kernel_entry NTSTATUS NTQueryProcessInformation
 	   OUT OPTIONAL PULONG           ReturnLength
 );
 
-
 typedef struct _RESOURCE
 {
 	PVOID  pAddress;
@@ -87,14 +84,15 @@ BOOLEAN CreateDebuggedProcess
 
 static BOOLEAN CreateSuspendedProcess
 (
-	IN     PSTR    pProcessName,
+	IN     PCHAR   pProcessName,
+	   OUT PDWORD  pdwProcessId,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PHANDLE phThreadHandle
 );
 
 BOOLEAN CreateSacrificialThread
 (
-	   OUT LPDWORD  pdwSacrificialThreadId,
+	   OUT PDWORD  pdwSacrificialThreadId,
 	   OUT PHANDLE phThreadHandle
 );
 
@@ -176,7 +174,7 @@ LPWIN32_FIND_DATA_ARRAYW FetchFileArrayW
 
 VOID TestAlertableThread
 (
-	HANDLE hAlertableThreadHandle
+	IN     HANDLE hAlertableThreadHandle
 );
 
 HANDLE CreateVessel
@@ -188,7 +186,7 @@ BOOLEAN MapLocalMemory
 (
 	IN     PUCHAR  pPayload,
 	   OUT PUCHAR *pMappedAddress,
-	   OUT SIZE_T  sPayloadSize,
+	IN	   SIZE_T  sPayloadSize,
 	   OUT PHANDLE phFileMappingHandle 
 );
 
@@ -236,6 +234,8 @@ BOOLEAN LogConsoleMouseClicks
 	IN	   VOID
 );
 
+VOID MiceHandlesTests();
+
 BOOLEAN SpoofParentProcessId
 (
 	IN     LPSTR   pMaliciousProcessName, 
@@ -281,8 +281,8 @@ BOOLEAN ReadStructureFromProcess
 
 LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 (
-    IN     LPWSTR pPath,
-    IN OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
+	IN     LPWSTR pPath,
+	OUT LPWIN32_FIND_DATA_ARRAYW pFiles_arr_t
 );
 
 BOOLEAN WriteToTargetProcessEnvironmentBlock
