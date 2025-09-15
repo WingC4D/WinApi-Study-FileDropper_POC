@@ -235,7 +235,7 @@ PRTL_USER_PROCESS_PARAMETERS FetchRTLUserProcessParameters
 
 BOOLEAN FetchImageBaseRelocationDirectory
 (
-	IN				PBYTE				   pImageData,
+	IN				PBYTE				    pImageData,
 	   OUT			PIMAGE_BASE_RELOCATION *pImageBaseRelocationDirectory_tBaseAddress
 )
 {
@@ -295,7 +295,7 @@ BOOLEAN FetchImageData
 
 BOOLEAN FetchImageDosHeader
 (
-	IN				PBYTE			  pImageData,
+	IN				PBYTE			   pImageData,
 	   OUT			PIMAGE_DOS_HEADER *pImageDOSHeader_tBaseAddress
 )
 {
@@ -310,7 +310,7 @@ BOOLEAN FetchImageDosHeader
 
 BOOLEAN FetchImageExportDirectory
 (
-	IN				PBYTE					pImageData,
+	IN				PBYTE					 pImageData,
 	   OUT			PIMAGE_EXPORT_DIRECTORY *pImageFileExportDirectory_tBaseAddress
 )
 {
@@ -327,7 +327,7 @@ BOOLEAN FetchImageExportDirectory
 
 BOOLEAN FetchImageFileHeader
 (
-	IN				PBYTE			   pImageData,
+	IN				PBYTE			    pImageData,
 	   OUT			PIMAGE_FILE_HEADER *pImageFileHeader_tBaseAddress
 )
 {
@@ -344,7 +344,7 @@ BOOLEAN FetchImageFileHeader
 
 BOOLEAN FetchImageImportDirectory
 (
-	IN				PBYTE					 pImageData,
+	IN				PBYTE					  pImageData,
 	   OUT			PIMAGE_IMPORT_DESCRIPTOR *pImageImportDirectory_tBaseAddress
 )
 {
@@ -381,7 +381,7 @@ BOOLEAN FetchImageNtHeaders
 
 BOOLEAN FetchImageOptionalHeaders
 (
-	IN				PBYTE				   pImageData,
+	IN				PBYTE				    pImageData,
 	   OUT			PIMAGE_OPTIONAL_HEADER *pImageOptionalHeaders_tBaseAddress
 )
 {
@@ -403,7 +403,7 @@ BOOLEAN FetchImageOptionalHeaders
 
 BOOLEAN FetchImageRtFuncDirectory
 (
-	IN				PBYTE						  pImageData,
+	IN				PBYTE						   pImageData,
 	   OUT			PIMAGE_RUNTIME_FUNCTION_ENTRY *pImageRtFuncDirectory_tBaseAddress
 )
 {
@@ -420,7 +420,7 @@ BOOLEAN FetchImageRtFuncDirectory
 
 BOOLEAN FetchImageSection
 (
-	IN				PBYTE 				  pImageData,
+	IN				PBYTE 				   pImageData,
 	   OUT			PIMAGE_SECTION_HEADER *pImageSectionHeader_tBaseAddress
 )
 {
@@ -450,7 +450,7 @@ BOOLEAN FetchImageSection
 
 BOOLEAN FetchImageTlsDirectory
 (
-	IN				PBYTE				 pImageData,
+	IN				PBYTE				  pImageData,
 	   OUT			PIMAGE_TLS_DIRECTORY *pImageTlsDirectory_tBaseAddress
 )
 {
