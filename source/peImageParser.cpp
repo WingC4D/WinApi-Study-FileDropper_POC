@@ -221,29 +221,26 @@ PRTL_USER_PROCESS_PARAMETERS FetchRTLUserProcessParameters
 								 bStatus2					 = FALSE;
 	
 
-	if (pProcessEnvironmentBlock_t == nullptr)
+	if (pProcessEnvironmentBlock_t == nullptr || !(pProcessEnvironmentBlock_t->Reserved1[0] != NULL || pProcessEnvironmentBlock_t->Reserved1[1] != NULL))
 	{
-		bStatus2 = TRUE;
+		bStatus1 = TRUE;
 
-		if (pProcessEnvironmentBlock_t->Reserved1[0] != NULL || pProcessEnvironmentBlock_t->Reserved1[1] != NULL)
+		pProcessEnvironmentBlock_t = FetchRemoteProcessEnvironmentBlock(hTargetImageProcessHandle, hHeapHandle, FetchRemotePBINtQuerySystemInformation(hTargetImageProcessHandle, hHeapHandle));
 
-		{
-			pProcessEnvironmentBlock_t = FetchRemoteProcessEnvironmentBlock(hTargetImageProcessHandle, hHeapHandle, FetchRemotePBINtQuerySystemInformation(hTargetImageProcessHandle, hHeapHandle));
-
-			if (pProcessEnvironmentBlock_t == nullptr) return nullptr;
-
-		}
+		if (pProcessEnvironmentBlock_t == nullptr) return nullptr;
 	}
+
 	if (check::Buffer(sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, reinterpret_cast<PVOID *>(&pRTLUserProcessParameters_t)) == FALSE || check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
 
 	bStatus2 = ReadStructFromProcess(hTargetImageProcessHandle, pProcessEnvironmentBlock_t->ProcessParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, reinterpret_cast<PVOID*>(&pRTLUserProcessParameters_t));
 
-		if (bStatus1) 
+	if (bStatus1 == TRUE) 
 	{
 		HeapFree(hHeapHandle, NULL, pProcessEnvironmentBlock_t);
 
 		pProcessEnvironmentBlock_t = nullptr;
 	}
+
 	if (bStatus2 == FALSE) return nullptr;
 
 	return pRTLUserProcessParameters_t;
