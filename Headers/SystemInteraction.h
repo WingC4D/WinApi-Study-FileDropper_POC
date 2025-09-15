@@ -202,7 +202,7 @@ BOOLEAN InjectPayloadRemoteMappedMemory
 
 BOOL FetchStompingTarget
 (
-	IN     LPSTR  pSacrificialDllName,
+	IN     LPWSTR  pSacrificialDllName,
 	IN     LPSTR  pSacrificialFuncName,
 	   OUT PVOID *pTargetFunctionAddress
 );

@@ -39,7 +39,6 @@ __kernel_entry NTSTATUS NtQueryProcessInformation
     IN              ULONG            ProcessInformationLength,
        OUT OPTIONAL PULONG           ReturnLength
 );
-
 BOOLEAN FetchImageBaseRelocationDirectory
 (
 	IN				PBYTE				   pImageData,
@@ -107,10 +106,9 @@ BOOLEAN FetchImageRtFuncDirectory
 	   OUT			PIMAGE_RUNTIME_FUNCTION_ENTRY *pImageRtFuncDirectory_tBaseAddress
 );
 
-BOOLEAN FetchPathFromRemoteProcess
+LPWSTR FetchPathFromRemoteProcess
 (
-	IN				HANDLE  hTargetImageProcessHandle,
-	   OUT			LPWSTR *pImagePathBufferAddress
+	IN				HANDLE  hTargetImageProcessHandle
 );
 
 PPROCESS_BASIC_INFORMATION FetchRemotePBINtQuerySystemInformation

@@ -3,14 +3,12 @@
 #include <TlHelp32.h>
 #include <detours.h>
 #include <stdio.h>
-
-#ifdef _M_X64
-#pragma comment (lib, "detoursx64.lib")
+#include <winternl.h>
+#ifdef __cplusplus
+	inline decltype(::MessageBoxA)* g_pMessageBoxA = ::MessageBoxA;
 #endif
 
-#ifdef _M_IX86
-#pragma comment (lib, "detoursx86.lib")
-#endif
+#pragma comment (lib, "detours.lib")
 
 typedef HANDLE(WINAPI* fnOpenProcess)
 (
@@ -26,6 +24,7 @@ typedef INT (WINAPI *fnMessageBoxA)
     _In_opt_ LPCSTR lpCaption,
     _In_     UINT uType
 );
+
 
 
 #ifdef __cplusplus

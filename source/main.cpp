@@ -2,7 +2,8 @@
 
 int main()
 {
-	DWORD						  dwPID0					= NULL,
+	DWORD						  dwHookLength				= NULL,
+								  dwPID0					= NULL,
 								  dwPID1					= NULL,
 							      dwPID2					= NULL,
 								  dwOldProtections			= NULL,
@@ -12,8 +13,7 @@ int main()
 								  dwHashedString1			= 0xFBB639B7,
 								  dwHashedString2			= 0xB6E8EE02;
 
-	SIZE_T						  sHookLength				= NULL,
-								  sObfuscatedSize			= NULL,
+	SIZE_T						  sObfuscatedSize			= NULL,
 								  sClearPayload				= NULL,
 								  sBytesWritten				= 0x06,
 								  sPaddedInputSize			= 0x40,
@@ -69,15 +69,17 @@ int main()
 	RESOURCE					  resource					= { };
 	PVOID						  fnLMBClick				= nullptr;
 
-	fnOpenProcess GlobalOpenProcess = OpenProcess;
+	hHeap = GetProcessHeap();
+
+	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return -0x99;
+
+	pImagePath = static_cast<LPWSTR>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, MAX_PATH * sizeof(WCHAR)));
+
+	if (pImagePath == nullptr) return -0x98;
 
 	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
 
-	FetchPathFromRemoteProcess(hProcess, reinterpret_cast<LPWSTR*>(&pwPath));
-
-	OpenProcess(PROCESS_ALL_ACCESS, FALSE, 25116);
-
-	HookWithVirtualAlloc(reinterpret_cast<PVOID>(OpenProcess), reinterpret_cast<PVOID>(GlobalOpenProcess), 6);
+	pImagePath = FetchPathFromRemoteProcess(hProcess);
 
 	hThread = GetCurrentThread();
 
@@ -92,8 +94,6 @@ int main()
 	//MiceHandlesTests();
 
 	pExtPayloadAddress = static_cast<PBYTE>(malloc(20));
-
-	memcpy(pExtPayloadAddress, "Hello World!\0", 13);
 
 	//MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
 
@@ -121,7 +121,7 @@ int main()
 
 	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwHashedString2, &hProcess) == FALSE) printf(":(\n");
 
-	FetchPathFromRemoteProcess(hProcess, &pImagePath);
+	pImagePath = FetchPathFromRemoteProcess(hProcess);
 
 	printf("Starting PE Parser...\n");
 

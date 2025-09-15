@@ -1,6 +1,5 @@
 #include <Hooks.h>
 
-fnMessageBoxA g_pMessageBoxA = MessageBoxA;
 namespace Anonymous
 {
 	 static BOOLEAN PrintDetourStatus
