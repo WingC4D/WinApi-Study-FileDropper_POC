@@ -9,7 +9,17 @@ namespace check
 		InvalidDosSignature = 2
 	};
 
-	static BOOLEAN HeapHandle
+	BOOLEAN HandleValidity
+	(
+		IN     HANDLE hCandidateHandle
+	)
+	{
+		if (hCandidateHandle == INVALID_HANDLE_VALUE || hCandidateHandle  == nullptr) return FALSE;
+
+		return TRUE;
+	}
+
+	BOOLEAN HeapHandle
 	(
 		IN OUT PHANDLE phHeapHandle
 	)
@@ -25,7 +35,7 @@ namespace check
 		return TRUE;
 	}
 
-	static BOOLEAN Buffer
+	BOOLEAN Buffer
 	(
 		IN     DWORD  dwSizeToAllocate,
 		IN     HANDLE hHeapHandle,
@@ -45,7 +55,7 @@ namespace check
 		return TRUE;
 	}
 
-	static ParseStatus DataBufferForDOSHeader
+	ParseStatus DataBufferForDOSHeader
 	(
 		IN	   PBYTE	 pCandidateData
 	)
@@ -73,7 +83,7 @@ namespace cleanUp
 		return nullptr;
 	}
 
-	BOOLEAN FetchImageData
+	PBYTE FetchImageData
 	(
 		IN     LPVOID *pImageData,
 		IN     HANDLE  hHeapHandle
@@ -85,7 +95,7 @@ namespace cleanUp
 
 		*pImageData = nullptr;
 
-		return FALSE;
+		return nullptr;
 	}
 
 	BOOLEAN ReadStructFromProcess
@@ -104,9 +114,9 @@ namespace cleanUp
 	}
 }
 
-LPWSTR FetchPathFromRemoteProcess
+LPWSTR FetchImagePathFromRemoteProcess
 (
-	IN				HANDLE	 hTargetImageProcessHandle
+	IN				HANDLE	 hTargetProcessHandle
 )
 {
 	PRTL_USER_PROCESS_PARAMETERS pUserProcessParameters = nullptr;
@@ -115,15 +125,15 @@ LPWSTR FetchPathFromRemoteProcess
 	LPWSTR						 pImagePath				= nullptr;
 	PPEB						 pProcEnvironmentBlock  = nullptr;
 
-	if (hHeapHandle == nullptr || hHeapHandle == INVALID_HANDLE_VALUE) return FALSE;
+	if (check::HandleValidity(hHeapHandle) == FALSE) return FALSE;
 
-	pProcEnvironmentBlock = FetchRemoteProcessEnvironmentBlock(hTargetImageProcessHandle, hHeapHandle, nullptr);
+	pProcEnvironmentBlock = FetchRemoteProcessEnvironmentBlock(hTargetProcessHandle, hHeapHandle, nullptr);
 
 	if (pProcEnvironmentBlock == nullptr) return  nullptr;
 
-	pUserProcessParameters = FetchRTLUserProcessParameters(hTargetImageProcessHandle, hHeapHandle, pProcEnvironmentBlock);
+	pUserProcessParameters = FetchRemoteRTLUserProcessParameters(hTargetProcessHandle, hHeapHandle, pProcEnvironmentBlock);
 
-	HeapFree(hHeapHandle, 0, pProcEnvironmentBlock);
+	HeapFree(hHeapHandle, NULL, pProcEnvironmentBlock);
 
 	pProcEnvironmentBlock = nullptr;
 
@@ -131,9 +141,9 @@ LPWSTR FetchPathFromRemoteProcess
 
 	if (check::Buffer(pUserProcessParameters->ImagePathName.Length, hHeapHandle, reinterpret_cast<PVOID *>(&pImagePath)) == FALSE) return FALSE;
 
-	bStatus = ReadStructFromProcess(hTargetImageProcessHandle, pUserProcessParameters->ImagePathName.Buffer, pUserProcessParameters->ImagePathName.Length, hHeapHandle, reinterpret_cast<PVOID *>(&pImagePath));
+	bStatus = ReadStructFromProcess(hTargetProcessHandle, pUserProcessParameters->ImagePathName.Buffer, pUserProcessParameters->ImagePathName.Length, hHeapHandle, reinterpret_cast<PVOID *>(&pImagePath));
 
-	HeapFree(hHeapHandle, 0, pUserProcessParameters);
+	HeapFree(hHeapHandle, NULL, pUserProcessParameters);
 
 	pUserProcessParameters = nullptr;
 
@@ -148,13 +158,13 @@ PPROCESS_BASIC_INFORMATION FetchRemotePBINtQuerySystemInformation
 	IN     OPTIONAL HANDLE hHeapHandle
 )
 {
+	if (check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
+
 	ULONG 						 NtQueryReturnValue		    = NULL;
 	fnNtQueryProcessInformation  NtQueryInformationProcess  = nullptr;
 	PPROCESS_BASIC_INFORMATION	 pProcessBasicInformation_t = static_cast<PPROCESS_BASIC_INFORMATION>(HeapAlloc(hHeapHandle, HEAP_ZERO_MEMORY, sizeof(PROCESS_BASIC_INFORMATION)));
 
-	if (check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
-
-	if (pProcessBasicInformation_t == nullptr) return  nullptr;
+	if (pProcessBasicInformation_t == nullptr) return nullptr;
 
 	if ((NtQueryInformationProcess = reinterpret_cast<fnNtQueryProcessInformation>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"NTDLL.dll"), const_cast<LPSTR>("NtQueryInformationProcess")))) == nullptr) 
 	{
@@ -176,7 +186,7 @@ PPEB FetchRemoteProcessEnvironmentBlock
 	IN     OPTIONAL PPROCESS_BASIC_INFORMATION pProcessBasicInformation_t
 )
 {
-	if (hTargetImageProcessHandle == nullptr || hTargetImageProcessHandle == INVALID_HANDLE_VALUE) return nullptr;
+	if (check::HandleValidity(hTargetImageProcessHandle) == FALSE) return nullptr;
 
 	PPEB	pProcessEnvironmentBlock_t = nullptr;
 	BOOLEAN bStatus					   = FALSE;
@@ -204,24 +214,22 @@ PPEB FetchRemoteProcessEnvironmentBlock
 	return pProcessEnvironmentBlock_t;
 }
 
-PRTL_USER_PROCESS_PARAMETERS FetchRTLUserProcessParameters
+PRTL_USER_PROCESS_PARAMETERS FetchRemoteRTLUserProcessParameters
 (
 	IN				HANDLE hTargetImageProcessHandle,
 	IN				HANDLE hHeapHandle,
 	IN     OPTIONAL PPEB   pProcessEnvironmentBlock_t
 )
 {
-	if (hTargetImageProcessHandle == nullptr || hTargetImageProcessHandle == INVALID_HANDLE_VALUE)
-	{
-		return nullptr;
-	}
+	if (check::HandleValidity(hTargetImageProcessHandle) == FALSE) return nullptr;
 
 	PRTL_USER_PROCESS_PARAMETERS pRTLUserProcessParameters_t = nullptr;
 	BOOLEAN						 bStatus1					 = FALSE,
 								 bStatus2					 = FALSE;
-	
 
-	if (pProcessEnvironmentBlock_t == nullptr || !(pProcessEnvironmentBlock_t->Reserved1[0] != NULL || pProcessEnvironmentBlock_t->Reserved1[1] != NULL))
+	if (check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
+
+	if (pProcessEnvironmentBlock_t == nullptr)
 	{
 		bStatus1 = TRUE;
 
@@ -230,7 +238,7 @@ PRTL_USER_PROCESS_PARAMETERS FetchRTLUserProcessParameters
 		if (pProcessEnvironmentBlock_t == nullptr) return nullptr;
 	}
 
-	if (check::Buffer(sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, reinterpret_cast<PVOID *>(&pRTLUserProcessParameters_t)) == FALSE || check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
+	if (check::Buffer(sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, reinterpret_cast<PVOID *>(&pRTLUserProcessParameters_t)) == FALSE) return nullptr;
 
 	bStatus2 = ReadStructFromProcess(hTargetImageProcessHandle, pProcessEnvironmentBlock_t->ProcessParameters, sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF, hHeapHandle, reinterpret_cast<PVOID*>(&pRTLUserProcessParameters_t));
 
@@ -263,33 +271,34 @@ BOOLEAN FetchImageBaseRelocationDirectory
 	return TRUE;
 }
 
-BOOLEAN FetchImageData
+PBYTE FetchImageData
 (
 	IN				LPWSTR lpImagePath,
-	IN OUT			HANDLE hHeapHandle,
-	   OUT			PBYTE *pImageDataBaseAddress		   
+	IN     OPTIONAL	HANDLE hHeapHandle,
+	   OUT OPTIONAL PDWORD pdwImageSize
 )
 {
-	if (lpImagePath == nullptr || pImageDataBaseAddress == nullptr) return FALSE;
+	if (lpImagePath == nullptr) return FALSE;
 
 	if (lpImagePath[0] == NULL)	   return FALSE;
 
-	if(check::HeapHandle(&hHeapHandle) == FALSE) return FALSE;
-
-	DWORD  dwFileSize  = NULL,
-		   dwBytesRead = NULL;
+	DWORD  dwBytesRead = NULL;
 	LPVOID pImageData  = nullptr;
 	HANDLE hFileHandle = INVALID_HANDLE_VALUE;
 
-	if ((hFileHandle   = CreateFileW(lpImagePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)) == INVALID_HANDLE_VALUE) return FALSE;
+	hFileHandle = CreateFileW(lpImagePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-	if ((dwFileSize    = GetFileSize(hFileHandle, nullptr)) == NULL) return FALSE;
+	if (check::HandleValidity(hFileHandle) == FALSE) return FALSE;
 
-	if (check::HeapHandle(&hHeapHandle)									== FALSE) return FALSE;
+	*pdwImageSize = GetFileSize(hFileHandle, nullptr);
 
-	if (check::Buffer(dwFileSize, hHeapHandle, &pImageData)				== FALSE) return FALSE;
+	if (*pdwImageSize == NULL) return FALSE;
 
-	if (ReadFile(hFileHandle, pImageData, dwFileSize, &dwBytesRead, nullptr) == FALSE || dwBytesRead != dwFileSize)
+	if (check::HeapHandle(&hHeapHandle)	== FALSE) return FALSE;
+
+	if (check::Buffer(*pdwImageSize, hHeapHandle, &pImageData)	== FALSE) return FALSE;
+	
+	if (ReadFile(hFileHandle, pImageData, *pdwImageSize, &dwBytesRead, nullptr) == FALSE || dwBytesRead != *pdwImageSize)
 	{
 		return cleanUp::FetchImageData(&pImageData, hHeapHandle);
 	}
@@ -301,9 +310,7 @@ BOOLEAN FetchImageData
 
 	CloseHandle(hFileHandle);
 
-	*pImageDataBaseAddress = static_cast<PBYTE>(pImageData);
-
-	return TRUE;
+	return static_cast<PBYTE>(pImageData);
 }
 
 BOOLEAN FetchImageDosHeader
@@ -424,7 +431,7 @@ BOOLEAN FetchImageRtFuncDirectory
 
 	PIMAGE_OPTIONAL_HEADER pImageOptionalHeaders_t = nullptr;
 
-	if (!FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t)) return FALSE;
+	if (FetchImageOptionalHeaders(pImageData, &pImageOptionalHeaders_t) == FALSE) return FALSE;
 
 	*pImageRtFuncDirectory_tBaseAddress = reinterpret_cast<PIMAGE_RUNTIME_FUNCTION_ENTRY>(pImageData + pImageOptionalHeaders_t->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress);
 
@@ -538,5 +545,4 @@ BOOLEAN ReadStructFromProcess
 	if (ReadProcessMemory(hTargetProcess, pStructBaseAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) == FALSE || sBytesRead != dwBufferSize) return cleanUp::ReadStructFromProcess(pReadBufferAddress, hHeapHandle);
 
 	return TRUE;
-
 }
