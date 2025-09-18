@@ -114,6 +114,104 @@ namespace cleanUp
 	}
 }
 
+PeFile::PeFile()
+{
+	bDidIAllocate			 = FALSE;
+	pBaseOfData				 = nullptr;
+	hHeapHandle				 = GetProcessHeap();
+	pImageDosHeader			 = nullptr;
+	pImageNtHeader			 = nullptr;
+	pImageFileHeader		 = nullptr;
+	pImageOptionalHeaders	 = nullptr;
+	pImageFirstSectionHeader = nullptr;
+	pImageRunTimeFunction	 = nullptr;
+	pImageImportAddressTable	 = nullptr;
+	pImageTlsDirectory		 = nullptr;
+	pImageDosHeader			 = nullptr;
+	pImageNtHeader			 = nullptr;
+	return;
+}
+
+PeFile::~PeFile()
+{
+	if (this->bDidIAllocate == TRUE)
+	{
+		HeapFree(this->hHeapHandle, NULL, this->pBaseOfData);
+	}
+
+	pBaseOfData				 = nullptr;
+	pImageDosHeader			 = nullptr;
+	pImageNtHeader			 = nullptr;
+	pImageFileHeader		 = nullptr;
+	pImageOptionalHeaders	 = nullptr;
+	pImageFirstSectionHeader = nullptr;
+	pImageRunTimeFunction	 = nullptr;
+	pImageImportAddressTable	 = nullptr;
+	pImageTlsDirectory		 = nullptr;
+	pImageDosHeader			 = nullptr;
+	pImageNtHeader			 = nullptr;
+
+}
+
+void PeFile::ConsumeDataStream(PBYTE pCandidateData)
+{
+
+	
+
+	return;
+}
+
+ error_codes PeFile::ParseDataFilePath(::LPWSTR lpFilePath)
+{
+	HANDLE		hFileHandle		   = INVALID_HANDLE_VALUE,
+				hHeapHandle		   = INVALID_HANDLE_VALUE;
+	DWORD		dwFileSize		   = NULL,
+				dwBytesRead		   = NULL;
+	PBYTE		pCandidateFileData = nullptr;
+	error_codes ecStatus		   = Success;
+
+	hFileHandle  = CreateFileW(lpFilePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+	if (CheckHandleValidity(hFileHandle) == FALSE)
+	{
+		return InvalidHandle;
+	}
+	
+	dwFileSize = GetFileSize(hFileHandle, nullptr);
+
+	if (dwFileSize == NULL) return FileSizeIsZero;
+
+	hHeapHandle = GetProcessHeap();
+
+	if (CheckHandleValidity(hHeapHandle) == FALSE)
+	{
+		return InvalidHandle;
+	}
+
+	pCandidateFileData = static_cast<PBYTE>(HeapAlloc(hHeapHandle, HEAP_ZERO_MEMORY, dwFileSize));
+
+	if (pCandidateFileData == nullptr) return FailedToAllocateMemory;
+
+	this->bDidIAllocate = TRUE;
+
+	if (ReadFile(hFileHandle, pCandidateFileData, dwFileSize, &dwBytesRead, nullptr) == FALSE)
+	{
+		HeapFree(hHeapHandle, NULL, pCandidateFileData);
+
+		return FailedToReadFile;
+	}
+
+	if (CheckCandidateDataValidity(pCandidateFileData) != Success)
+	{
+		if (HeapFree(hHeapHandle, NULL, pCandidateFileData) == FALSE) return InvalidBufferSize;
+
+	}
+
+	this->hHeapHandle	  = hHeapHandle;
+
+	return MapFileStructures(pCandidateFileData, TRUE);
+}
+
 LPWSTR FetchImagePathFromRemoteProcess
 (
 	IN				HANDLE	 hTargetProcessHandle
@@ -285,6 +383,7 @@ PBYTE FetchImageData
 	DWORD  dwBytesRead = NULL;
 	LPVOID pImageData  = nullptr;
 	HANDLE hFileHandle = INVALID_HANDLE_VALUE;
+	
 
 	hFileHandle = CreateFileW(lpImagePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
@@ -310,7 +409,7 @@ PBYTE FetchImageData
 
 	CloseHandle(hFileHandle);
 
-	return static_cast<PBYTE>(pImageData);
+	return static_cast <PBYTE>(pImageData);
 }
 
 BOOLEAN FetchImageDosHeader
@@ -407,7 +506,7 @@ BOOLEAN FetchImageOptionalHeaders
 {
 	if (check::DataBufferForDOSHeader(pImageData) != check::ParseStatus::Success) return FALSE;
 
-	PIMAGE_NT_HEADERS	   pImageNtHeaders     = nullptr;
+	PIMAGE_NT_HEADERS	   pImageNtHeaders      = nullptr;
 	PIMAGE_OPTIONAL_HEADER pImageOptionalHeader = nullptr;
 
 	if (FetchImageNtHeaders(pImageData, &pImageNtHeaders) == FALSE) return FALSE;

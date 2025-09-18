@@ -69,7 +69,8 @@ int main()
 	Context						  RC4Context_t				= { };
 	RESOURCE					  resource					= { };
 	PVOID						  fnLMBClick				= nullptr;
-	
+	PeFile						  PeFileClass				= { };
+
 	hHeap = GetProcessHeap();
 
 	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return -0x99;
@@ -82,9 +83,11 @@ int main()
 
 	pImagePath = FetchImagePathFromRemoteProcess(hProcess);
 
-	pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
+	PeFileClass.ParseDataFilePath(pImagePath);
 
-	if (pImageData == nullptr) return -97;
+	//pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
+
+	//if (pImageData == nullptr) return -97;
 
 	hThread = GetCurrentThread();
 
@@ -148,12 +151,14 @@ int main()
 
 	PDWORD pRVAsOfNames = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
 
+
+
 	/*
-	FetchImageSection(pImageData, &pImageSection_Entry);
+	FetchImageSection(pBaseOfData, &pImageSection_Entry);
 
 	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), const_cast<LPSTR>("NtQuerySystemInformation"));
 
-	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, pImageFileHeader_t->NumberOfSections, pImageData);
+	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, pImageFileHeader_t->NumberOfSections, pBaseOfData);
 
 	printf("%s\n", reinterpret_cast<PCHAR>(pImageSection_Entry_idata->Name));
 
@@ -266,9 +271,9 @@ int main()
 /*
 for (DWORD i = 0; i < pImageExportDirectory->NumberOfNames; i++)
 {
-	PDWORD pFuncNameArray = reinterpret_cast<PDWORD>(pImageData + pImageExportDirectory->AddressOfNames);
+	PDWORD pFuncNameArray = reinterpret_cast<PDWORD>(pBaseOfData + pImageExportDirectory->AddressOfNames);
 
-	PCHAR pFuncName = reinterpret_cast<PCHAR>(pImageData + pFuncNameArray[i]);
+	PCHAR pFuncName = reinterpret_cast<PCHAR>(pBaseOfData + pFuncNameArray[i]);
 
 	printf("%s\n", pFuncName);
 }
