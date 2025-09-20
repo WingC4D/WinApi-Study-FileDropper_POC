@@ -332,7 +332,11 @@ BOOL InjectPayloadToProcess
 	   OUT PHANDLE phRemoteThreadHandle
 )
 {
-	if (hTargetProcessHandle == INVALID_HANDLE_VALUE  || hTargetProcessHandle == nullptr || pPayloadAddress == nullptr || sPayloadSize == NULL || phRemoteThreadHandle == nullptr) return FALSE;
+	if (hTargetProcessHandle	== INVALID_HANDLE_VALUE
+		|| hTargetProcessHandle == nullptr
+		|| pPayloadAddress		== nullptr
+		|| sPayloadSize			== NULL
+		|| phRemoteThreadHandle == nullptr) return FALSE;
 
 	DWORD  dwOldProtection			= NULL;
 	SIZE_T sBytesWritten			= NULL;

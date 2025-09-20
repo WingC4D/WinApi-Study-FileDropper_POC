@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <Windows.h>
 #include <wininet.h>
 #include <winternl.h>
@@ -109,9 +108,6 @@ public:
 
 
 private:
-
-	
-
 	BOOLEAN						  bDidIAllocate;
 
 	static void MapDataDirectoriesHelper
