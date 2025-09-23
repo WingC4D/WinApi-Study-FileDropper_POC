@@ -15,6 +15,31 @@ namespace Anonymous
 }
 
 
+HLOCAL WINAPI HookedLocalAlloc(UINT dwFlags, SIZE_T sSize)
+{
+
+    printf("Allocating %zu Bytes!\n", sSize);
+
+	return HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sSize);
+}
+
+
+LPVOID WINAPI HookedHeapAlloc
+(
+    IN     HANDLE hHeap,
+    IN     DWORD  dwFlags,
+    IN     SIZE_T dwBytes
+)
+{
+    
+	// if (dwFlags == HEAP_ZERO_MEMORY) std::cout << "| HEAP_ZERO_MEMORY ";
+
+    //printf("|\n");
+    //g_GlobalHeapAllocCount++;
+
+    return static_cast<LPVOID>(LocalAlloc(LPTR, dwBytes));
+}
+
 INT WINAPI HookedMessageBoxA
 (
     HWND   hWindowHandle,
@@ -27,10 +52,10 @@ INT WINAPI HookedMessageBoxA
 
     printf("Intercepted Vars Are:\n\t1. %s\n\t2. %s\n", lpEditedHeaderText, lpEditedBodyText);
 
+    
+
     return g_pMessageBoxA(nullptr, lpEditedBodyText, lpEditedHeaderText, uiType);
 }
-
-
 
 BOOLEAN HookWithVirtualAlloc
 (
@@ -85,9 +110,6 @@ BOOLEAN HookWithVirtualAlloc
 
     //ReadProcessMemory(GetCurrentProcess(), pFunctionToHook, )
 
-
-
-
     memset(pFunctionToHook, 0x90, sHookLength);
 
     dwRelativeVirtualAddress = static_cast<DWORD>(reinterpret_cast<DWORD64>(pAddressOfMyCode) - reinterpret_cast<DWORD64>(pFunctionToHook) - 0x05);
@@ -112,7 +134,7 @@ BOOLEAN HookLocalThreadUsingDetours
 
     if  ((dwDetoursStatus = DetourUpdateThread(hThreadToHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
-    if  ((dwDetoursStatus = DetourAttach(reinterpret_cast<PVOID *>(&g_pMessageBoxA), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+    if  ((dwDetoursStatus = DetourAttach(reinterpret_cast<PVOID *>(&fnFunctionToHook), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
     if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
@@ -134,7 +156,7 @@ BOOLEAN UnHookLocalThreadUsingDetours
 
     if  ((dwDetoursStatus = DetourUpdateThread(hThreadToUnHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
-    if  ((dwDetoursStatus = DetourDetach(reinterpret_cast<PVOID *>(&g_pMessageBoxA), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+    if  ((dwDetoursStatus = DetourDetach(reinterpret_cast<PVOID *>(&fnOriginalHookedFunction), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
     if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 

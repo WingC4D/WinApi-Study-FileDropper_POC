@@ -52,7 +52,6 @@ int main()
 								  hPayloadObjectHandle		= INVALID_HANDLE_VALUE,
 								  hHeap						= INVALID_HANDLE_VALUE;
 
-
 	LPWSTR						  pImagePath				= nullptr,
 								  pImagePath2				= nullptr;
 
@@ -73,25 +72,31 @@ int main()
 
 	hHeap = GetProcessHeap();
 
+	HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(g_pMessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA) ,  GetCurrentThread());
+
 	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return -0x99;
 
 	pImagePath = static_cast<LPWSTR>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, MAX_PATH * sizeof(WCHAR)));
 
 	if (pImagePath == nullptr) return -0x98;
 
+	MessageBoxA(nullptr, pTargetStringToHash_1, pTargetStringToHash_2,MB_OKCANCEL);
+
+	std::cout << g_GlobalHeapAllocCount;
+
 	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
 
 	pImagePath = FetchImagePathFromRemoteProcess(hProcess);
 
-	PeFileClass.ParseDataFilePath(pImagePath);
+	PeFileClass.ParseDataFilePath(const_cast<LPWSTR>(L"C:\\Windows\\System32\\ntdll.dll"));
 
-	//pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
+	pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
 
-	//if (pImageData == nullptr) return -97;
+	if (pImageData == nullptr) return -97;
 
 	hThread = GetCurrentThread();
 
-	if (HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 1;
+	if (HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(g_pMessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 1;
 
 	MessageBoxA(nullptr, "[!] Malware Development Is Fun!\n", "API Hooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
 
@@ -127,7 +132,7 @@ int main()
 
 	printf("Starting PE Parser...\n");
 
-	pImageData = FetchImageData(const_cast<LPWSTR>(L"C:\\WINDOWS\\System32\\kernel32.dll"), hHeap, &dwImageSize);
+	pImageData = FetchImageData(const_cast<LPWSTR>(L"C:\\Windows\\System32\\kernelbase.dll"), hHeap, &dwImageSize);
 
 	if (pImageData == nullptr) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
 

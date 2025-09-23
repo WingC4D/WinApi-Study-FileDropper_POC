@@ -201,6 +201,8 @@ void PeFile::ConsumeDataStream(PBYTE pCandidateData)
 		return FailedToReadFile;
 	}
 
+	CloseHandle(hFileHandle);
+
 	if (CheckCandidateDataValidity(pCandidateFileData) != Success)
 	{
 		if (HeapFree(hHeapHandle, NULL, pCandidateFileData) == FALSE) return InvalidBufferSize;
@@ -387,8 +389,10 @@ PBYTE FetchImageData
 
 	hFileHandle = CreateFileW(lpImagePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-	if (check::HandleValidity(hFileHandle) == FALSE) return FALSE;
-
+	if (check::HandleValidity(hFileHandle) == FALSE) {
+		printf("Error code:%lx", GetLastError());
+		return FALSE;
+	}
 	*pdwImageSize = GetFileSize(hFileHandle, nullptr);
 
 	if (*pdwImageSize == NULL) return FALSE;

