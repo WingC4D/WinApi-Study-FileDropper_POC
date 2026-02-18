@@ -2,6 +2,7 @@
 #pragma comment(lib, "onecore.lib")
 #pragma comment(lib, "kernel32.lib")
 
+
 #include "CompileTimeHashEngine.h"
 #include "HashingAPI.h"
 #include "Externals.h"
@@ -10,6 +11,7 @@
 #include "peImageParser.h"
 #include "dllinjection.h"
 #include "Hooks.h"
+#include "HookClass.h"
 #include "WebRetrival.h"
 #ifdef __cplusplus
 extern "C"

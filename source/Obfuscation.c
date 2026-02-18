@@ -4,19 +4,19 @@
 BOOLEAN RtlMacToStrA
 (
 	IN     PUCHAR  pPayloadArray[],
-	IN     SIZE_T  NmbrOfElements,
+	IN     SIZE_T  NumberOfElements,
 	IN     UCHAR   ucPaddedBytes,
-	   OUT PUCHAR *pClearPayloadAddress,
-	   OUT PDWORD pClearPayloadSize
+	   OUT PBYTE  *pClearPayloadAddress,
+	   OUT PSIZE_T pClearPayloadSize
 )
 {
-	if (!pPayloadArray || !NmbrOfElements || !*pClearPayloadAddress || !pClearPayloadSize) return FALSE;
+	if (!pPayloadArray || !NumberOfElements || !*pClearPayloadAddress || !pClearPayloadSize) return FALSE;
 
 	fnRtlEthernetStringToAddressA pRtlEthernetStringToAddressA = (fnRtlEthernetStringToAddressA)GetProcAddress(GetModuleHandle(L"NTDLL"), "RtlEthernetStringToAddressA");
 
 	if (pRtlEthernetStringToAddressA == NULL) return FALSE;
 
-	SIZE_T sBufferSize = NmbrOfElements * MAC + 1;
+	SIZE_T sBufferSize = NumberOfElements * MAC + 1;
 
 	if (*pClearPayloadAddress == NULL) *pClearPayloadAddress = LocalAlloc(LPTR, sBufferSize);
 	else
@@ -28,7 +28,7 @@ BOOLEAN RtlMacToStrA
 
 	LPSTR Terminator = NULL;
 
-	for (SIZE_T i = 0; i < NmbrOfElements; i++)
+	for (SIZE_T i = 0; i < NumberOfElements; i++)
 	{
 		if (pRtlEthernetStringToAddressA((char*)pPayloadArray[i], &Terminator, *pClearPayloadAddress + i * MAC) != 0) return FALSE;
 	}

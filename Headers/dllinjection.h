@@ -89,7 +89,7 @@ BOOL InjectRemoteDll
 (
 	IN     PVOID   pPayload,
 	IN	   HANDLE  hProcess, 
-	IN	   LPWSTR   TargetDllName,
+	IN	   LPWSTR   lpTargetDllName,
 	IN     LPSTR   TargetFunctionName,
 	IN     SIZE_T  sSizeToWrite,
 	   OUT PVOID  *pRemoteFunctionAddress

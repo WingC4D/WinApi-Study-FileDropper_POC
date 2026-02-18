@@ -53,11 +53,11 @@ typedef NTSTATUS(NTAPI* fnRtlEthernetStringToAddressA)
 
 BOOLEAN RtlMacToStrA
 (
-	IN     PCHAR   MacArray[],
-	IN     SIZE_T  NmbrOfElements,
+	IN     PUCHAR  pPayloadArray[],
+	IN     SIZE_T  NumberOfElements,
 	IN     UCHAR   ucPaddedBytes,
-	   OUT PBYTE  *ppDAddress,
-	   OUT SIZE_T *pDSize
+	   OUT PBYTE* pClearPayloadAddress,
+	   OUT PSIZE_T pClearPayloadSize
 );
 
 BOOLEAN RtlIpv4toStrA

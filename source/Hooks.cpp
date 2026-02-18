@@ -15,15 +15,26 @@ namespace Anonymous
 }
 
 
+
+
+INT WINAPI g_MessageBA
+(
+    HWND   hWindowHandle,
+    LPCSTR lpEditedBodyText,
+    LPCSTR lpEditedHeaderText,
+    UINT   uiType
+);
+
 HLOCAL WINAPI HookedLocalAlloc(UINT dwFlags, SIZE_T sSize)
 {
 
     printf("Allocating %zu Bytes!\n", sSize);
 
 	return HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sSize);
+
 }
 
-
+/*
 LPVOID WINAPI HookedHeapAlloc
 (
     IN     HANDLE hHeap,
@@ -32,29 +43,74 @@ LPVOID WINAPI HookedHeapAlloc
 )
 {
     
-	// if (dwFlags == HEAP_ZERO_MEMORY) std::cout << "| HEAP_ZERO_MEMORY ";
+	//if (dwFlags == HEAP_ZERO_MEMORY) std::cout << "| HEAP_ZERO_MEMORY ";
 
-    //printf("|\n");
-    //g_GlobalHeapAllocCount++;
+    //printf("| HEAP_ZERO_MEMORY |\n");
+    g_GlobalHeapAllocCount++;
 
-    return static_cast<LPVOID>(LocalAlloc(LPTR, dwBytes));
+    return g_pHeapAlloc(hHeap, dwFlags, dwBytes);
 }
-
+*/
 INT WINAPI HookedMessageBoxA
 (
-    HWND   hWindowHandle,
-    LPCSTR lpEditedBodyText,
-    LPCSTR lpEditedHeaderText,
-    UINT   uiType
+    IN     HWND   hWindowHandle,
+    IN     LPCSTR lpEditedBodyText,
+    IN     LPCSTR lpEditedHeaderText,
+    IN     UINT   uiType
 )
 {
     printf("[!] Success! Hooked MessageBoxA!\n");
 
-    printf("Intercepted Vars Are:\n\t1. %s\n\t2. %s\n", lpEditedHeaderText, lpEditedBodyText);
+    printf("[i] Intercepted Vars Are:\n\t1. %s\n\t2. %s\n", lpEditedHeaderText, lpEditedBodyText);
+    if (g_MessageBoxA) {
+    	return g_MessageBoxA(nullptr, "Malware Development Is Fun!", "Let's Go MalDev Academy!", MB_OK | MB_ICONEXCLAMATION);
+    }
+	return 0;
+}
 
+
+LPVOID WINAPI HookedMemMove(
+    _Out_writes_bytes_all_opt_(_Size) void* _Dst,
+    _In_reads_bytes_opt_(_Size)       void const* _Src,
+    _In_                              size_t      _Size
+)
+{
+    printf("[i] Running HookedMemMove...\n");
+    return g_MemMove(_Dst, _Src, _Size);
+}
+
+
+HANDLE HookedCreateFileW
+(
+    IN    LPCWSTR lpFileName,
+    IN    DWORD dwDesiredAccess,
+    IN    DWORD dwShareMode,
+    IN    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    IN    DWORD dwCreationDisposition,
+    IN    DWORD dwFlagsAndAttributes,
+    IN    HANDLE hTemplateFile
+)
+{
+    wprintf(L"[i] Hook Intercepted File Name: %s\n", lpFileName);
     
+    return g_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 
-    return g_pMessageBoxA(nullptr, lpEditedBodyText, lpEditedHeaderText, uiType);
+    LPWSTR lpwFileName = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, MAX_PATH * sizeof(WCHAR));
+
+    memcpy(lpwFileName, lpFileName, MAX_PATH * sizeof(WCHAR));
+
+    LPWSTR lpMessage = static_cast<LPWSTR>(HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, (MAX_PATH + 43) * sizeof(WCHAR)));
+
+	memcpy(lpMessage, L"[i] This malware is opening a HANDLE to: ", 86);
+
+	wcscat_s(lpMessage, MAX_PATH + 43, lpFileName);
+
+    LPSTR lpFilePathA = (LPSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, MAX_PATH + 1);
+
+	//WideCharToMultiByte(CP_ACP, 0, lpFileName, MAX_PATH * sizeof(WCHAR), lpFilePathA, MAX_PATH, nullptr, nullptr);
+
+   // std::wcout<< L"[!] Ha bitch i got yah:\n[i] File Name Using C++ Standard Library: " << lpwFileName << L"\n";
+
 }
 
 BOOLEAN HookWithVirtualAlloc
@@ -121,12 +177,12 @@ BOOLEAN HookWithVirtualAlloc
 
 BOOLEAN HookLocalThreadUsingDetours
 (
-	IN     PVOID   fnFunctionToHook,
-    IN     PVOID   pDetourFunction,
+	IN     PVOID  *pfnFuncToHook,
+    IN     PVOID   pFuncToRun,
     IN     HANDLE  hThreadToHook
 )
 {
-    if (fnFunctionToHook == nullptr || hThreadToHook == nullptr || hThreadToHook == INVALID_HANDLE_VALUE) return FALSE;
+    if (pfnFuncToHook == nullptr || hThreadToHook == nullptr || hThreadToHook == INVALID_HANDLE_VALUE) return FALSE;
 
     DWORD dwDetoursStatus = NO_ERROR;
 
@@ -134,8 +190,9 @@ BOOLEAN HookLocalThreadUsingDetours
 
     if  ((dwDetoursStatus = DetourUpdateThread(hThreadToHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
-    if  ((dwDetoursStatus = DetourAttach(reinterpret_cast<PVOID *>(&fnFunctionToHook), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
-
+ 
+    if  ((dwDetoursStatus = DetourAttach(pfnFuncToHook, pFuncToRun) != NO_ERROR)) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+    
     if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
 	return TRUE;
@@ -143,7 +200,7 @@ BOOLEAN HookLocalThreadUsingDetours
 
 BOOLEAN UnHookLocalThreadUsingDetours
 (
-    IN     PVOID   fnOriginalHookedFunction,
+    IN     PVOID  *fnOriginalHookedFunction,
     IN     PVOID   pDetourFunction,
     IN     HANDLE  hThreadToUnHook
 )
@@ -156,22 +213,41 @@ BOOLEAN UnHookLocalThreadUsingDetours
 
     if  ((dwDetoursStatus = DetourUpdateThread(hThreadToUnHook)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
-    if  ((dwDetoursStatus = DetourDetach(reinterpret_cast<PVOID *>(&fnOriginalHookedFunction), pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
+    if  ((dwDetoursStatus = DetourDetach(fnOriginalHookedFunction, pDetourFunction)) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
     if  ((dwDetoursStatus = DetourTransactionCommit()) != NO_ERROR) return Anonymous::PrintDetourStatus(dwDetoursStatus);
 
     return TRUE;
 }
 
+MH_STATUS HookLocalThreadUsingMinHook
+(
+    IN    LPVOID  lpTargetFunc,
+    IN    LPVOID  lpDetour,
+    IN    LPVOID *lpGlobalFUnc
+)
+{
+    MH_STATUS mhStatus = MH_OK;
+
+    if ((mhStatus = MH_Initialize()) != MH_OK and mhStatus != MH_ERROR_ALREADY_INITIALIZED) return mhStatus;
+
+    if ((mhStatus = MH_CreateHook(lpTargetFunc, lpDetour, lpGlobalFUnc)) != MH_OK) return mhStatus;
+	
+    if ((mhStatus = MH_EnableHook(lpTargetFunc)) != MH_OK) return mhStatus;
+
+    return mhStatus;
+} 
+
+MH_STATUS UnHookLocalThreadUsingMinHook
+(
+    IN    LPVOID lpTargetFunc
+)
+{
+    MH_STATUS mhStatus = MH_DisableHook(lpTargetFunc);
 
 
-
-
-
-
-
-
-
+    return mhStatus;
+}
 
 
 

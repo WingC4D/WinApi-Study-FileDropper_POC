@@ -55,7 +55,7 @@ BOOL UserInputContinueFolders
 
 BOOL UserInputDrives
 (
-	LPWSTR pPath
+	LPCWSTR pPath
 );
 
 VOID UserInputFolders

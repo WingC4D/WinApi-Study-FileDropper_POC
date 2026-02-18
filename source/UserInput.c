@@ -1,7 +1,8 @@
 #include "UserInput.h"
 
-BOOL UserInputDrives(
-	const LPWSTR pPath
+BOOL UserInputDrives
+(
+	LPCWSTR pPath
 )
 {
 	wprintf(L"Please Choose a Drive\n");

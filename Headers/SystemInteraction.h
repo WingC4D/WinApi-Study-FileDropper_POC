@@ -249,7 +249,7 @@ BOOLEAN SpoofParentProcessId
 BOOLEAN SpoofCommandLineArguments
 (
 	IN     LPWSTR  pSpoofedCommandLine,
-	IN	   LPWSTR  pMaliciousCommandLine,
+	IN	   LPWSTR  pActualCommandLine,
 	IN     DWORD   dwSpoofedCLALength,
 	   OUT PHANDLE phProcessHandle,
 	   OUT PDWORD  pdwProcessId,
@@ -273,7 +273,7 @@ BOOLEAN SpoofProcessCLA_PPID //CLA = Command Line Argument | PPID = Parent Proce
 BOOLEAN ReadStructureFromProcess
 (
 	IN     HANDLE hTargetProcess, 
-	IN     PVOID  pPEBBaseAddress, 
+	IN     PVOID  pStructAddress, 
 	   OUT PVOID *pReadBufferAddress, 
 	IN     DWORD  dwBufferSize,
 	IN     HANDLE hHeap

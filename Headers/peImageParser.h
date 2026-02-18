@@ -30,7 +30,7 @@ typedef struct _WIN_CERTIFICATE {
 
 #define TextSection ".text"
 
-typedef NTSTATUS(NTAPI* fnNtQueryProcessInformation)
+typedef NTSTATUS(NTAPI* fnNtQueryInformationProcess)
 (
     IN              HANDLE           ProcessHandle,
     IN              PROCESSINFOCLASS ProcessInformationClass,
@@ -47,7 +47,7 @@ __kernel_entry NTSTATUS NtQueryProcessInformation
     IN              ULONG            ProcessInformationLength,
        OUT OPTIONAL PULONG           ReturnLength
 );
-enum error_codes : UCHAR
+enum pe_parser_error_codes : UCHAR
 {
 	Success				   = 0x00,
 	InvalidHandle		   = 0x01,
@@ -96,7 +96,7 @@ public:
 		IN     PBYTE pCandidateData
 	);
 
-	error_codes ParseDataFilePath
+	pe_parser_error_codes ParseDataFilePath
 	(
 		IN     LPWSTR lpPath
 	);
@@ -125,7 +125,7 @@ private:
 		*puOrdinalsIndex += 1;
 	}
 
-	static error_codes CheckCandidateDataValidity
+	static pe_parser_error_codes CheckCandidateDataValidity
 	(
 		IN     static PBYTE pCandidateData
 	)
@@ -160,99 +160,75 @@ private:
 	{
 		switch (ucLoopIndex)
 		{
-		case IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG:
-			pImageLoadConfigurationsDirectory = static_cast<PIMAGE_LOAD_CONFIG_DIRECTORY>(pAddressOfDirectory);
+		case IMAGE_DIRECTORY_ENTRY_EXPORT: pImageExportDirectory = static_cast<PIMAGE_EXPORT_DIRECTORY>(pAddressOfDirectory);
 
-			MapDataDirectoriesHelper("Load Configurations", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
+			MapDataDirectoriesHelper("Exports", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
 
 			break;
-
-		case IMAGE_DIRECTORY_ENTRY_IMPORT:
-			pImageImportDirectory = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(pAddressOfDirectory);
+		case IMAGE_DIRECTORY_ENTRY_IMPORT: pImageImportDirectory = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(pAddressOfDirectory);
 
 			MapDataDirectoriesHelper("Import Addresses", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
 
 			break;
+		case IMAGE_DIRECTORY_ENTRY_RESOURCE: pImageResourceDirectory = static_cast<PIMAGE_RESOURCE_DIRECTORY>(pAddressOfDirectory);
 
-		case IMAGE_DIRECTORY_ENTRY_SECURITY:
-			pImageSecurityDirectory = static_cast<LPWIN_CERTIFICATE>(pAddressOfDirectory);
+			MapDataDirectoriesHelper("Resource", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
+
+			break;
+		case IMAGE_DIRECTORY_ENTRY_EXCEPTION: pImageRunTimeFunction = static_cast<PIMAGE_RUNTIME_FUNCTION_ENTRY>(pAddressOfDirectory);
+
+			MapDataDirectoriesHelper("Runtime Functions", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
+
+			break;
+		case IMAGE_DIRECTORY_ENTRY_SECURITY: pImageSecurityDirectory = static_cast<LPWIN_CERTIFICATE>(pAddressOfDirectory);
 
 			MapDataDirectoriesHelper("Security", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
 
 			break;
+		case IMAGE_DIRECTORY_ENTRY_BASERELOC: pImageBaseRelocationDirectory = static_cast<PIMAGE_BASE_RELOCATION>(pAddressOfDirectory);
 
-		case IMAGE_DIRECTORY_ENTRY_DEBUG:
-			pImageDebugDirectory = static_cast<PIMAGE_DEBUG_DIRECTORY>(pAddressOfDirectory);
+			MapDataDirectoriesHelper("Base Relocations", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
+
+			break;
+		case IMAGE_DIRECTORY_ENTRY_DEBUG: pImageDebugDirectory = static_cast<PIMAGE_DEBUG_DIRECTORY>(pAddressOfDirectory);
 
 			MapDataDirectoriesHelper("Debug", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
 
 			break;
-
-		case IMAGE_DIRECTORY_ENTRY_RESOURCE:
-			pImageResourceDirectory = static_cast<PIMAGE_RESOURCE_DIRECTORY>(pAddressOfDirectory);
-
-			MapDataDirectoriesHelper("Resource", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
+		case IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: pImageLoadConfigurationsDirectory = static_cast<PIMAGE_LOAD_CONFIG_DIRECTORY>(pAddressOfDirectory);
+			//i = 10
+			MapDataDirectoriesHelper("Load Configurations", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
 
 			break;
+		case IMAGE_DIRECTORY_ENTRY_IAT: pImageImportAddressTable = static_cast<PIMAGE_THUNK_DATA>(pAddressOfDirectory);
 
-		case IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT:
-			pImageDelayLoadDirectory = static_cast<PIMAGE_DELAYLOAD_DESCRIPTOR>(pAddressOfDirectory);
+			MapDataDirectoriesHelper("Import Addresses Table", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr, ucLoopIndex);
+
+			break;
+		case IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: pImageDelayLoadDirectory = static_cast<PIMAGE_DELAYLOAD_DESCRIPTOR>(pAddressOfDirectory);
 
 			MapDataDirectoriesHelper("Delayed Imports", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
 
 			break;
-
-
-		case IMAGE_DIRECTORY_ENTRY_BASERELOC:
-			pImageBaseRelocationDirectory = static_cast<PIMAGE_BASE_RELOCATION>(pAddressOfDirectory);
-
-			MapDataDirectoriesHelper("Base Relocations", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
-
-			break;
-
-		case IMAGE_DIRECTORY_ENTRY_EXPORT:
-			pImageExportDirectory = static_cast<PIMAGE_EXPORT_DIRECTORY>(pAddressOfDirectory);
-
-			MapDataDirectoriesHelper("Exports", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
-
-			break;
-
-		case IMAGE_DIRECTORY_ENTRY_IAT:
-			pImageImportAddressTable = static_cast<PIMAGE_THUNK_DATA>(pAddressOfDirectory);
-
-			MapDataDirectoriesHelper("Import Addresses Table", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
-
-			break;
-
 		case IMAGE_DIRECTORY_ENTRY_TLS:
 			pImageTlsDirectory = static_cast<PIMAGE_TLS_DIRECTORY>(pAddressOfDirectory);
 
 			MapDataDirectoriesHelper("TLS", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
 
 			break;
-
-		case IMAGE_DIRECTORY_ENTRY_EXCEPTION:
-			pImageRunTimeFunction = static_cast<PIMAGE_RUNTIME_FUNCTION_ENTRY>(pAddressOfDirectory);
-
-			MapDataDirectoriesHelper("Runtime Functions", puOrdinalArrayIndex, ActualDirectoriesOrdinals_arr,ucLoopIndex);
-
-			break;
-
+		
 		default:
 			if (ucLoopIndex < 2)
 			{
 				switch (ucLoopIndex)
 				{
-				case 0:
-					std::cout << "[!] The " << ucLoopIndex + 1 << "st Directory isn't Empty!\n";
+				case 0: std::cout << "[!] The " << ucLoopIndex + 1 << "st Directory isn't Empty!\n";
 					break;
 
-				case 1:
-					std::cout << "[!] The " << ucLoopIndex + 1 << "nd Directory isn't Empty!\n";
+				case 1: std::cout << "[!] The " << ucLoopIndex + 1 << "nd Directory isn't Empty!\n";
 					break;
 
-				case 2:
-					std::cout << "[!] The " << ucLoopIndex + 1 << "rd Directory isn't Empty!\n";
+				case 2: std::cout << "[!] The " << ucLoopIndex + 1 << "rd Directory isn't Empty!\n";
 					break;
 
 				default:
@@ -267,8 +243,6 @@ private:
 
 			break;
 		}
-
-		return;
 	}
 	UCHAR *MapDataDirectories
 	(
@@ -310,13 +284,13 @@ private:
 		return pActualDirectoriesOrdinals_arr;
 	}
 
-	error_codes MapFileStructures
+	pe_parser_error_codes MapFileStructures
 	(
 		IN     PBYTE   pFileData,
 		IN     const BOOLEAN bValidated
 	)
 	{
-		error_codes ecStatus = Success;
+		pe_parser_error_codes ecStatus = Success;
 
 		if (bValidated == FALSE)
 		{

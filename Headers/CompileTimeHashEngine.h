@@ -1,6 +1,6 @@
 #pragma once
 #include <Windows.h>
-// CREDIT: GEMENI 
+
 #ifdef __cplusplus
 // C++-ONLY SECTION
 // The constexpr implementations are defined here in a namespace.
@@ -21,10 +21,7 @@ namespace CompileTime
     // The compile-time hashing function
     constexpr DWORD GenerateCompileTimeHashW(IN LPCWSTR lpTargetStringToHash)
     {
-        // NOTE: Your original logic was a placeholder.
-        // A real hash implementation should iterate over the string.
-        // For example, using the djb2 algorithm:
-        DWORD dwHash = g_KEY;
+    	DWORD dwHash = g_KEY;
         if (lpTargetStringToHash) 
         {
             int c = 0;
@@ -38,8 +35,6 @@ namespace CompileTime
 }
 #endif
 
-// C-COMPATIBLE API (for both C and C++ runtime calls)
-// This is the public interface that all your source files will use for runtime hashing.
 #ifdef __cplusplus
 extern "C" {
 #endif

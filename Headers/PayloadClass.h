@@ -8,17 +8,22 @@ class Payload
 			   hInjectedTread;
 		SIZE_T sSize;
 		DWORD  dwProtections;
-        LPVOID lpExternalAddress;
+        LPVOID lpExternalAddress,
+			   lpLocalStompedFunction,
+			   lpRemoteStompedFunction;
 
-		enum error_codes : UCHAR
+        enum error_codes : UCHAR
         {
             success,
             nullptrHandle,
             invalidHandle,
             nullptrPayload,
+            nullptrInput,
             unknownPayloadSize,
-            processWriteFailed,
-            virtualProtectExFailed
+            writeProcMemFailed,
+            virtualProtectFailed,
+            virtualProtectExFailed,
+            memcpyFailed
         };
 
         error_codes InjectToRemoteProcWriteMem
@@ -26,7 +31,15 @@ class Payload
 			IN     OPTIONAL HANDLE hTargetProcessHandle
         );
 
+        error_codes StompLocalFunction
+		(
+            IN			LPVOID pTargetFunction
+        );
 
+        error_codes StompRemoteFunction
+		(
+			IN          LPVOID lpRemoteFunctionAddress
+        );
          
     private:
         error_codes CheckHandleValidity

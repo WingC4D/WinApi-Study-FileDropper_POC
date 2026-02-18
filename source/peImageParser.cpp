@@ -161,14 +161,14 @@ void PeFile::ConsumeDataStream(PBYTE pCandidateData)
 	return;
 }
 
- error_codes PeFile::ParseDataFilePath(::LPWSTR lpFilePath)
+ pe_parser_error_codes PeFile::ParseDataFilePath(::LPWSTR lpFilePath)
 {
 	HANDLE		hFileHandle		   = INVALID_HANDLE_VALUE,
 				hHeapHandle		   = INVALID_HANDLE_VALUE;
 	DWORD		dwFileSize		   = NULL,
 				dwBytesRead		   = NULL;
 	PBYTE		pCandidateFileData = nullptr;
-	error_codes ecStatus		   = Success;
+	pe_parser_error_codes ecStatus		   = Success;
 
 	hFileHandle  = CreateFileW(lpFilePath, GENERIC_READ, NULL, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
@@ -261,12 +261,12 @@ PPROCESS_BASIC_INFORMATION FetchRemotePBINtQuerySystemInformation
 	if (check::HeapHandle(&hHeapHandle) == FALSE) return nullptr;
 
 	ULONG 						 NtQueryReturnValue		    = NULL;
-	fnNtQueryProcessInformation  NtQueryInformationProcess  = nullptr;
+	fnNtQueryInformationProcess  NtQueryInformationProcess  = nullptr;
 	PPROCESS_BASIC_INFORMATION	 pProcessBasicInformation_t = static_cast<PPROCESS_BASIC_INFORMATION>(HeapAlloc(hHeapHandle, HEAP_ZERO_MEMORY, sizeof(PROCESS_BASIC_INFORMATION)));
 
 	if (pProcessBasicInformation_t == nullptr) return nullptr;
 
-	if ((NtQueryInformationProcess = reinterpret_cast<fnNtQueryProcessInformation>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"NTDLL.dll"), const_cast<LPSTR>("NtQueryInformationProcess")))) == nullptr) 
+	if ((NtQueryInformationProcess = reinterpret_cast<fnNtQueryInformationProcess>(GetProcessAddressReplacement(GetModuleHandleReplacement(L"NTDLL.dll"), const_cast<LPSTR>("NtQueryInformationProcess")))) == nullptr) 
 	{
 		return cleanUp::FetchProcBasicInfo(&pProcessBasicInformation_t, hHeapHandle);
 	}
